@@ -67,9 +67,13 @@ pub fn status_now(repository: &git2::Repository) -> BackendResult<Status> {
           },
         )
         .unwrap_or("UU");
-      snapshot
-        .conflicts
-        .push(change(None, false, &path, "conflicted", detail)?);
+      snapshot.conflicts.push(change(
+        None,
+        false,
+        &path,
+        ChangeStatus::Conflicted,
+        detail,
+      )?);
       continue;
     }
     if flags.contains(git2::Status::WT_NEW) {
@@ -77,18 +81,18 @@ pub fn status_now(repository: &git2::Repository) -> BackendResult<Status> {
         entry.index_to_workdir(),
         false,
         &path,
-        "untracked",
+        ChangeStatus::Untracked,
         "worktree",
       )?);
     }
     for (code, name) in [
-      (git2::Status::INDEX_NEW, "added"),
+      (git2::Status::INDEX_NEW, ChangeStatus::Added),
       (
         git2::Status::INDEX_MODIFIED | git2::Status::INDEX_TYPECHANGE,
-        "modified",
+        ChangeStatus::Modified,
       ),
-      (git2::Status::INDEX_DELETED, "deleted"),
-      (git2::Status::INDEX_RENAMED, "renamed"),
+      (git2::Status::INDEX_DELETED, ChangeStatus::Deleted),
+      (git2::Status::INDEX_RENAMED, ChangeStatus::Renamed),
     ] {
       if flags.intersects(code) {
         snapshot.staged.push(change(
@@ -104,10 +108,10 @@ pub fn status_now(repository: &git2::Repository) -> BackendResult<Status> {
     for (code, name) in [
       (
         git2::Status::WT_MODIFIED | git2::Status::WT_TYPECHANGE,
-        "modified",
+        ChangeStatus::Modified,
       ),
-      (git2::Status::WT_DELETED, "deleted"),
-      (git2::Status::WT_RENAMED, "renamed"),
+      (git2::Status::WT_DELETED, ChangeStatus::Deleted),
+      (git2::Status::WT_RENAMED, ChangeStatus::Renamed),
     ] {
       if flags.intersects(code) {
         snapshot.unstaged.push(change(
@@ -137,15 +141,13 @@ pub async fn status(root: &Path) -> BackendResult<Status> {
 pub fn operation_now(repository: &git2::Repository) -> Operation {
   use git2::RepositoryState::*;
   let operation = match repository.state() {
-    Merge => Some("merge"),
-    Rebase | RebaseInteractive | RebaseMerge | ApplyMailboxOrRebase => Some("rebase"),
-    Revert | RevertSequence => Some("revert"),
-    CherryPick | CherryPickSequence => Some("cherry-pick"),
+    Merge => Some(OperationKind::Merge),
+    Rebase | RebaseInteractive | RebaseMerge | ApplyMailboxOrRebase => Some(OperationKind::Rebase),
+    Revert | RevertSequence => Some(OperationKind::Revert),
+    CherryPick | CherryPickSequence => Some(OperationKind::CherryPick),
     _ => None,
   };
-  Operation {
-    operation: operation.map(str::to_owned),
-  }
+  Operation { operation }
 }
 pub async fn operation(root: &Path) -> BackendResult<Operation> {
   process::repository(root, |repo| Ok(operation_now(repo))).await
@@ -185,7 +187,7 @@ fn change(
   delta: Option<git2::DiffDelta<'_>>,
   renamed: bool,
   fallback: &str,
-  name: &str,
+  name: ChangeStatus,
   detail: &str,
 ) -> BackendResult<Change> {
   let text = |path: &Path| {
@@ -212,7 +214,7 @@ fn change(
   Ok(Change {
     path,
     old_path,
-    status: name.into(),
+    status: name,
     detail: detail.into(),
   })
 }

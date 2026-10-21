@@ -77,18 +77,23 @@ export const useWorkspaceNavigationQuery = ({
   const navigationModel = current
     ? {
         headings: current.headings,
-        outgoingLinks: current.outgoing_links.map((link) => ({
-          sourcePath: link.source_path,
-          targetPath: link.target_path,
-          targetAnchor: link.target_anchor,
-          targetHeadingSlug: link.target_heading_slug,
-          target: link.target,
-          text: link.text,
-          context: link.context,
-          line: link.line,
-          column: link.column,
-          linkType: link.link_type,
-        })),
+        outgoingLinks: current.outgoing_links.flatMap((link) => {
+          if (link.is_external || !link.target_path) return []
+          return [
+            {
+              sourcePath: link.source_path,
+              targetPath: link.target_path,
+              targetAnchor: link.target_anchor,
+              targetHeadingSlug: link.target_heading_slug,
+              target: link.target,
+              text: link.text,
+              context: link.context,
+              line: link.line,
+              column: link.column,
+              linkType: link.link_type,
+            },
+          ]
+        }),
         backlinks: current.backlinks.map((link) => ({
           sourcePath: link.source_path,
           text: link.text,

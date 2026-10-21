@@ -37,7 +37,7 @@ async fn exact_stale_and_workspace_miss_preserve_atomic_layouts() -> BackendResu
   let database = Database::open(directory.path()).await?;
   let store = GraphLayoutStore::new(database.pool.clone());
   let root = RootInfo {
-    kind: "external".into(),
+    kind: crate::workspace::RootKind::External,
     path: directory
       .path()
       .join("first")
@@ -46,21 +46,24 @@ async fn exact_stale_and_workspace_miss_preserve_atomic_layouts() -> BackendResu
   };
   store.save(&root, value()).await?;
   let exact = store.get(&root, request("r1")).await?;
-  assert_eq!(exact.r#match, "exact");
+  assert_eq!(serde_json::to_value(exact.r#match)?, "exact");
   assert_eq!(exact.viewport.unwrap().zoom, 0.5);
   let stale = store.get(&root, request("r2")).await?;
-  assert_eq!(stale.r#match, "stale");
+  assert_eq!(serde_json::to_value(stale.r#match)?, "stale");
   assert!(stale.viewport.is_none());
   assert_eq!(stale.nodes[0].x, 100.0);
   let second = RootInfo {
-    kind: "external".into(),
+    kind: crate::workspace::RootKind::External,
     path: directory
       .path()
       .join("second")
       .to_string_lossy()
       .into_owned(),
   };
-  assert_eq!(store.get(&second, request("r1")).await?.r#match, "miss");
+  assert_eq!(
+    serde_json::to_value(store.get(&second, request("r1")).await?.r#match)?,
+    "miss"
+  );
   let mut invalid = value();
   invalid.nodes.push(invalid.nodes[0].clone());
   assert!(store.save(&root, invalid).await.is_err());

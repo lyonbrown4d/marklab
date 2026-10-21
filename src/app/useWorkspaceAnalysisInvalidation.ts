@@ -32,7 +32,7 @@ export const useWorkspaceAnalysisInvalidation = (workspaceKey: string): void => 
       })
 
     void Promise.all([
-      listen<unknown>('fs-buffer-status', (event) => {
+      listen('fs-buffer-status', (event) => {
         const status = fsBufferStatusSchema.safeParse(event.payload)
         if (!status.success) return
         delays.next(status.data.dirty ? DIRTY_INVALIDATION_DELAY_MS : 0)

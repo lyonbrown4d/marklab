@@ -73,7 +73,7 @@ export const useEditorBufferStatus = ({
 
     let cancelled = false
     let unlisten: (() => void) | undefined
-    void listen<unknown>('fs-buffer-status', (event) => {
+    void listen('fs-buffer-status', (event) => {
       const parsed = fsBufferStatusSchema.safeParse(event.payload)
       if (!parsed.success) return
 

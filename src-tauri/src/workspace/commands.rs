@@ -2,7 +2,7 @@ use super::{Workspace, WorkspaceRegistry, types::*};
 use crate::error::{BackendError, BackendResult};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use serde::{Deserialize, Serialize};
-use tauri::{Emitter, Manager, State};
+use tauri::{Manager, State};
 
 pub(super) async fn announce(window: &WebviewWindow, workspace: &Workspace) -> BackendResult<()> {
   workspace.invalidate(window.app_handle())
@@ -18,10 +18,12 @@ async fn change_root(
   let previous = registry.get(window.label())?;
   let next = registry.open_async(window.label(), path, single).await?;
   let followup: BackendResult<()> = async {
-    window.emit_to(
+    crate::desktop::event_contracts::WORKSPACE_GENERATION_CHANGED.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "workspace-generation-changed",
-      serde_json::json!({"generation":next.generation}),
+      &(crate::desktop::event_contracts::WorkspaceGenerationChanged {
+        generation: next.generation,
+      }),
     )?;
     if previous.generation != next.generation {
       crate::desktop::reset_workspace_runtime(window).await?;
@@ -43,6 +45,7 @@ async fn change_root(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fs_get_root_info(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -52,6 +55,7 @@ pub fn fs_get_root_info(
   Ok(registry.get(window.label())?.root_info())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_snapshot(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -61,6 +65,7 @@ pub async fn fs_get_snapshot(
   registry.get(window.label())?.snapshot().await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_list_entries(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -70,6 +75,7 @@ pub async fn fs_list_entries(
   Ok(registry.get(window.label())?.snapshot().await?.entries)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_set_root(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -78,6 +84,7 @@ pub async fn fs_set_root(
   change_root(&window, &registry, request.path.as_deref(), false).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_set_single_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -87,16 +94,21 @@ pub async fn fs_set_single_file(
 }
 pub use super::buffer_commands::*;
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct PathMetadata {
   path: String,
-  kind: String,
+  kind: crate::workspace::EntryKind,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
   size_bytes: u64,
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(default, with = "crate::ipc_number")]
+  #[specta(type = Option<u64>)]
   modified_ms: Option<u64>,
   readonly: bool,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_path_metadata(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -110,9 +122,9 @@ pub async fn fs_get_path_metadata(
   Ok(PathMetadata {
     path: request.path,
     kind: if m.is_dir() {
-      "folder".into()
+      crate::workspace::EntryKind::Folder
     } else {
-      "file".into()
+      crate::workspace::EntryKind::File
     },
     size_bytes: m.len(),
     modified_ms: m
@@ -123,14 +135,17 @@ pub async fn fs_get_path_metadata(
     readonly: m.permissions().readonly(),
   })
 }
+pub use WorkspaceCreateRequest as CreateRequest;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct CreateRequest {
+pub struct WorkspaceCreateRequest {
   path: String,
+  #[serde(default)]
   content: Option<String>,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_create_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -166,6 +181,7 @@ pub async fn fs_create_file(
   announce(&window, &workspace).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_create_dir(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -178,13 +194,14 @@ pub async fn fs_create_dir(
   announce(&window, &workspace).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct MoveRequest {
   pub(super) from: String,
   pub(super) to: String,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_rename_path(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -194,6 +211,7 @@ pub async fn fs_rename_path(
   super::operations::move_path(window, workspace, request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_move_path(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -203,6 +221,7 @@ pub async fn fs_move_path(
   super::operations::move_path(window, workspace, request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_delete_path(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -234,7 +253,7 @@ mod tests {
   fn metadata_omits_missing_time_and_preserves_valid_milliseconds() {
     let mut metadata = PathMetadata {
       path: "preview.pdf".into(),
-      kind: "file".into(),
+      kind: crate::workspace::EntryKind::File,
       size_bytes: 42,
       modified_ms: None,
       readonly: false,

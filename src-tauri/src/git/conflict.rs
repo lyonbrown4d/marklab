@@ -8,16 +8,16 @@ use crate::error::BackendResult;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::path::Path;
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(untagged)]
 pub enum ConflictPreview {
   Text(Conflict),
   Unavailable {
     path: String,
-    unavailable_reason: String,
+    unavailable_reason: UnavailableReason,
   },
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Conflict {
   pub path: String,
@@ -29,7 +29,7 @@ pub struct Conflict {
   pub deleted: bool,
   pub marker_size: usize,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 pub(super) struct Stage {
   pub(super) mode: String,
   pub(super) hash: String,
@@ -40,7 +40,7 @@ struct Details {
   stages: Vec<Stage>,
   attribute: String,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct SaveResult {
   pub status: Status,
   pub revision: String,
@@ -59,7 +59,7 @@ fn revision(file: &str, stages: &[Stage], result: &str, deleted: bool, attribute
   hash.update(result.as_bytes());
   hex::encode(hash.finalize())
 }
-async fn details(root: &Path, file: &str) -> BackendResult<Result<Details, &'static str>> {
+async fn details(root: &Path, file: &str) -> BackendResult<Result<Details, UnavailableReason>> {
   safety::file_path(file)?;
   let status = status::status(root).await?;
   if !status.conflicts.iter().any(|v| v.path == file) {
@@ -158,7 +158,7 @@ pub async fn read(root: &Path, file: &str) -> BackendResult<ConflictPreview> {
     Ok(value) => ConflictPreview::Text(value.snapshot),
     Err(reason) => ConflictPreview::Unavailable {
       path: file.into(),
-      unavailable_reason: reason.into(),
+      unavailable_reason: reason,
     },
   })
 }
@@ -204,7 +204,7 @@ pub async fn save(root: &Path, request: &ConflictSaveRequest) -> BackendResult<S
   }
   let details = details(root, &request.path)
     .await?
-    .map_err(|reason| error("git_invalid_input", reason))?;
+    .map_err(|reason| error("git_invalid_input", reason.as_str()))?;
   let expected = details.snapshot;
   if !expected.revision.eq_ignore_ascii_case(&request.revision) {
     return Err(error(

@@ -13,6 +13,7 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn export_markdown(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -43,6 +44,7 @@ pub async fn export_markdown(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn export_workspace_publication(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -91,6 +93,7 @@ async fn consume_grant(window: &WebviewWindow, path: &str) -> BackendResult<Save
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn export_cancel(
   window: WebviewWindow,
   exports: State<'_, ExportService>,
@@ -100,6 +103,7 @@ pub fn export_cancel(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn export_open_output_path(
   app: AppHandle,
   window: WebviewWindow,

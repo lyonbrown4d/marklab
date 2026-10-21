@@ -138,7 +138,7 @@ export const usePlateWorkspaceLinkCompletion = ({
       if (item.action?.kind === 'create-file') {
         cancel()
         void fsApi
-          .createFile(item.action.path, item.action.content)
+          .createFile(item.action.path, item.action.content ?? undefined)
           .then(apply)
           .catch((error: unknown) => console.warn('Failed to create workspace-link target', error))
       } else {

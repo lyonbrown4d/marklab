@@ -127,7 +127,9 @@ describe('ScmPanel', () => {
     const user = userEvent.setup()
     vi.mocked(gitApi.getStatus).mockResolvedValue(
       createSnapshot({
-        unstaged: [{ path: 'docs/guide.md', status: 'modified', detail: 'modified' }],
+        unstaged: [
+          { path: 'docs/guide.md', old_path: null, status: 'modified', detail: 'modified' },
+        ],
       }),
     )
 
@@ -190,8 +192,8 @@ describe('ScmPanel', () => {
   it('labels refresh and change groups in the expanded repository panel', async () => {
     vi.mocked(gitApi.getStatus).mockResolvedValue(
       createSnapshot({
-        staged: [{ path: 'README.md', status: 'modified', detail: 'modified' }],
-        unstaged: [{ path: 'src/App.tsx', status: 'modified', detail: 'modified' }],
+        staged: [{ path: 'README.md', old_path: null, status: 'modified', detail: 'modified' }],
+        unstaged: [{ path: 'src/App.tsx', old_path: null, status: 'modified', detail: 'modified' }],
       }),
     )
 
@@ -221,7 +223,14 @@ describe('ScmPanel', () => {
   it('ties conflict commit blocking text to the disabled commit action', async () => {
     vi.mocked(gitApi.getStatus).mockResolvedValue(
       createSnapshot({
-        conflicts: [{ path: 'docs/conflict.md', status: 'conflicted', detail: 'both modified' }],
+        conflicts: [
+          {
+            path: 'docs/conflict.md',
+            old_path: null,
+            status: 'conflicted',
+            detail: 'both modified',
+          },
+        ],
       }),
     )
 
@@ -236,7 +245,9 @@ describe('ScmPanel', () => {
   })
   it('keeps staged commit blocked when operation state cannot be checked', async () => {
     vi.mocked(gitApi.getStatus).mockResolvedValue(
-      createSnapshot({ staged: [{ path: 'ready.md', status: 'modified', detail: '' }] }),
+      createSnapshot({
+        staged: [{ path: 'ready.md', old_path: null, status: 'modified', detail: '' }],
+      }),
     )
     vi.mocked(gitApi.getOperationState).mockRejectedValue(
       new Error('Cannot inspect operation state'),
@@ -251,7 +262,9 @@ describe('ScmPanel', () => {
   })
   it('keeps staged commit blocked while operation state is loading', async () => {
     vi.mocked(gitApi.getStatus).mockResolvedValue(
-      createSnapshot({ staged: [{ path: 'ready.md', status: 'modified', detail: '' }] }),
+      createSnapshot({
+        staged: [{ path: 'ready.md', old_path: null, status: 'modified', detail: '' }],
+      }),
     )
     vi.mocked(gitApi.getOperationState).mockImplementation(() => new Promise(() => undefined))
     renderPanel()

@@ -1,8 +1,11 @@
 mod bootstrap;
 mod cli;
+#[cfg(feature = "ipc-codegen")]
+mod codegen;
 pub mod commands;
 mod controls;
 mod diagnostics;
+pub(crate) mod event_contracts;
 mod events;
 mod flush;
 mod geometry;
@@ -23,7 +26,7 @@ mod window_state;
 pub mod windows;
 use crate::error::BackendResult;
 pub(crate) use flush::with_flushed_windows;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 pub fn run() -> BackendResult<()> {
   let builder = tauri::Builder::default()
     .manage(startup::StartupState::default())
@@ -61,10 +64,10 @@ pub fn run() -> BackendResult<()> {
               let _ = window.unminimize();
               let _ = window.show();
               let _ = window.set_focus();
-              let _ = window.emit_to(
+              let _ = crate::desktop::event_contracts::SINGLE_INSTANCE.emit_to(
+                window.app_handle(),
                 tauri::EventTarget::webview_window(window.label()),
-                "single-instance",
-                serde_json::json!({"args":args,"cwd":cwd}),
+                &(crate::desktop::event_contracts::SingleInstance { args, cwd }),
               );
             } else if !windows::activate_existing(&app).unwrap_or(false) {
               let _ = bootstrap::reopen(&app).await;
@@ -187,3 +190,6 @@ pub(crate) async fn fail_workspace_transition(
   window.hide()?;
   startup::failed(window.app_handle(), window.label(), error.message.clone()).await
 }
+
+#[cfg(feature = "ipc-codegen")]
+pub(crate) use invoke::export as export_bindings;

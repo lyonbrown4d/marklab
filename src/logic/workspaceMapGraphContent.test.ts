@@ -4,37 +4,25 @@ import { buildWorkspaceMapGraph } from '@/logic/workspaceMapGraph'
 import type { FsGraph } from '@/services/fsApi'
 
 describe('workspace map graph content', () => {
-  it('retains only a bounded backend file summary when graph content mode is none', () => {
-    const summary = `Useful document preview ${'detail '.repeat(90)}`
-    const graph = buildGraphFromKnowledgeGraph(
-      {
-        mode: 'mindmap',
-        nodes: [
-          {
-            id: 'file:notes/current.md',
-            kind: 'file',
-            label: 'current',
-            path: 'notes/current.md',
-            content: summary,
-          },
-          {
-            id: 'heading:notes/current.md:intro',
-            kind: 'heading',
-            label: 'Intro',
-            path: 'notes/current.md',
-            content: 'Heading body remains controlled by graph content mode.',
-          },
-        ],
-        edges: [],
-      } satisfies FsGraph,
-      'none',
-    )
-
-    const mapped = buildWorkspaceMapGraph(graph)
+  it('keeps topology free of document content until details are requested', () => {
+    const native: FsGraph = {
+      mode: 'mindmap',
+      revision: '1:1',
+      nodes: [
+        {
+          id: 'file:notes/current.md',
+          kind: 'file',
+          label: 'current',
+          path: 'notes/current.md',
+          group: { key: 'notes', label: 'notes', source: 'path' },
+        },
+      ],
+      edges: [],
+    }
+    const mapped = buildWorkspaceMapGraph(buildGraphFromKnowledgeGraph(native, 'none'))
     const file = mapped.nodes.find((node) => node.id === 'file:notes/current.md')
-
-    expect(file?.data.content).toMatch(/^Useful document preview/)
-    expect(file?.data.content?.length).toBeLessThanOrEqual(420)
-    expect(graph.nodes.find((node) => node.type === 'heading')?.data.content).toBeUndefined()
+    expect(file?.data.path).toBe('notes/current.md')
+    expect(file?.data.content).toBeUndefined()
+    expect(file?.data.preview).toBeUndefined()
   })
 })

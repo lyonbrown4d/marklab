@@ -135,3 +135,89 @@ async fn explicitly_restored_old_windows_do_not_change_last_selected_workspace()
   database.pool.close().await;
   Ok(())
 }
+
+#[tokio::test]
+async fn json_adapters_preserve_state_only_storage_and_version_defaults() -> BackendResult<()> {
+  let directory = tempfile::tempdir()?;
+  let database = Database::open(directory.path()).await?;
+  let store = SettingsStore::new(database.pool.clone());
+  store
+    .set(
+      "marklab.preferences",
+      "main",
+      json!({"state":{"locale":"zh-CN"}}),
+    )
+    .await?;
+  let (stored, version): (String, Option<i64>) =
+    sqlx::query_as("SELECT value_json,version FROM settings WHERE key='marklab.preferences'")
+      .fetch_one(&database.pool)
+      .await?;
+  assert_eq!(
+    serde_json::from_str::<Value>(&stored).map_err(json_error)?,
+    json!({"locale":"zh-CN"})
+  );
+  assert_eq!(version, None);
+  assert_eq!(
+    store
+      .read_setting("marklab.preferences")
+      .await?
+      .unwrap()
+      .version,
+    None
+  );
+  store
+    .set(WORKSPACE, "main", json!({"state":{"tabs":[]}}))
+    .await?;
+  assert_eq!(store.read_session("main").await?.unwrap().version, Some(1));
+  sqlx::query("INSERT INTO window_state(window_id,value_json) VALUES('legacy',?)")
+    .bind(r#"{"width":800,"height":600}"#)
+    .execute(&database.pool)
+    .await?;
+  assert!(
+    !store
+      .get_window_state("legacy")
+      .await?
+      .unwrap()
+      .is_maximized
+  );
+  database.pool.close().await;
+  Ok(())
+}
+
+#[tokio::test]
+async fn malformed_persisted_json_keeps_the_existing_error_code() -> BackendResult<()> {
+  let directory = tempfile::tempdir()?;
+  let database = Database::open(directory.path()).await?;
+  let store = SettingsStore::new(database.pool.clone());
+  sqlx::query("INSERT INTO settings(key,value_json) VALUES('bad','[]')")
+    .execute(&database.pool)
+    .await?;
+  sqlx::query("INSERT INTO window_sessions(id,value_json) VALUES('bad','{')")
+    .execute(&database.pool)
+    .await?;
+  sqlx::query("INSERT INTO window_state(window_id,value_json) VALUES('bad','{}')")
+    .execute(&database.pool)
+    .await?;
+  assert_eq!(
+    store.read_setting("bad").await.unwrap_err().code,
+    "invalid_persisted_data"
+  );
+  assert_eq!(
+    store.read_session("bad").await.unwrap_err().code,
+    "invalid_persisted_data"
+  );
+  assert_eq!(
+    store.get_window_state("bad").await.unwrap_err().code,
+    "invalid_persisted_data"
+  );
+  assert_eq!(
+    store
+      .set("marklab.preferences", "main", json!({"state":[]}))
+      .await
+      .unwrap_err()
+      .code,
+    "invalid_settings"
+  );
+  database.pool.close().await;
+  Ok(())
+}

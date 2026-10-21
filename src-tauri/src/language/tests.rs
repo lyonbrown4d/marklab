@@ -173,15 +173,10 @@ async fn language_documents_enforce_owner_versions_consumer_counts_and_atomic_ba
 #[test]
 fn native_mermaid_parser_reports_real_errors_and_keeps_completion_catalog() {
   assert_eq!(
-    mermaid::diagnostics("flowchart TD\n  A --> B", 0),
+    serde_json::to_value(mermaid::diagnostics("flowchart TD\n  A --> B", 0)).unwrap(),
     serde_json::json!([])
   );
-  assert!(
-    !mermaid::diagnostics("flowchart TD\n  A --> [", 4)
-      .as_array()
-      .expect("diagnostics")
-      .is_empty()
-  );
+  assert!(!mermaid::diagnostics("flowchart TD\n  A --> [", 4).is_empty());
   let completion = mermaid::completion(
     "sequenceDiagram\n  ",
     Position {
@@ -190,6 +185,7 @@ fn native_mermaid_parser_reports_real_errors_and_keeps_completion_catalog() {
     },
   )
   .expect("completion");
+  let completion = serde_json::to_value(completion).unwrap();
   assert!(
     completion["items"]
       .as_array()
@@ -216,7 +212,7 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
   .expect("source");
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: directory
         .path()
         .canonicalize()
@@ -240,15 +236,12 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
     column: 9,
     new_name: None,
   };
-  assert_eq!(markdown::definition(&index, &request)["path"], "target.md");
-  assert_eq!(markdown::definition(&index, &request)["line"], 3);
   assert_eq!(
-    markdown::references(&index, &request)
-      .as_array()
-      .expect("references")
-      .len(),
-    1
+    markdown::definition(&index, &request).unwrap().path,
+    "target.md"
   );
+  assert_eq!(markdown::definition(&index, &request).unwrap().line, 3);
+  assert_eq!(markdown::references(&index, &request).len(), 1);
   let service = LanguageService::default();
   service
     .open("window".into(), open("completion", "[Go](target.md#de"))
@@ -267,6 +260,7 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
     },
   )
   .expect("heading completion");
+  let completion = serde_json::to_value(completion).unwrap();
   assert!(
     completion["items"]
       .as_array()
@@ -282,11 +276,11 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
   };
   let index = markdown::overlay(&index, &request).expect("overlay");
   assert_eq!(
-    markdown::code_actions(&index, &request)[0]["kind"],
+    serde_json::to_value(markdown::code_actions(&index, &request)).unwrap()[0]["kind"],
     "create-file"
   );
   assert!(
-    markdown::code_actions(&index, &request)[0]
+    serde_json::to_value(markdown::code_actions(&index, &request)).unwrap()[0]
       .get("content")
       .is_none()
   );

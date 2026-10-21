@@ -8,7 +8,7 @@ import {
   type SetStateAction,
 } from 'react'
 import { useLatest } from 'ahooks'
-import type { Node, ReactFlowInstance } from '@xyflow/react'
+import type { Node, ReactFlowInstance, Viewport } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 import {
@@ -22,7 +22,7 @@ import {
   mergeWorkspaceMapArrangementOverrides,
 } from '@/pages/workspace-map/workspaceMapLayoutPersistence'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
-import { graphLayoutApi, type GraphLayoutViewport } from '@/services/graphLayoutApi'
+import { graphLayoutApi } from '@/services/graphLayoutApi'
 
 type WorkspaceMapFlow =
   | (Pick<ReactFlowInstance<Node<GraphNodeData>, GraphData['edges'][number]>, 'fitView'> &
@@ -101,7 +101,7 @@ export const useWorkspaceMapLayout = ({
   const staleFlowRef = useRef<WorkspaceMapFlow>(null)
   const previousStatusRef = useRef<LayoutState['status']>('loading')
   const laidOutNodesRef = useRef<Node<GraphNodeData>[]>([])
-  const restoredViewportRef = useRef<GraphLayoutViewport | null>(null)
+  const restoredViewportRef = useRef<Viewport | null>(null)
   const graphRef = useLatest(graph)
   const nodesRef = useLatest(nodes)
   const [retryGeneration, setRetryGeneration] = useState(0)
@@ -162,7 +162,11 @@ export const useWorkspaceMapLayout = ({
         .catch(() => ({ match: 'miss' as const, nodes: [], viewport: null }))
       if (stored.match === 'exact' && !forceArrange) {
         const restored = applyStoredWorkspaceMapLayout(layoutNodes, stored)
-        restoredViewportRef.current = stored.viewport
+        const viewport = stored.viewport
+        restoredViewportRef.current =
+          viewport && viewport.x !== null && viewport.y !== null && viewport.zoom !== null
+            ? { x: viewport.x, y: viewport.y, zoom: viewport.zoom }
+            : null
         return { nodes: restored, persisted: true }
       }
       const { layoutGraphNative } = await import('@/logic/graphLayout')

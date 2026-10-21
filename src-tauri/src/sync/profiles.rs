@@ -188,7 +188,7 @@ impl SyncService {
   }
   pub async fn test_profile(&self, id: &str) -> BackendResult<()> {
     let channel = super::Channel {
-      provider: "webdav".into(),
+      provider: crate::sync::SyncProvider::Webdav,
       profile_id: id.into(),
       remote_root: "/".into(),
       auto_sync: false,

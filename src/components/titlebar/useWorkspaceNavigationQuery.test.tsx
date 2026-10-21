@@ -3,7 +3,10 @@ import { renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useWorkspaceNavigationQuery } from '@/components/titlebar/useWorkspaceNavigationQuery'
-import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
+import {
+  workspaceAnalysisApi,
+  type WorkspaceNavigationResult,
+} from '@/services/workspaceAnalysisApi'
 
 vi.mock('@/services/workspaceAnalysisApi', () => ({
   workspaceAnalysisApi: {
@@ -14,16 +17,18 @@ vi.mock('@/services/workspaceAnalysisApi', () => ({
 
 const analysisApi = vi.mocked(workspaceAnalysisApi)
 
-const navigationResult = (activePath: string, text: string) => ({
+const navigationResult = (activePath: string, text: string): WorkspaceNavigationResult => ({
   ready: true as const,
   revision: 1,
   active_path: activePath,
   files: [],
-  headings: [{ path: activePath, slug: text.toLowerCase(), text, level: 2 }],
+  headings: [{ path: activePath, slug: text.toLowerCase(), text, level: 2, line: 1, column: 1 }],
   file_total: 4,
   heading_total: 1,
   current: {
-    headings: [{ path: activePath, slug: 'current', text: `${text} current`, level: 1 }],
+    headings: [
+      { path: activePath, slug: 'current', text: `${text} current`, level: 1, line: 1, column: 1 },
+    ],
     outgoing_links: [],
     backlinks: [],
     missing_links: [],
@@ -62,7 +67,21 @@ describe('useWorkspaceNavigationQuery', () => {
   })
 
   it('queries exact deferred heading text and maps navigation to command view models', async () => {
-    analysisApi.queryNavigation.mockResolvedValue(navigationResult('notes/current.md', 'Intro'))
+    const response = navigationResult('notes/current.md', 'Intro')
+    response.current.outgoing_links.push({
+      source_path: 'notes/current.md',
+      target: 'https://example.com',
+      text: 'External',
+      context: 'External link',
+      line: 1,
+      column: 1,
+      link_type: 'markdown',
+      target_path: null,
+      target_anchor: null,
+      target_heading_slug: null,
+      is_external: true,
+    })
+    analysisApi.queryNavigation.mockResolvedValue(response)
     const { result } = renderHook(
       () =>
         useWorkspaceNavigationQuery({
@@ -88,10 +107,13 @@ describe('useWorkspaceNavigationQuery', () => {
         slug: 'intro',
         text: 'Intro',
         level: 2,
+        line: 1,
+        column: 1,
         label: 'current',
       },
     ])
     expect(result.current.navigationHeadings[0]?.text).toBe('Intro current')
+    expect(result.current.navigationOutgoingLinks).toEqual([])
     expect(result.current.indexedFileCount).toBe(4)
     expect(result.current.collectionCounts.structured).toBe(2)
   })

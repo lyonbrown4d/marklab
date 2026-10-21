@@ -1,6 +1,17 @@
 use super::test_support::Repository;
+use super::types::UnavailableReason;
 use super::*;
 use std::path::Path;
+#[test]
+fn optional_branch_fields_accept_omission_and_required_values_stay_required() {
+  let branch: types::BranchRequest =
+    serde_json::from_value(serde_json::json!({"name":"topic"})).unwrap();
+  assert!(branch.expected_root.is_none());
+  assert!(branch.start_point.is_none());
+  assert!(branch.force.is_none());
+  assert!(serde_json::from_value::<types::BranchRequest>(serde_json::json!({})).is_err());
+  assert!(serde_json::from_value::<types::PathsRequest>(serde_json::json!({})).is_err());
+}
 #[test]
 fn rejects_unsafe_paths() {
   for value in [
@@ -22,14 +33,17 @@ fn rejects_unsafe_paths() {
 }
 #[test]
 fn preview_rejects_binary_encoding_and_size() {
-  assert_eq!(preview::decode(vec![0]).unwrap_err(), "binary");
+  assert_eq!(
+    preview::decode(vec![0]).unwrap_err(),
+    UnavailableReason::Binary
+  );
   assert_eq!(
     preview::decode(vec![255]).unwrap_err(),
-    "unsupported_encoding"
+    UnavailableReason::UnsupportedEncoding
   );
   assert_eq!(
     preview::decode(vec![b'a'; preview::MAX_PREVIEW + 1]).unwrap_err(),
-    "too_large"
+    UnavailableReason::TooLarge
   );
 }
 #[test]

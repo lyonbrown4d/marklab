@@ -57,7 +57,7 @@ const monacoMock = {} as Awaited<ReturnType<typeof configureMonaco>>
 const createDiff = (overrides: Partial<GitFileDiff> = {}): GitFileDiff => ({
   modified_content: '# Updated\n',
   modified_label: 'Worktree',
-  old_path: undefined,
+  old_path: null,
   original_content: '# Original\n',
   original_label: 'HEAD',
   path: 'docs/guide.md',

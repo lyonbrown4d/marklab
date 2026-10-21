@@ -22,6 +22,9 @@ export const applyStoredWorkspaceMapLayout = (
     const saved = storedById.get(node.id)
     if (!saved) return node
     const restoreGeometry = stored.match === 'exact' || saved.userModified
+    const fallback = getGraphNodeLayoutSize(node)
+    const height = saved.height ?? fallback.height
+    const width = saved.width ?? fallback.width
     return {
       ...node,
       data: {
@@ -33,11 +36,11 @@ export const applyStoredWorkspaceMapLayout = (
       draggable: saved.pinned ? false : node.draggable,
       ...(restoreGeometry
         ? {
-            height: saved.height,
-            measured: { height: saved.height, width: saved.width },
-            position: { x: saved.x, y: saved.y },
-            style: { ...node.style, height: saved.height, width: saved.width },
-            width: saved.width,
+            height,
+            measured: { height, width },
+            position: { x: saved.x ?? node.position.x, y: saved.y ?? node.position.y },
+            style: { ...node.style, height, width },
+            width,
           }
         : {}),
     }
@@ -132,7 +135,7 @@ export const readWorkspaceMapNodePersistedCollapsed = (
   return typeof value === 'boolean' ? value : undefined
 }
 
-const toStoredNode = (node: Node<GraphNodeData>): GraphLayoutNode => {
+const toStoredNode = (node: Node<GraphNodeData>) => {
   const fallback = getGraphNodeLayoutSize(node)
   const width =
     node.width ?? node.measured?.width ?? numericStyleDimension(node, 'width') ?? fallback.width
@@ -148,7 +151,7 @@ const toStoredNode = (node: Node<GraphNodeData>): GraphLayoutNode => {
     width,
     x: node.position.x,
     y: node.position.y,
-  }
+  } satisfies GraphLayoutNode
 }
 
 const numericStyleDimension = (node: Node<GraphNodeData>, key: 'height' | 'width') => {

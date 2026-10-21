@@ -11,7 +11,7 @@ fn root(path: &str) -> RootInfo {
   };
   let path = portable.as_str();
   RootInfo {
-    kind: "external".into(),
+    kind: crate::workspace::RootKind::External,
     path: path.into(),
   }
 }

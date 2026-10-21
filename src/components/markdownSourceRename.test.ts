@@ -25,6 +25,7 @@ const plan: MarkdownLanguageRenameResult = {
     { path: 'Current.md', line: 1, startColumn: 3, endColumn: 8, newText: 'Renamed' },
     { path: 'Other.md', line: 2, startColumn: 3, endColumn: 8, newText: 'Renamed' },
   ],
+  rejectReason: null,
   appliedEdits: 1,
   touchedFiles: ['Other.md'],
 }

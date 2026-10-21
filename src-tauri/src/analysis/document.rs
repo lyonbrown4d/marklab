@@ -1,12 +1,10 @@
 use crate::error::{BackendError, BackendResult};
 use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
-use std::{
-  collections::BTreeMap,
-  ops::Range,
-  sync::{Arc, LazyLock},
-};
+use std::{collections::BTreeMap, ops::Range, sync::LazyLock};
+#[path = "document_types.rs"]
+mod types;
+pub use types::{Document, Heading, Link, LinkKind};
 #[path = "link_positions.rs"]
 mod link_positions;
 pub use link_positions::position;
@@ -14,47 +12,6 @@ pub use link_positions::position;
 static WIKI: LazyLock<Result<Regex, regex::Error>> =
   LazyLock::new(|| Regex::new(r"!?\[\[([^\]\n]+?)\]\]"));
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Heading {
-  pub path: String,
-  pub slug: String,
-  pub text: String,
-  pub level: u8,
-  pub line: usize,
-  pub column: usize,
-}
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Link {
-  pub source_path: String,
-  pub target: String,
-  pub text: String,
-  pub context: String,
-  pub line: usize,
-  pub column: usize,
-  pub link_type: String,
-  pub target_path: Option<String>,
-  pub target_anchor: Option<String>,
-  pub target_heading_slug: Option<String>,
-  pub is_external: bool,
-  #[serde(skip)]
-  pub offset: usize,
-  #[serde(skip)]
-  pub end_offset: usize,
-  #[serde(skip)]
-  pub span_start: usize,
-  #[serde(skip)]
-  pub span_end: usize,
-}
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Document {
-  pub path: String,
-  pub title: String,
-  pub content: Arc<str>,
-  pub headings: Vec<Heading>,
-  pub links: Vec<Link>,
-  pub assets: Vec<Link>,
-  pub word_count: usize,
-}
 struct PendingLink {
   target: String,
   text: String,
@@ -141,7 +98,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
             &content,
             pending.target,
             pending.text,
-            "markdown",
+            LinkKind::Markdown,
             pending.range,
             pending.inline,
           );
@@ -197,7 +154,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
         &content,
         target.trim().into(),
         label.trim().into(),
-        "wiki",
+        LinkKind::Wiki,
         range.start + found.start()..range.start + found.end(),
         true,
       );
@@ -240,14 +197,14 @@ fn link_at(
   content: &str,
   target: String,
   text: String,
-  kind: &str,
+  kind: LinkKind,
   range: Range<usize>,
   inline: bool,
 ) -> Link {
   let raw = &content[range.clone()];
   // Resolved reference-style destinations are outside this usage span.
   // Never mistake matching label text for a writable destination.
-  let found = link_positions::destination(raw, &target, kind, inline);
+  let found = link_positions::destination(raw, &target, kind.as_str(), inline);
   let destination = found.map_or(range.start, |index| range.start + index);
   let (line, column) = position(content, destination);
   let context = content
@@ -264,7 +221,7 @@ fn link_at(
     context,
     line,
     column,
-    link_type: kind.into(),
+    link_type: kind,
     target_path: None,
     target_anchor: None,
     target_heading_slug: None,

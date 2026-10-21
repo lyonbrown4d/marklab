@@ -1,9 +1,10 @@
+use super::protocol::{CompletionResponse, completion_list, position as lsp_position};
 use super::{Document, mermaid, types::Position, utf16};
 use crate::{
-  analysis::{Index, targets},
+  analysis::{Index, document::LinkKind, targets},
   error::BackendResult,
 };
-use serde_json::{Value, json};
+use lsp_types::{CompletionItem, CompletionItemKind, CompletionTextEdit, Range, TextEdit};
 #[path = "completion_fences.rs"]
 mod fences;
 #[path = "completion_files.rs"]
@@ -13,7 +14,11 @@ mod headings;
 #[path = "completion_snippets.rs"]
 mod snippets;
 
-pub fn completion(index: &Index, document: &Document, position: Position) -> BackendResult<Value> {
+pub fn completion(
+  index: &Index,
+  document: &Document,
+  position: Position,
+) -> BackendResult<CompletionResponse> {
   let offset = utf16::offset(&document.text, position)?;
   if document.language_id == "mermaid" {
     return mermaid::completion(&document.text, position);
@@ -29,13 +34,10 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
         character: position.character,
       },
     )?;
-    if let Some(items) = result["items"].as_array_mut() {
-      for item in items {
-        for edge in ["start", "end"] {
-          if let Some(line) = item["textEdit"]["range"][edge]["line"].as_u64() {
-            item["textEdit"]["range"][edge]["line"] = json!(line + block.start_line as u64);
-          }
-        }
+    for item in &mut result.0.items {
+      if let Some(CompletionTextEdit::Edit(edit)) = &mut item.text_edit {
+        edit.range.start.line += block.start_line as u32;
+        edit.range.end.line += block.start_line as u32;
       }
     }
     return Ok(result);
@@ -45,7 +47,7 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
     .map_or(0, |index| index + 1);
   let before = &document.text[line_start..offset];
   if let Some(items) = snippets::completions(&document.uri, before, position) {
-    return Ok(json!({"isIncomplete":false,"items":items}));
+    return Ok(completion_list(items, false));
   }
   let mut items = Vec::new();
   if let Some(languages) = fences::completions(before, position) {
@@ -64,7 +66,11 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
           context: String::new(),
           line: 1,
           column: 1,
-          link_type: if wiki { "wiki" } else { "markdown" }.into(),
+          link_type: if wiki {
+            LinkKind::Wiki
+          } else {
+            LinkKind::Markdown
+          },
           target_path: None,
           target_anchor: None,
           target_heading_slug: None,
@@ -102,17 +108,31 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
       );
     }
   }
-  Ok(json!({"isIncomplete":items.len()>=files::LIMIT,"items":items}))
+  let is_incomplete = items.len() >= files::LIMIT;
+  Ok(completion_list(items, is_incomplete))
 }
 fn item(
   label: &str,
   text: &str,
   detail: &str,
-  kind: u8,
+  kind: CompletionItemKind,
   position: Position,
   start: usize,
-) -> Value {
-  json!({"label":label,"kind":kind,"detail":detail,"insertText":text,"textEdit":{"newText":text,"range":{"start":{"line":position.line,"character":start},"end":position}}})
+) -> CompletionItem {
+  CompletionItem {
+    label: label.into(),
+    kind: Some(kind),
+    detail: Some(detail.into()),
+    insert_text: Some(text.into()),
+    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+      new_text: text.into(),
+      range: Range::new(
+        lsp_position(position.line, start),
+        lsp_position(position.line, position.character),
+      ),
+    })),
+    ..CompletionItem::default()
+  }
 }
 fn link_prefix(before: &str) -> Option<(usize, bool)> {
   let wiki = before

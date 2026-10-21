@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::BackendResult;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 pub fn escape(value: &str) -> String {
   value
@@ -20,7 +20,7 @@ pub fn escape(value: &str) -> String {
 pub fn render(
   documents: &[SourceDocument],
   options: &PublicationOptions,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<u8>> {
   let mut body = String::new();
   if options.cover {
@@ -88,7 +88,7 @@ pub fn render(
 fn nodes_html(
   nodes: &[Node],
   document: &SourceDocument,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
   chapter: usize,
 ) -> BackendResult<String> {
   let mut html = String::new();

@@ -1,6 +1,11 @@
+import type {
+  NativeCommandRequest,
+  RuntimeCommandName,
+  RuntimeCommandParameters,
+  RuntimeCommandResult,
+} from '@/runtime/tauri/contract'
 import { isTauri } from '@tauri-apps/api/core'
 import type { DesktopRuntimeApi } from '@/runtime/desktop'
-import type { WorkspaceSessionSeedPayload } from '@/runtime/rendererLifecycle'
 import { createGitApi } from '@/runtime/tauri/git'
 import { createNativeApis } from '@/runtime/tauri/native'
 import { createEventHub, invokeWorkspaceCommand, request } from '@/runtime/tauri/transport'
@@ -26,7 +31,7 @@ const installRuntime = async (): Promise<void> => {
   try {
     await events.install()
     await windows.install()
-    const seed = await request<WorkspaceSessionSeedPayload | null>('workspace_session_seed')
+    const seed = await request('workspace_session_seed')
     // A live change received while awaiting the snapshot is newer than it.
     if (seed && !events.has('workspace-session-seed'))
       events.publish('workspace-session-seed', seed)
@@ -47,10 +52,15 @@ const installRuntime = async (): Promise<void> => {
     lifecycle: { getLaunchInfo: () => request('lifecycle_get_launch_info') },
     platform: { get: () => request('app_get_platform') },
     commands: {
-      invoke: <T>(command: string, payload?: Record<string, unknown>): Promise<T> =>
+      invoke: <C extends RuntimeCommandName>(
+        command: C,
+        ...args: RuntimeCommandParameters<C>
+      ): Promise<RuntimeCommandResult<C>> =>
         command === 'app-ready'
-          ? (appReady(payload as Parameters<typeof appReady>[0]) as Promise<T>)
-          : invokeWorkspaceCommand<T>(command, payload),
+          ? (appReady(args[0] as NativeCommandRequest<'app_ready'>) as Promise<
+              RuntimeCommandResult<C>
+            >)
+          : invokeWorkspaceCommand(command, ...args),
     },
     events: { listen: events.subscribe },
     git: createGitApi(),

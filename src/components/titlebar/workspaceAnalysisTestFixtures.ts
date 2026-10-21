@@ -20,7 +20,16 @@ export const basicWorkspaceNavigationFixture: WorkspaceNavigationResult = {
   revision: 1,
   active_path: 'notes/target.md',
   files: [],
-  headings: [{ path: 'notes/target.md', level: 2, text: 'Indexed Detail', slug: 'indexed-detail' }],
+  headings: [
+    {
+      path: 'notes/target.md',
+      level: 2,
+      text: 'Indexed Detail',
+      slug: 'indexed-detail',
+      line: 1,
+      column: 1,
+    },
+  ],
   file_total: 1,
   heading_total: 1,
   current: {
@@ -42,7 +51,16 @@ export const linkedWorkspaceNavigationFixture: WorkspaceNavigationResult = {
   heading_total: 0,
   headings: [],
   current: {
-    headings: [{ path: 'notes/target.md', level: 2, text: 'Current Topic', slug: 'current-topic' }],
+    headings: [
+      {
+        path: 'notes/target.md',
+        level: 2,
+        text: 'Current Topic',
+        slug: 'current-topic',
+        line: 1,
+        column: 1,
+      },
+    ],
     outgoing_links: [
       {
         source_path: 'notes/target.md',
@@ -50,6 +68,7 @@ export const linkedWorkspaceNavigationFixture: WorkspaceNavigationResult = {
         target: 'resolved.md#done',
         link_type: 'markdown',
         target_path: 'notes/resolved.md',
+        is_external: false,
         target_anchor: 'done',
         target_heading_slug: 'done',
         context: 'Read [Resolved Topic](resolved.md#done)',

@@ -1,9 +1,8 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { FsGraph } from '@/services/fsApi'
-import { graphNodeContent } from '@/logic/graphNodeContent'
 import type { PreviewFileKind } from '@/logic/fileTypes'
 import type { GraphContentMode } from '@/store/appTypes'
-import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
+import type { MarkdownBlock } from '@/logic/markdownBlocks'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 import type { WorkspaceGraphPreview } from '@/services/fsApiSchemas'
 
@@ -78,31 +77,18 @@ export const buildGraphFromKnowledgeGraph = (
   graph: FsGraph,
   contentMode: GraphContentMode = 'none',
 ): GraphData => {
-  const includeContent = contentMode !== 'none'
   const nodes: Node<GraphNodeData>[] = graph.nodes.map((node) => ({
     id: node.id,
     type: node.kind,
     data: {
       label: node.label,
-      subtitle:
-        node.kind === 'heading' && node.level
-          ? `H${node.level}`
-          : (node.path ?? node.slug ?? undefined),
-      path: node.path ?? undefined,
-      line: node.line ?? undefined,
-      level: node.level ?? undefined,
-      slug: node.slug ?? undefined,
-      content: graphNodeContent(node, includeContent),
-      contentBlocks: includeContent
-        ? normalizeMarkdownBlocks(node.content_blocks ?? undefined)
-        : undefined,
-      contentStartLine: includeContent ? (node.content_start_line ?? undefined) : undefined,
-      contentEndLine: includeContent ? (node.content_end_line ?? undefined) : undefined,
+      subtitle: node.path,
+      path: node.path,
       contentMode,
-      previewKind: node.preview_kind ?? undefined,
-      sourcePath: node.source_path ?? undefined,
-      target: node.target ?? undefined,
-      workspaceGroup: node.group ?? undefined,
+      previewKind: node.kind === 'file' ? undefined : node.preview_kind,
+      sourcePath: node.kind === 'file' ? undefined : node.source_path,
+      target: node.kind === 'file' ? undefined : node.target,
+      workspaceGroup: node.kind === 'file' ? node.group : undefined,
     },
     position: { x: 0, y: 0 },
   }))
@@ -111,7 +97,7 @@ export const buildGraphFromKnowledgeGraph = (
     source: edge.source,
     target: edge.target,
     type: 'smoothstep',
-    className: edge.kind === 'contains' ? 'graph-edge--hierarchy' : 'graph-edge--reference',
+    className: 'graph-edge--reference',
     data: { kind: edge.kind },
   }))
 

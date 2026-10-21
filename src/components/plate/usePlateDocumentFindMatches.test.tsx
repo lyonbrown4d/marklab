@@ -2,28 +2,28 @@ import { act, renderHook } from '@testing-library/react'
 import { createPlateEditor } from 'platejs/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePlateDocumentFindMatches } from '@/components/plate/usePlateDocumentFindMatches'
-import {
-  PlateDocumentFindWorkerClient,
-  type PlateDocumentFindWorkerPort,
-} from '@/services/plateDocumentFindWorkerClient'
+import { PlateDocumentFindWorkerClient } from '@/services/plateDocumentFindWorkerClient'
+import { createComlinkTestWorker } from '@/test/comlinkTestWorker'
+import type {
+  PlateDocumentFindWorkerMatch,
+  PlateDocumentFindWorkerScan,
+} from '@/workers/plateDocumentFindWorkerProtocol'
 
-class FakeWorker implements PlateDocumentFindWorkerPort {
-  onerror: ((event: ErrorEvent) => void) | null = null
-  onmessage: ((event: MessageEvent<unknown>) => void) | null = null
-  readonly sent: Array<{ id: number; query: string; source: unknown }> = []
-  terminated = false
-
-  postMessage(message: unknown) {
-    this.sent.push(message as { id: number; query: string; source: unknown })
-  }
-
-  terminate() {
-    this.terminated = true
-  }
-
-  emit(data: unknown) {
-    this.onmessage?.({ data } as MessageEvent<unknown>)
-  }
+const createDeferredWorker = () => {
+  let respond!: (matches: PlateDocumentFindWorkerMatch[]) => void
+  let started!: (request: PlateDocumentFindWorkerScan) => void
+  const request = new Promise<PlateDocumentFindWorkerScan>((resolve) => {
+    started = resolve
+  })
+  const { worker } = createComlinkTestWorker({
+    scan: (input: PlateDocumentFindWorkerScan) => {
+      started(input)
+      return new Promise<PlateDocumentFindWorkerMatch[]>((resolve) => {
+        respond = resolve
+      })
+    },
+  })
+  return { worker, request, respond: (matches: PlateDocumentFindWorkerMatch[]) => respond(matches) }
 }
 
 const regexOptions = { matchCase: false, useRegex: true as const, wholeWord: false }
@@ -41,11 +41,11 @@ describe('usePlateDocumentFindMatches worker lifecycle', () => {
     const editor = createPlateEditor({
       value: [{ children: [{ text: 'alpha beta gamma' }], type: 'p' }],
     })
-    const workers: FakeWorker[] = []
+    const workers: ReturnType<typeof createDeferredWorker>[] = []
     const client = new PlateDocumentFindWorkerClient(() => {
-      const worker = new FakeWorker()
-      workers.push(worker)
-      return worker
+      const next = createDeferredWorker()
+      workers.push(next)
+      return next.worker
     })
     const hook = renderHook(
       ({ active, query }) =>
@@ -53,34 +53,35 @@ describe('usePlateDocumentFindMatches worker lifecycle', () => {
       { initialProps: { active: true, query: 'alpha' } },
     )
     expect(workers).toHaveLength(1)
-    const firstSource = workers[0]!.sent[0]!.source
+    const firstSource = (await workers[0]!.request).source
 
     hook.rerender({ active: true, query: 'beta' })
-    expect(workers[0]!.terminated).toBe(true)
+    expect(workers[0]!.worker.terminate).toHaveBeenCalledOnce()
     expect(workers).toHaveLength(2)
-    expect(workers[1]!.sent[0]!.source).toBe(firstSource)
-    act(() => workers[0]!.emit({ id: 1, matches: [match('stale')], ok: true }))
+    expect((await workers[1]!.request).source).toEqual(firstSource)
+    act(() => workers[0]!.respond([match('stale')]))
     await act(async () => {
-      workers[1]!.emit({ id: 2, matches: [match('beta')], ok: true })
-      await Promise.resolve()
+      workers[1]!.respond([match('beta')])
+      await new Promise((resolve) => setImmediate(resolve))
     })
     expect(hook.result.current.matches[0]?.regex?.match).toBe('beta')
 
     hook.rerender({ active: false, query: 'beta' })
     act(() => vi.runOnlyPendingTimers())
-    expect(workers[1]!.terminated).toBe(true)
+    expect(workers[1]!.worker.terminate).toHaveBeenCalledOnce()
 
     hook.rerender({ active: true, query: 'gamma' })
     expect(workers).toHaveLength(3)
     await act(async () => {
-      workers[2]!.emit({ id: 3, matches: [match('gamma')], ok: true })
-      await Promise.resolve()
+      await workers[2]!.request
+      workers[2]!.respond([match('gamma')])
+      await new Promise((resolve) => setImmediate(resolve))
     })
     expect(hook.result.current.matches[0]?.regex?.match).toBe('gamma')
 
     hook.rerender({ active: false, query: '' })
     act(() => vi.runOnlyPendingTimers())
-    expect(workers.every((worker) => worker.terminated)).toBe(true)
+    workers.forEach(({ worker }) => expect(worker.terminate).toHaveBeenCalledOnce())
     hook.unmount()
   })
 
@@ -92,8 +93,8 @@ describe('usePlateDocumentFindMatches worker lifecycle', () => {
     const editor = createPlateEditor({
       value: [{ children: [{ text: 'alpha beta gamma' }], type: 'p' }],
     })
-    const worker = new FakeWorker()
-    const client = new PlateDocumentFindWorkerClient(() => worker)
+    const testWorker = createDeferredWorker()
+    const client = new PlateDocumentFindWorkerClient(() => testWorker.worker)
     const hook = renderHook(
       ({ active, query, useRegex }) =>
         usePlateDocumentFindMatches(
@@ -107,9 +108,10 @@ describe('usePlateDocumentFindMatches worker lifecycle', () => {
       { initialProps: { active: true, query: 'alpha', useRegex: true } },
     )
 
+    await testWorker.request
     hook.rerender(next)
-    expect(worker.terminated).toBe(true)
-    act(() => worker.emit({ id: 1, matches: [match('stale')], ok: true }))
+    expect(testWorker.worker.terminate).toHaveBeenCalledOnce()
+    act(() => testWorker.respond([match('stale')]))
     await act(async () => Promise.resolve())
     expect(hook.result.current.matches).toHaveLength(expectedMatches)
     expect(hook.result.current.matches[0]?.regex).toBeUndefined()

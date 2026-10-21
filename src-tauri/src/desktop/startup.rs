@@ -8,22 +8,42 @@ use std::{
     atomic::{AtomicBool, Ordering},
   },
 };
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
-#[derive(Clone, Serialize)]
+use tauri::{AppHandle, Manager, WebviewWindow};
+#[derive(Clone, Copy, Serialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum OpeningStage {
+  #[allow(
+    dead_code,
+    reason = "Retained in the shared startup progress wire protocol."
+  )]
+  Starting,
+  Loading,
+  #[allow(
+    dead_code,
+    reason = "Retained in the shared startup progress wire protocol."
+  )]
+  Indexing,
+  Failed,
+}
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Progress {
-  pub stage: &'static str,
+  pub stage: OpeningStage,
   pub workspace_path: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub error: Option<String>,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionSeed {
   #[serde(flatten)]
   value: crate::settings::PersistedValue,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
   native_attempt: u64,
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(default, with = "crate::ipc_number")]
+  #[specta(type = Option<u64>)]
   native_generation: Option<u64>,
 }
 pub fn seed(
@@ -89,7 +109,7 @@ impl StartupState {
       Boot {
         phase: Phase::Loading,
         progress: Progress {
-          stage: "loading",
+          stage: OpeningStage::Loading,
           workspace_path: target.clone().unwrap_or_default(),
           error: None,
         },
@@ -136,10 +156,10 @@ pub fn emit_progress(app: &AppHandle, label: &str) {
   if let Ok(Some(boot)) = app.state::<StartupState>().boot(label) {
     for target in [label.to_string(), format!("opening-{label}")] {
       if let Some(window) = crate::native_window::get(app, &target) {
-        let _ = window.emit_to(
+        let _ = crate::desktop::event_contracts::WINDOW_OPENING_PROGRESS.emit_to(
+          window.app_handle(),
           tauri::EventTarget::webview_window(window.label()),
-          "window-opening-progress",
-          boot.progress.clone(),
+          &(boot.progress.clone()),
         );
       }
     }
@@ -151,7 +171,7 @@ pub async fn failed(app: &AppHandle, label: &str, error: String) -> BackendResul
   state.progress(
     label,
     Progress {
-      stage: "failed",
+      stage: OpeningStage::Failed,
       workspace_path: target.unwrap_or_default(),
       error: Some(error),
     },
@@ -205,10 +225,10 @@ pub async fn ready(
       {
         boot.phase = Phase::Interactive;
       }
-      window.emit_to(
+      crate::desktop::event_contracts::WINDOW_PRESENTED.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        "window-presented",
-        (),
+        &(),
       )?;
       super::launch::flush(app, window)?;
     }

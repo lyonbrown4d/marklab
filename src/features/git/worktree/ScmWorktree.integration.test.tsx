@@ -33,9 +33,14 @@ vi.mock('@/services/gitApi', () => {
   }
   return { gitApi, gitApiForWorkspace: () => gitApi }
 })
-const change = (path: string) => ({ path, status: 'modified' as const, detail: 'modified' })
+const change = (path: string) => ({
+  path,
+  old_path: null,
+  status: 'modified' as const,
+  detail: 'modified',
+})
 const snapshot = (overrides: Partial<GitStatusSnapshot> = {}): GitStatusSnapshot => ({
-  repo: { is_repository: true, branch: 'main' },
+  repo: { workdir: null, git_dir: null, head: null, is_repository: true, branch: 'main' },
   staged: [],
   unstaged: [],
   untracked: [],
@@ -161,8 +166,8 @@ describe('source control worktree operations', () => {
     vi.mocked(gitApi.getStatus).mockResolvedValue(
       snapshot({
         untracked: [
-          { path: 'new.md', status: 'untracked', detail: '' },
-          { path: 'keep.md', status: 'untracked', detail: '' },
+          { old_path: null, path: 'new.md', status: 'untracked', detail: '' },
+          { old_path: null, path: 'keep.md', status: 'untracked', detail: '' },
         ],
       }),
     )
@@ -190,7 +195,9 @@ describe('source control worktree operations', () => {
     vi.mocked(gitApi.getOperationState).mockResolvedValue({ operation: 'merge' })
     vi.mocked(gitApi.getStatus).mockResolvedValue(
       snapshot({
-        conflicts: [{ path: 'conflict.md', status: 'conflicted', detail: 'both modified' }],
+        conflicts: [
+          { old_path: null, path: 'conflict.md', status: 'conflicted', detail: 'both modified' },
+        ],
       }),
     )
     vi.mocked(gitApi.abortOperation).mockResolvedValue(snapshot())

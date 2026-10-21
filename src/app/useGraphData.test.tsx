@@ -20,7 +20,15 @@ vi.mock('@/services/fsApi', async () => {
 const graph = (label: string): FsGraph => ({
   mode: 'mindmap',
   revision: label,
-  nodes: [{ id: `file:${label}`, kind: 'file', label, path: `${label}.md` }],
+  nodes: [
+    {
+      id: `file:${label}`,
+      kind: 'file',
+      label,
+      path: `${label}.md`,
+      group: { key: 'Workspace', label: 'Workspace', source: 'path' },
+    },
+  ],
   edges: [],
 })
 const createQueryClient = () =>

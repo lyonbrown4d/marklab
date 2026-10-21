@@ -10,7 +10,7 @@ export const htmlPreviewApi = {
     if (new TextEncoder().encode(source).byteLength > MAX_HTML_PREVIEW_BYTES) {
       throw new Error('HTML preview is limited to 512 KiB')
     }
-    const result = await invoke<unknown>('html_preview_render', { source })
+    const result = await invoke('html_preview_render', { source })
     signal.throwIfAborted()
     return resultSchema.parse(result).document
   },

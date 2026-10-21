@@ -3,7 +3,7 @@ mod commands;
 mod create;
 mod native;
 mod shortcuts;
-mod types;
+pub(crate) mod types;
 use crate::{
   error::{BackendError, BackendResult},
   native_window::TrustedWindow,
@@ -14,7 +14,7 @@ use std::{
   collections::HashMap,
   sync::{Arc, Mutex},
 };
-use tauri::{Emitter, Webview};
+use tauri::{Manager, Webview};
 use types::*;
 #[derive(Clone)]
 struct Entry {
@@ -117,7 +117,7 @@ impl WebTabs {
   pub fn resume(&self, owner: &str) {
     for entry in self.entries(owner) {
       if entry.state.active
-        && entry.state.status == "ready"
+        && entry.state.status == TabStatus::Ready
         && let Some(view) = entry.view
       {
         let _ = view.show();
@@ -167,10 +167,10 @@ impl WebTabs {
       None
     };
     if let Some(state) = state {
-      let _ = window.emit_to(
+      let _ = crate::desktop::event_contracts::WEB_TABS_STATE.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        "web-tabs-state",
-        Event::State { state },
+        &(Event::State { state }),
       );
     }
   }
@@ -180,7 +180,7 @@ impl WebTabs {
         load.abort();
       }
       entry.generation += 1;
-      entry.state.status = "loading".into();
+      entry.state.status = TabStatus::Loading;
       entry.state.error = None;
       entry.state.url = url;
     });
@@ -198,11 +198,13 @@ impl WebTabs {
         if manager
           .entry(owner_window.label(), &timer_id)
           .is_ok_and(|v| {
-            v.instance == instance && v.generation == generation && v.state.status == "loading"
+            v.instance == instance
+              && v.generation == generation
+              && v.state.status == TabStatus::Loading
           })
         {
           manager.change(&owner_window, &timer_id, |v| {
-            v.state.status = "error".into();
+            v.state.status = TabStatus::Error;
             v.state.error = Some(TabError {
               description: "Web page did not finish loading".into(),
             });
@@ -228,7 +230,7 @@ impl WebTabs {
       if let Some(load) = v.load.take() {
         load.abort();
       }
-      v.state.status = "ready".into();
+      v.state.status = TabStatus::Ready;
       v.state.error = None;
     });
     if let Ok(entry) = self.entry(window.label(), id)
@@ -254,17 +256,17 @@ impl WebTabs {
           .iter()
           .rev()
           .find(|binding| binding.key == key && binding.modifiers == modifiers)
-          .map(|binding| binding.action.clone())
+          .map(|binding| binding.action)
       })
     });
     if let Some(action) = action {
-      let _ = window.emit_to(
+      let _ = crate::desktop::event_contracts::WEB_TABS_STATE.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        "web-tabs-state",
-        Event::Shortcut {
+        &(Event::Shortcut {
           action,
           tab_id: id.into(),
-        },
+        }),
       );
       true
     } else {

@@ -1,13 +1,13 @@
 use super::{Position, files, item};
 use crate::analysis::document::Document;
-use serde_json::{Value, json};
+use lsp_types::{CompletionItem, CompletionItemKind};
 
 pub(super) fn completions(
   file: &Document,
   query: &str,
   position: Position,
   start: usize,
-) -> Vec<Value> {
+) -> Vec<CompletionItem> {
   let query = query.trim().to_lowercase();
   let mut fuzzy_budget = 1024usize;
   let mut headings: Vec<_> = file
@@ -53,7 +53,7 @@ pub(super) fn completions(
         &heading.text,
         &heading.slug,
         &format!("{}#{}", file.path, heading.slug),
-        18,
+        CompletionItemKind::REFERENCE,
         position,
         start,
       );
@@ -69,7 +69,7 @@ pub(super) fn completions(
       } else {
         30
       };
-      value["sortText"] = json!(format!("{score:04}-{}", heading.text));
+      value.sort_text = Some(format!("{score:04}-{}", heading.text));
       value
     })
     .collect()

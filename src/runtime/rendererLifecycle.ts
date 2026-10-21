@@ -1,13 +1,11 @@
+import type { RuntimeEventPayloads } from '@/runtime/tauri/contract'
 import { signalAppReady } from '@/runtime/app'
 import { listen } from '@/runtime/events'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 import type { RendererReadySignal } from '@/types/rendererReady'
 import { nextRendererFrame } from '@/runtime/rendererFrame'
 
-export type WorkspaceSessionSeedPayload = {
-  state?: Record<string, unknown>
-  version?: number
-}
+export type WorkspaceSessionSeedPayload = RuntimeEventPayloads['workspace-session-seed']
 
 type SeedListener = (payload: WorkspaceSessionSeedPayload) => void
 
@@ -27,7 +25,7 @@ export const acceptWorkspaceSessionSeed = (payload: WorkspaceSessionSeedPayload)
 
 export const installWorkspaceSessionSeedBridge = (): Promise<void> => {
   if (bridgeInstallation) return bridgeInstallation
-  const installation = listen<WorkspaceSessionSeedPayload>('workspace-session-seed', (event) =>
+  const installation = listen('workspace-session-seed', (event) =>
     acceptWorkspaceSessionSeed(event.payload),
   ).then(() => undefined)
   const guardedInstallation = installation.catch((error: unknown) => {

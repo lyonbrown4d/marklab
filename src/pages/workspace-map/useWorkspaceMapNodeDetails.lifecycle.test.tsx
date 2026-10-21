@@ -59,7 +59,7 @@ describe('workspace map detail route lifecycle', () => {
 
   it('does no observation or requests while inactive and resumes with the latest graph', async () => {
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockImplementation(async (request) => ({
-      items: [{ id: 'file:a.md', content: request.revision }],
+      items: [{ id: 'file:a.md', content: request.revision, preview: { html: '', math: [] } }],
       revision: request.revision,
       truncated: false,
     }))
@@ -88,7 +88,7 @@ describe('workspace map detail route lifecycle', () => {
     ) => void
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails)
       .mockResolvedValueOnce({
-        items: [{ id: 'file:a.md', content: 'preview' }],
+        items: [{ id: 'file:a.md', content: 'preview', preview: { html: '', math: [] } }],
         revision: 'one',
         truncated: false,
       })
@@ -110,7 +110,7 @@ describe('workspace map detail route lifecycle', () => {
     expect(result.current.nodes[0]?.data.content).toBeUndefined()
     await advance(1)
     resolvePending({
-      items: [{ id: 'file:a.md', content: 'late' }],
+      items: [{ id: 'file:a.md', content: 'late', preview: { html: '', math: [] } }],
       revision: 'one',
       truncated: false,
     })
@@ -130,7 +130,7 @@ describe('workspace map detail route lifecycle', () => {
 
   it('releases placeholder details when the active viewport has no file nodes', async () => {
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockResolvedValue({
-      items: [{ id: 'file:a.md', content: 'preview' }],
+      items: [{ id: 'file:a.md', content: 'preview', preview: { html: '', math: [] } }],
       revision: 'one',
       truncated: false,
     })

@@ -64,6 +64,8 @@ const page = {
   totalRows: 201,
   offset: 0,
   rows: [['header', 'value']],
+  cells: [[{ value: 'header' }, { value: 'value' }]],
+  calculation: { status: 'cached' as const, warnings: [], errorCount: 0 },
   truncated: false,
 }
 const renderPreview = (
@@ -230,7 +232,7 @@ describe('SpreadsheetPreviewSurface', () => {
   it('shows failures with retry and handles empty truncated sheets explicitly', async () => {
     vi.mocked(spreadsheetApi.readPage)
       .mockRejectedValueOnce(new Error('Bad workbook'))
-      .mockResolvedValueOnce({ ...page, rows: [], totalRows: 0, truncated: true })
+      .mockResolvedValueOnce({ ...page, rows: [], cells: [], totalRows: 0, truncated: true })
     renderPreview()
     expect(await screen.findByRole('alert')).toHaveTextContent('Bad workbook')
     fireEvent.click(screen.getByRole('button', { name: 'preview.spreadsheetRetry' }))

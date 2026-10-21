@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import { gitStatusSnapshotSchema } from '@/services/gitSchemas'
 import { gitPreviewUnavailableSchema } from '@/types/gitPreview'
@@ -10,28 +11,41 @@ export const gitConflictSnapshotSchema = z.object({
   result: z.string(),
   revision: z.string().regex(/^[a-f0-9]{64}$/i),
   deleted: z.boolean(),
-  markerSize: z.number().int().min(1).max(1024).optional(),
-})
+  markerSize: z.number().int().min(1).max(1024),
+}) satisfies z.ZodType<GitConflictSnapshot>
+
 export const gitConflictSaveRequestSchema = z
   .object({
     path: z.string().min(1).max(32_768),
     content: z.string().max(1_048_576),
     revision: z.string().regex(/^[a-f0-9]{64}$/i),
-    stage: z.boolean().optional(),
-    deleteFile: z.boolean().optional(),
+    stage: z.boolean().nullish(),
+    deleteFile: z.boolean().nullish(),
   })
-  .strict()
-export const gitConflictPathSchema = z.object({ path: z.string().min(1).max(32_768) }).strict()
+  .strict() satisfies z.ZodType<GitConflictSaveRequest>
+
+export const gitConflictPathSchema = z
+  .object({ path: z.string().min(1).max(32_768) })
+  .strict() satisfies z.ZodType<DesktopCommandArgs['git_conflict']['request']>
+
 export const gitConflictSaveResultSchema = z.object({
   status: gitStatusSnapshotSchema,
   revision: z.string().regex(/^[a-f0-9]{64}$/i),
   staged: z.boolean(),
-})
-export type GitConflictSnapshot = z.infer<typeof gitConflictSnapshotSchema>
+}) satisfies z.ZodType<GitConflictSaveResult>
+
+export type GitConflictSnapshot = Exclude<
+  DesktopCommandResults['git_conflict'],
+  { unavailable_reason: string }
+>
+
 export const gitConflictPreviewSchema = z.union([
   gitPreviewUnavailableSchema,
   gitConflictSnapshotSchema,
-])
-export type GitConflictPreview = z.infer<typeof gitConflictPreviewSchema>
-export type GitConflictSaveRequest = z.infer<typeof gitConflictSaveRequestSchema>
-export type GitConflictSaveResult = z.infer<typeof gitConflictSaveResultSchema>
+]) satisfies z.ZodType<GitConflictPreview>
+
+export type GitConflictPreview = DesktopCommandResults['git_conflict']
+
+export type GitConflictSaveRequest = DesktopCommandArgs['git_conflict_save']['request']
+
+export type GitConflictSaveResult = DesktopCommandResults['git_conflict_save']

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize, thiserror::Error)]
+#[derive(Debug, Clone, Serialize, thiserror::Error, specta::Type)]
 #[error("{message}")]
 pub struct BackendError {
   pub code: String,

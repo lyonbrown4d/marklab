@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 import type {
   RendererDiagnosticError,
@@ -5,7 +6,10 @@ import type {
   RendererDiagnosticReport,
 } from '@/types/rendererDiagnostics'
 
-type DiagnosticInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>
+type DiagnosticInvoke = (
+  command: 'diagnostics_renderer_report',
+  args: DesktopCommandArgs['diagnostics_renderer_report']['request'],
+) => Promise<DesktopCommandResults['diagnostics_renderer_report']>
 type ReporterOptions = { invoke: DiagnosticInvoke; now?: () => number }
 
 export type RendererDiagnosticReporter = {
@@ -49,9 +53,7 @@ export const createRendererDiagnosticReporter = ({
     recent.set(fingerprint, timestamp)
     if (recent.size > 100) recent.delete(recent.keys().next().value ?? fingerprint)
     void Promise.resolve()
-      .then(() =>
-        invoke('diagnostics_renderer_report', report as unknown as Record<string, unknown>),
-      )
+      .then(() => invoke('diagnostics_renderer_report', report))
       .catch(() => undefined)
   }
   return {

@@ -29,6 +29,8 @@ const page = {
   totalRows: 1,
   offset: 0,
   rows: [['=SUM(A1)']],
+  cells: [[{ value: '=SUM(A1)' }]],
+  calculation: { status: 'cached' as const, warnings: [], errorCount: 0 },
   truncated: false,
 }
 

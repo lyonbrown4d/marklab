@@ -4,12 +4,12 @@ use super::types::{PublicationOptions, SourceDocument};
 use super::typst_engine::{compile, math, quoted};
 use crate::error::{BackendError, BackendResult};
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 pub fn render(
   documents: &[SourceDocument],
   options: &PublicationOptions,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<u8>> {
   let (width, height) = options.dimensions_mm();
   let numbering = if options.page_numbers {

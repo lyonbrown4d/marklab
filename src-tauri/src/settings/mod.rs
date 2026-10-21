@@ -7,7 +7,7 @@ mod types;
 use crate::error::{BackendError, BackendResult};
 pub use commands::*;
 use serde_json::Value;
-use sqlx::{Row, SqlitePool};
+use sqlx::{SqlitePool, types::Json};
 use types::*;
 pub use types::{PersistResult, PersistedValue, RecentWorkspace, WindowState};
 
@@ -75,33 +75,28 @@ impl SettingsStore {
     }
   }
   pub async fn read_setting(&self, key: &str) -> BackendResult<Option<PersistedValue>> {
-    let row = sqlx::query("SELECT value_json,version FROM settings WHERE key=?")
-      .bind(key)
-      .fetch_optional(&self.pool)
-      .await?;
-    row
-      .map(|row| {
-        Ok(PersistedValue {
-          state: serde_json::from_str(row.get("value_json")).map_err(json_error)?,
-          version: row.get("version"),
-        })
-      })
-      .transpose()
+    let row = sqlx::query_as::<_, (Json<serde_json::Map<String, Value>>, Option<i64>)>(
+      "SELECT value_json,version FROM settings WHERE key=?",
+    )
+    .bind(key)
+    .fetch_optional(&self.pool)
+    .await
+    .map_err(persisted_decode_error)?;
+    Ok(row.map(|(Json(state), version)| PersistedValue { state, version }))
   }
   pub async fn write_setting(&self, key: &str, value: &PersistedValue) -> BackendResult<()> {
     sqlx::query("INSERT INTO settings(key,value_json,version) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,version=excluded.version")
-            .bind(key).bind(serde_json::to_string(&value.state).map_err(json_error)?).bind(value.version).execute(&self.pool).await?;
+            .bind(key).bind(Json(&value.state)).bind(value.version).execute(&self.pool).await?;
     Ok(())
   }
   pub async fn get_window_state(&self, id: &str) -> BackendResult<Option<WindowState>> {
-    let value: Option<String> =
+    let value: Option<Json<WindowState>> =
       sqlx::query_scalar("SELECT value_json FROM window_state WHERE window_id=?")
         .bind(id)
         .fetch_optional(&self.pool)
-        .await?;
-    value
-      .map(|value| serde_json::from_str(&value).map_err(json_error))
-      .transpose()
+        .await
+        .map_err(persisted_decode_error)?;
+    Ok(value.map(|Json(value)| value))
   }
   pub async fn set_window_state(&self, id: &str, value: &WindowState) -> BackendResult<()> {
     if value.width == 0 || value.height == 0 {
@@ -111,10 +106,20 @@ impl SettingsStore {
       ));
     }
     sqlx::query("INSERT INTO window_state(window_id,value_json) VALUES(?,?) ON CONFLICT(window_id) DO UPDATE SET value_json=excluded.value_json")
-            .bind(id).bind(serde_json::to_string(value).map_err(json_error)?).execute(&self.pool).await?;
+            .bind(id).bind(Json(value)).execute(&self.pool).await?;
     Ok(())
   }
 }
 pub(crate) fn json_error(error: serde_json::Error) -> BackendError {
   BackendError::new("invalid_persisted_data", error.to_string())
+}
+
+// SQLx wraps Serde failures in ColumnDecode; retain the persisted-data contract.
+pub(crate) fn persisted_decode_error(error: sqlx::Error) -> BackendError {
+  if let sqlx::Error::ColumnDecode { source, .. } = &error
+    && let Some(error) = source.downcast_ref::<serde_json::Error>()
+  {
+    return BackendError::new("invalid_persisted_data", error.to_string());
+  }
+  error.into()
 }

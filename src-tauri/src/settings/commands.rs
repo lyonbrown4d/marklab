@@ -4,31 +4,35 @@ use crate::{
   error::{BackendError, BackendResult},
   workspace::WorkspaceRegistry,
 };
+pub use SettingsEmptyRequest as EmptyRequest;
 use serde::Deserialize;
 use serde_json::Value;
-use tauri::{Emitter, Manager, State};
+use tauri::{Manager, State};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct EmptyRequest {}
-#[derive(Deserialize)]
+pub struct SettingsEmptyRequest {}
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct KeyRequest {
   key: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct SetRequest {
   key: String,
+  #[specta(type = crate::ipc_json::JsonValue)]
   value: Value,
 }
-#[derive(Deserialize)]
+pub use SettingsPathRequest as PathRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct PathRequest {
+pub struct SettingsPathRequest {
   path: String,
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn settings_persist_get(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -39,6 +43,7 @@ pub async fn settings_persist_get(
   store.get(&request.key, window.label()).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn settings_persist_set(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -67,7 +72,7 @@ pub async fn settings_persist_set(
         .and_then(|state| state.get("rootKind"))
         .and_then(Value::as_str)
         .unwrap_or("internal");
-      if root != info.path || requested_kind != info.kind {
+      if root != info.path || requested_kind != info.kind.as_str() {
         return Err(BackendError::new(
           "workspace_mismatch",
           "Session root must match this window's workspace",
@@ -78,7 +83,8 @@ pub async fn settings_persist_set(
       .set(&request.key, window.label(), request.value)
       .await?;
     if request.key == super::types::WORKSPACE {
-      let _ = window.app_handle().emit("recent-workspaces-changed", ());
+      let _ =
+        crate::desktop::event_contracts::RECENT_WORKSPACES_CHANGED.emit(window.app_handle(), &());
     }
     Ok(())
   }
@@ -86,6 +92,7 @@ pub async fn settings_persist_set(
   Ok(PersistResult::from_result(result))
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn settings_persist_remove(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -106,6 +113,7 @@ pub async fn settings_persist_remove(
   ))
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn recent_workspaces_list(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -117,6 +125,7 @@ pub async fn recent_workspaces_list(
   store.list_recent_workspaces().await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn recent_workspaces_remove(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -127,7 +136,8 @@ pub async fn recent_workspaces_remove(
     async {
       registry.get(window.label())?;
       store.remove_recent_workspace(&request.path).await?;
-      let _ = window.app_handle().emit("recent-workspaces-changed", ());
+      let _ =
+        crate::desktop::event_contracts::RECENT_WORKSPACES_CHANGED.emit(window.app_handle(), &());
       Ok(())
     }
     .await,

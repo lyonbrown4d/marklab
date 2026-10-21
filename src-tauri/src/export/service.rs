@@ -1,21 +1,24 @@
+use super::types::ExportTaskStatus;
 use super::{
   render,
   types::{ChapterRequest, ExportTaskEvent, PublicationOptions},
 };
+use crate::desktop::event_contracts::EXPORT_TASK;
 use crate::error::{BackendError, BackendResult};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::platform::save_paths::SavePathGrant;
 use crate::workspace::Workspace;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use tokio::sync::Semaphore;
+use tokio_util::sync::CancellationToken;
 
 struct Task {
   owner: String,
-  cancelled: AtomicBool,
+  cancelled: CancellationToken,
   // One atomic transition arbitrates cancellation versus the final disk write.
   state: AtomicU8,
   window: WebviewWindow,
@@ -62,13 +65,13 @@ impl ExportService {
       id: id.clone(),
       format: options.format,
       output_path: output.to_string_lossy().into_owned(),
-      status: "started".into(),
+      status: ExportTaskStatus::Started,
       progress: Some(0.05),
       message: "Export queued".into(),
     };
     let task = Arc::new(Task {
       owner: window.label().into(),
-      cancelled: AtomicBool::new(false),
+      cancelled: CancellationToken::new(),
       state: AtomicU8::new(0),
       window: window.clone(),
       event: event.clone(),
@@ -145,22 +148,21 @@ impl ExportService {
           {
             outputs.insert(output.clone(), task.owner.clone());
           }
-          event.status = "finished".into();
+          event.status = ExportTaskStatus::Finished;
           event.progress = Some(1.0);
           event.message = "Export finished".into();
         }
         Err(error) => {
           event.status = if error.code == "EXPORT_CANCELLED" {
-            "cancelled"
+            ExportTaskStatus::Cancelled
           } else {
-            "failed"
-          }
-          .into();
+            ExportTaskStatus::Failed
+          };
           event.progress = None;
           event.message = error.message;
         }
       }
-      if !task.cancelled.load(Ordering::Acquire) {
+      if !task.cancelled.is_cancelled() {
         emit(&window, &event);
         if matches!(event.status.as_str(), "finished" | "failed") {
           crate::notifications::notify(
@@ -170,7 +172,7 @@ impl ExportService {
               event.format.extension(),
               &output,
               &task.owner,
-              event.status == "finished",
+              event.status == super::types::ExportTaskStatus::Finished,
             )
             .with_owner(&window),
           );
@@ -196,9 +198,9 @@ impl ExportService {
     {
       return Ok(false);
     }
-    task.cancelled.store(true, Ordering::Release);
+    task.cancelled.cancel();
     let mut event = task.event.clone();
-    event.status = "cancelled".into();
+    event.status = ExportTaskStatus::Cancelled;
     event.progress = None;
     event.message = "Export cancelled".into();
     emit(&task.window, &event);
@@ -213,7 +215,7 @@ impl ExportService {
         .compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire)
         .is_ok()
       {
-        task.cancelled.store(true, Ordering::Release);
+        task.cancelled.cancel();
       }
     }
     self
@@ -232,9 +234,9 @@ impl ExportService {
 }
 
 fn emit(window: &WebviewWindow, payload: &ExportTaskEvent) {
-  if let Err(error) = window.emit_to(
+  if let Err(error) = EXPORT_TASK.emit_to(
+    window.app_handle(),
     tauri::EventTarget::webview_window(window.label()),
-    "export-task",
     payload,
   ) {
     log::warn!("Export progress delivery failed: {error}");

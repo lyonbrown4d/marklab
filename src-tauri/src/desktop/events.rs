@@ -1,6 +1,6 @@
 use super::lifecycle::{cleanup_window, close_window, request_quit};
 use crate::workspace::WorkspaceRegistry;
-use tauri::{AppHandle, Emitter, Manager, RunEvent, Window, WindowEvent};
+use tauri::{AppHandle, Manager, RunEvent, Window, WindowEvent};
 pub fn window_event(window: &Window, event: &WindowEvent) {
   match event {
     WindowEvent::CloseRequested { api, .. } => {
@@ -26,10 +26,12 @@ pub fn window_event(window: &Window, event: &WindowEvent) {
       let _ = super::menus::refresh_shortcuts(window.app_handle(), window.label());
     }
     WindowEvent::ThemeChanged(theme) => {
-      let _ = window.emit_to(
+      let _ = crate::desktop::event_contracts::SYSTEM_THEME_CHANGED.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        "system-theme-changed",
-        serde_json::json!({"colorMode":if *theme==tauri::Theme::Dark{"dark"}else{"light"}}),
+        &(crate::desktop::event_contracts::SystemThemeChanged {
+          color_mode: (*theme).into(),
+        }),
       );
     }
     WindowEvent::Destroyed => {

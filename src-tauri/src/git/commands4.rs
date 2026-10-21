@@ -3,6 +3,7 @@ use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{error::BackendResult, workspace::WorkspaceRegistry};
 use tauri::{Manager, State};
 #[tauri::command]
+#[specta::specta]
 pub async fn git_remote_remove(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -32,6 +33,7 @@ pub async fn git_remote_remove(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_fetch(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -61,6 +63,7 @@ pub async fn git_fetch(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_pull(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -102,6 +105,7 @@ pub async fn git_pull(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_push(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -131,6 +135,7 @@ pub async fn git_push(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_reset(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -160,6 +165,7 @@ pub async fn git_reset(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_branch_create(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

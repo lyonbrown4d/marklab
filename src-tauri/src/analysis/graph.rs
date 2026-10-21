@@ -1,14 +1,15 @@
+pub use super::graph_types::*;
+pub use super::publication::publication;
 use super::{Index, document::Document, targets};
 use crate::error::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn revision(index: &Index) -> String {
   format!("{}:{}", index.generation, index.revision)
 }
 
-pub fn graph(index: &Index) -> Value {
+pub fn graph(index: &Index) -> WorkspaceGraph {
   let mut nodes = BTreeMap::new();
   let mut edges = BTreeMap::new();
   for document in index.files.values() {
@@ -17,7 +18,19 @@ pub fn graph(index: &Index) -> Value {
       .path
       .rsplit_once('/')
       .map_or("Workspace", |(folder, _)| folder);
-    nodes.insert(id.clone(),json!({"id":id,"kind":"file","label":document.title,"path":document.path,"group":{"key":folder,"label":folder,"source":"path"}}));
+    nodes.insert(
+      id.clone(),
+      GraphNode::File {
+        id,
+        label: document.title.clone(),
+        path: document.path.clone(),
+        group: GraphGroup {
+          key: folder.into(),
+          label: folder.into(),
+          source: GroupSource::Path,
+        },
+      },
+    );
   }
   for document in index.files.values() {
     let source = format!("file:{}", document.path);
@@ -31,20 +44,40 @@ pub fn graph(index: &Index) -> Value {
         (
           format!("file:{path}"),
           if link.target_heading_slug.is_some() {
-            "references_heading"
+            EdgeKind::ReferencesHeading
           } else {
-            "links_to"
+            EdgeKind::LinksTo
           },
         )
       } else if index.paths.contains(path) {
-        (format!("preview:{path}"), "previews")
+        (format!("preview:{path}"), EdgeKind::Previews)
       } else {
-        (format!("missing:{path}"), "links_to")
+        (format!("missing:{path}"), EdgeKind::LinksTo)
       };
       if target == source {
         continue;
       }
-      nodes.entry(target.clone()).or_insert_with(||json!({"id":target,"kind":if index.paths.contains(path){"preview"}else{"missing"},"label":path,"path":path,"source_path":document.path,"target":link.target,"preview_kind":preview_kind(path)}));
+      nodes.entry(target.clone()).or_insert_with(|| {
+        if index.paths.contains(path) {
+          GraphNode::Preview {
+            id: target.clone(),
+            label: path.into(),
+            path: path.into(),
+            source_path: document.path.clone(),
+            target: link.target.clone(),
+            preview_kind: preview_kind(path),
+          }
+        } else {
+          GraphNode::Missing {
+            id: target.clone(),
+            label: path.into(),
+            path: path.into(),
+            source_path: document.path.clone(),
+            target: link.target.clone(),
+            preview_kind: preview_kind(path),
+          }
+        }
+      });
       let (a, b) = if source < target {
         (source.clone(), target)
       } else {
@@ -52,22 +85,33 @@ pub fn graph(index: &Index) -> Value {
       };
       edges
         .entry((a.clone(), b.clone()))
-        .or_insert_with(|| json!({"id":format!("edge:{a}:{b}"),"source":a,"target":b,"kind":kind}));
+        .or_insert_with(|| GraphEdge {
+          id: format!("edge:{a}:{b}"),
+          source: a,
+          target: b,
+          kind,
+        });
     }
   }
-  json!({"mode":"mindmap","revision":revision(index),"nodes":nodes.into_values().collect::<Vec<_>>(),"edges":edges.into_values().collect::<Vec<_>>()})
+  WorkspaceGraph {
+    mode: GraphMode::Mindmap,
+    revision: revision(index),
+    nodes: nodes.into_values().collect(),
+    edges: edges.into_values().collect(),
+  }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct DetailsRequest {
   pub revision: String,
   pub node_ids: Vec<String>,
   pub mode: String,
+  #[serde(default)]
   pub max_nodes: Option<usize>,
 }
 
-pub fn details(index: &Index, request: DetailsRequest) -> BackendResult<Value> {
+pub fn details(index: &Index, request: DetailsRequest) -> BackendResult<GraphDetails> {
   let limit = request.max_nodes.unwrap_or(32);
   if !(1..=64).contains(&limit)
     || request.node_ids.is_empty()
@@ -104,15 +148,20 @@ pub fn details(index: &Index, request: DetailsRequest) -> BackendResult<Value> {
         .map(|file| {
           let content = summary(file);
           let preview = super::graph_preview::render(&content);
-          let mut item = json!({"id":id,"content":content,"preview":preview});
-          if request.mode == "full" {
-            item["content_blocks"] = blocks(file);
+          GraphDetail {
+            id: id.clone(),
+            content,
+            preview,
+            content_blocks: (request.mode == "full").then(|| blocks(file)),
           }
-          item
         })
     })
     .collect();
-  Ok(json!({"items":items,"revision":request.revision,"truncated":selected.len()>limit}))
+  Ok(GraphDetails {
+    items,
+    revision: request.revision,
+    truncated: selected.len() > limit,
+  })
 }
 
 pub fn summary(file: &Document) -> String {
@@ -128,15 +177,18 @@ pub fn summary(file: &Document) -> String {
     .collect()
 }
 
-fn blocks(file: &Document) -> Value {
+fn blocks(file: &Document) -> Vec<MarkdownBlock> {
   let mut blocks = Vec::new();
   let mut text = String::new();
   let mut code: Option<String> = None;
   for line in file.content.lines().take(2000) {
     if line.trim_start().starts_with("```") {
       if let Some(language) = code.take() {
-        blocks.push(json!({"id":format!("{}:block:{}",file.path,blocks.len()),"kind":"code","text":text,"language":language}));
-        text.clear();
+        blocks.push(MarkdownBlock::Code {
+          id: format!("{}:block:{}", file.path, blocks.len()),
+          text: std::mem::take(&mut text),
+          language,
+        });
       } else {
         code = Some(line.trim_start().trim_start_matches('`').trim().into());
       }
@@ -144,91 +196,22 @@ fn blocks(file: &Document) -> Value {
       text.push_str(line);
       text.push('\n');
     } else if !line.trim().is_empty() {
-      blocks.push(json!({"id":format!("{}:block:{}",file.path,blocks.len()),"kind":if line.starts_with('>'){"blockquote"}else{"paragraph"},"text":line.chars().take(16384).collect::<String>()}));
+      let id = format!("{}:block:{}", file.path, blocks.len());
+      let text = line.chars().take(16384).collect();
+      blocks.push(if line.starts_with('>') {
+        MarkdownBlock::Blockquote { id, text }
+      } else {
+        MarkdownBlock::Paragraph { id, text }
+      });
     }
     if blocks.len() >= 24 {
       break;
     }
   }
-  json!(blocks)
+  blocks
 }
 
-pub fn publication(index: &Index) -> Value {
-  let mut incoming = BTreeMap::<String, usize>::new();
-  for path in index.files.keys() {
-    incoming.insert(path.clone(), 0);
-  }
-  for document in index.files.values() {
-    for target in adjacent(index, &document.path) {
-      *incoming.entry(target).or_default() += 1;
-    }
-  }
-  let mut paths: Vec<_> = index.files.keys().cloned().collect();
-  paths.sort_by_key(|path| (!entry(path), path.clone()));
-  let primary = paths
-    .iter()
-    .find(|path| incoming.get(*path) == Some(&0))
-    .cloned();
-  let mut visited = BTreeSet::new();
-  let mut ordered = Vec::new();
-  if let Some(primary) = primary {
-    visit(index, &primary, 0, false, &mut visited, &mut ordered);
-  }
-  for path in paths {
-    visit(index, &path, 0, true, &mut visited, &mut ordered);
-  }
-  let chapters:Vec<_>=ordered.into_iter().filter_map(|(path,depth,orphaned)|index.files.get(&path).map(|file|json!({"path":path,"title":file.title,"depth":depth,"orphaned":orphaned,"wordCount":file.word_count,"estimatedPages":file.word_count.div_ceil(430).max(1),"excerpt":summary(file).chars().take(220).collect::<String>()}))).collect();
-  json!({"title":std::path::Path::new(&index.root).file_name().map(|name|name.to_string_lossy()).unwrap_or_default(),"estimatedPages":chapters.iter().map(|chapter|chapter["estimatedPages"].as_u64().unwrap_or(0)).sum::<u64>()+2,"orphanCount":chapters.iter().filter(|chapter|chapter["orphaned"]==true).count(),"totalWords":index.files.values().map(|file|file.word_count).sum::<usize>(),"chapters":chapters})
-}
-
-fn visit(
-  index: &Index,
-  path: &str,
-  depth: usize,
-  orphaned: bool,
-  visited: &mut BTreeSet<String>,
-  ordered: &mut Vec<(String, usize, bool)>,
-) {
-  // Explicit stack avoids recursive traversal of adversarial link chains.
-  let mut pending = vec![(path.to_owned(), depth)];
-  while let Some((path, depth)) = pending.pop() {
-    if !visited.insert(path.clone()) {
-      continue;
-    }
-    ordered.push((path.clone(), depth.min(2), orphaned));
-    let mut next = adjacent(index, &path);
-    next.reverse();
-    pending.extend(next.into_iter().map(|path| (path, depth + 1)));
-  }
-}
-fn adjacent(index: &Index, path: &str) -> Vec<String> {
-  let mut seen = BTreeSet::new();
-  index
-    .files
-    .get(path)
-    .into_iter()
-    .flat_map(|file| &file.links)
-    .filter_map(|link| link.target_path.as_ref())
-    .filter(|target| {
-      target.as_str() != path && index.files.contains_key(*target) && seen.insert((*target).clone())
-    })
-    .cloned()
-    .collect()
-}
-fn entry(path: &str) -> bool {
-  std::path::Path::new(path).file_stem().is_some_and(|stem| {
-    [
-      "readme",
-      "index",
-      "home",
-      "intro",
-      "introduction",
-      "overview",
-    ]
-    .contains(&stem.to_string_lossy().to_lowercase().as_str())
-  })
-}
-fn preview_kind(path: &str) -> &'static str {
+fn preview_kind(path: &str) -> PreviewKind {
   match std::path::Path::new(path)
     .extension()
     .and_then(|ext| ext.to_str())
@@ -236,14 +219,14 @@ fn preview_kind(path: &str) -> &'static str {
     .to_lowercase()
     .as_str()
   {
-    "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => "image",
-    "pdf" => "pdf",
-    "docx" => "docx",
-    "mp3" | "wav" | "ogg" => "audio",
-    "mp4" | "webm" => "video",
-    "drawio" => "drawio",
-    "excalidraw" => "excalidraw",
-    "xlsx" | "xlsm" => "spreadsheet",
-    _ => "source",
+    "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => PreviewKind::Image,
+    "pdf" => PreviewKind::Pdf,
+    "docx" => PreviewKind::Docx,
+    "mp3" | "wav" | "ogg" => PreviewKind::Audio,
+    "mp4" | "webm" => PreviewKind::Video,
+    "drawio" => PreviewKind::Drawio,
+    "excalidraw" => PreviewKind::Excalidraw,
+    "xlsx" | "xlsm" => PreviewKind::Spreadsheet,
+    _ => PreviewKind::Source,
   }
 }

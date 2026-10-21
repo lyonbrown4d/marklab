@@ -1,13 +1,14 @@
 use super::{
   AiService, GenerateRequest, GenerationEvent, InlineRequest, Job, StartResult, policy, prompt,
 };
+use crate::desktop::event_contracts::{AI_COMPLETION, AI_GENERATION};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{
   error::{BackendError, BackendResult},
   settings::SettingsStore,
 };
-use tauri::{Emitter, Manager};
-use tokio::sync::watch;
+use tauri::Manager;
+use tokio_util::sync::CancellationToken;
 impl AiService {
   pub async fn start_generation(
     &self,
@@ -21,14 +22,15 @@ impl AiService {
       .get(window.label())?;
     let request_id = uuid::Uuid::new_v4().to_string();
     let channel = if inline.is_some() {
-      "ai-completion-event"
+      AI_COMPLETION
     } else {
-      "ai-generation-event"
+      AI_GENERATION
     };
     let session = inline
       .as_ref()
       .map(|input| input.completion_session_id.clone());
-    let (cancel, mut cancelled) = watch::channel(false);
+    let cancel = CancellationToken::new();
+    let cancelled = cancel.clone();
     let mut jobs = self.inner.jobs.lock().await;
     window
       .state::<crate::workspace::WorkspaceRegistry>()
@@ -41,11 +43,11 @@ impl AiService {
         .collect::<Vec<_>>();
       for id in previous {
         if let Some(job) = jobs.remove(&id) {
-          let _ = job.cancel.send(true);
-          let _ = window.emit_to(
+          job.cancel.cancel();
+          let _ = job.channel.emit_to(
+            window.app_handle(),
             tauri::EventTarget::webview_window(window.label()),
-            job.channel,
-            GenerationEvent::Cancelled { request_id: id },
+            &GenerationEvent::Cancelled { request_id: id },
           );
         }
       }
@@ -77,7 +79,7 @@ impl AiService {
     let id = request_id.clone();
     tauri::async_runtime::spawn(async move {
       tokio::task::yield_now().await;
-      let result = tokio::select! {biased;_=cancelled.changed()=>None,result=service.generate(request)=>Some(result)};
+      let result = tokio::select! {biased;_=cancelled.cancelled()=>None,result=service.generate(request)=>Some(result)};
       let mut jobs = service.inner.jobs.lock().await;
       if jobs.remove(&id).is_none() {
         return;
@@ -89,19 +91,19 @@ impl AiService {
             result.text = prompt::clean(&result.text, &input);
           }
           if !result.text.is_empty() {
-            let _ = window.emit_to(
+            let _ = channel.emit_to(
+              window.app_handle(),
               tauri::EventTarget::webview_window(window.label()),
-              channel,
-              GenerationEvent::Delta {
+              &GenerationEvent::Delta {
                 request_id: id.clone(),
                 delta: result.text,
               },
             );
           }
-          let _ = window.emit_to(
+          let _ = channel.emit_to(
+            window.app_handle(),
             tauri::EventTarget::webview_window(window.label()),
-            channel,
-            GenerationEvent::Finish {
+            &GenerationEvent::Finish {
               request_id: id,
               finish_reason: result.finish_reason,
               usage: result.usage,
@@ -110,10 +112,10 @@ impl AiService {
           );
         }
         Some(Err(_)) => {
-          let _ = window.emit_to(
+          let _ = channel.emit_to(
+            window.app_handle(),
             tauri::EventTarget::webview_window(window.label()),
-            channel,
-            GenerationEvent::Error {
+            &GenerationEvent::Error {
               request_id: id,
               message: "AI provider request failed".into(),
             },
@@ -197,11 +199,11 @@ impl AiService {
     if jobs.get(id).is_some_and(|job| job.owner == window.label())
       && let Some(job) = jobs.remove(id)
     {
-      let _ = job.cancel.send(true);
-      let _ = window.emit_to(
+      job.cancel.cancel();
+      let _ = job.channel.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        job.channel,
-        GenerationEvent::Cancelled {
+        &GenerationEvent::Cancelled {
           request_id: id.into(),
         },
       );
@@ -217,11 +219,11 @@ impl AiService {
       .collect::<Vec<_>>();
     for id in ids {
       if let Some(job) = jobs.remove(&id) {
-        let _ = job.cancel.send(true);
-        let _ = window.emit_to(
+        job.cancel.cancel();
+        let _ = job.channel.emit_to(
+          window.app_handle(),
           tauri::EventTarget::webview_window(window.label()),
-          job.channel,
-          GenerationEvent::Cancelled { request_id: id },
+          &GenerationEvent::Cancelled { request_id: id },
         );
       }
     }
@@ -235,7 +237,7 @@ impl AiService {
       .collect::<Vec<_>>();
     for id in ids {
       if let Some(job) = jobs.remove(&id) {
-        let _ = job.cancel.send(true);
+        job.cancel.cancel();
       }
     }
     drop(jobs);

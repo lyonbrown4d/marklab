@@ -17,7 +17,7 @@ const statusCenterMock = vi.hoisted(() => ({
     id: string
     label: string
     status: 'idle' | 'running' | 'error'
-    message?: string | null
+    message: string | null
   }>,
 }))
 
@@ -114,7 +114,7 @@ describe('StatusCenter', () => {
       .mockReset()
       .mockImplementation(() => Promise.resolve(statusCenterMock.backgroundTasks))
     vi.mocked(fsApi.getBufferStatus).mockReset().mockResolvedValue(null)
-    vi.mocked(fsApi.rebuildSearchIndex).mockReset().mockResolvedValue(undefined)
+    vi.mocked(fsApi.rebuildSearchIndex).mockReset().mockResolvedValue(null)
   })
 
   it('labels the trigger with the current status summary', () => {

@@ -10,7 +10,7 @@ use std::{
     atomic::{AtomicBool, Ordering},
   },
 };
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Manager, WebviewWindow};
 use tokio::sync::oneshot;
 #[derive(Default)]
 pub struct QuitState(pub AtomicBool);
@@ -30,13 +30,15 @@ impl Drop for FlushTicket {
     }
   }
 }
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct FlushResult {
   request_id: String,
+  #[serde(default)]
   error: Option<String>,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn window_flush_result(
   window: crate::native_window::TrustedWindow,
   request: FlushResult,
@@ -82,10 +84,12 @@ pub async fn request_renderer_flush(window: &WebviewWindow) -> BackendResult<()>
     id: id.clone(),
   };
   async {
-    window.emit_to(
+    crate::desktop::event_contracts::WINDOW_FLUSH_REQUESTED.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "window-flush-requested",
-      serde_json::json!({"requestId":id}),
+      &(crate::desktop::event_contracts::WindowFlushRequested {
+        request_id: id.clone(),
+      }),
     )?;
     tokio::time::timeout(std::time::Duration::from_secs(30), receiver)
       .await
@@ -126,10 +130,12 @@ pub fn request_quit(app: &AppHandle) -> BackendResult<()> {
         .unwrap_or_default()
       {
         if let Some(window) = crate::native_window::get(&app, &label) {
-          let _ = window.emit_to(
+          let _ = crate::desktop::event_contracts::WINDOW_CLOSE_ERROR.emit_to(
+            window.app_handle(),
             tauri::EventTarget::webview_window(window.label()),
-            "window-close-error",
-            serde_json::json!({"message":error.message}),
+            &(crate::desktop::event_contracts::WindowCloseError {
+              message: error.message.clone(),
+            }),
           );
         }
       }

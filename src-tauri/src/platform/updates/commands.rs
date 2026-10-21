@@ -1,4 +1,4 @@
-use super::{UpdateResult, UpdateService, UpdateState};
+use super::{UpdateEventKind, UpdateResult, UpdateService, UpdateState, UpdateStatus};
 use crate::{
   error::{BackendError, BackendResult},
   native_window::TrustedWindow,
@@ -8,6 +8,7 @@ use serde::Deserialize;
 use tauri::{Manager, State};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn updates_get_state(
   service: State<'_, UpdateService>,
   request: EmptyRequest,
@@ -16,6 +17,7 @@ pub async fn updates_get_state(
   Ok(service.state.lock().await.clone())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn updates_check(
   window: TrustedWindow,
   service: State<'_, UpdateService>,
@@ -25,6 +27,7 @@ pub async fn updates_check(
   service.check(window.app_handle()).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn updates_download(
   window: TrustedWindow,
   service: State<'_, UpdateService>,
@@ -34,6 +37,7 @@ pub async fn updates_download(
   service.download(window.app_handle()).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn updates_install(
   window: TrustedWindow,
   service: State<'_, UpdateService>,
@@ -42,19 +46,20 @@ pub async fn updates_install(
   let _ = request;
   service.install(window.app_handle(), true).await
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct ScheduleRequest {
   enabled: bool,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn updates_set_install_on_quit(
   window: TrustedWindow,
   service: State<'_, UpdateService>,
   request: ScheduleRequest,
 ) -> BackendResult<UpdateResult> {
   let mut state = service.state.lock().await;
-  if request.enabled && state.status != "downloaded" {
+  if request.enabled && state.status != UpdateStatus::Downloaded {
     return Err(BackendError::new(
       "NOT_READY",
       "Download an update before scheduling installation",
@@ -63,6 +68,6 @@ pub async fn updates_set_install_on_quit(
   state.install_on_quit = request.enabled;
   drop(state);
   service
-    .publish(window.app_handle(), "install-on-quit-changed")
+    .publish(window.app_handle(), UpdateEventKind::InstallOnQuitChanged)
     .await
 }

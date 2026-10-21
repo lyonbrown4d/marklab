@@ -92,7 +92,7 @@ async fn fixture(endpoint: &str) -> (tempfile::TempDir, SyncService, std::sync::
   tokio::fs::create_dir(&root).await.unwrap();
   let workspace = std::sync::Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: root.to_string_lossy().into(),
     },
     1,
@@ -101,7 +101,7 @@ async fn fixture(endpoint: &str) -> (tempfile::TempDir, SyncService, std::sync::
     .set_channel(
       &workspace.root_info(),
       super::super::Channel {
-        provider: "webdav".into(),
+        provider: crate::sync::SyncProvider::Webdav,
         profile_id: "test".into(),
         remote_root: "/notes".into(),
         auto_sync: false,
@@ -116,7 +116,7 @@ async fn independent_workspaces_upload_download_delete_and_preserve_conflicts() 
   let server = server::Server::new().await;
   let (_a, first_service, first) = fixture(&server.endpoint).await;
   let (_b, second_service, second) = fixture(&server.endpoint).await;
-  let (_sender, cancel) = watch::channel(false);
+  let cancel = CancellationToken::new();
   tokio::fs::write(first.root_directory().join("note.md"), "first\n")
     .await
     .unwrap();
@@ -184,7 +184,7 @@ async fn independent_workspaces_upload_download_delete_and_preserve_conflicts() 
       root_path: second.root_info().path,
       path: "note.md".into(),
       binding,
-      choice: "remote".into(),
+      choice: crate::sync::ConflictChoice::Remote,
       expected_local_hash: comparison.local.hash,
       expected_remote_hash: comparison.saved_remote.hash,
       confirm_delete: false,
@@ -217,7 +217,7 @@ async fn independent_workspaces_upload_download_delete_and_preserve_conflicts() 
 async fn corrupt_remote_objects_never_replace_local_content() {
   let server = server::Server::new().await;
   let (_a, service, workspace) = fixture(&server.endpoint).await;
-  let (_sender, cancel) = watch::channel(false);
+  let cancel = CancellationToken::new();
   let mut value = entry("note.md", 'a');
   value.storage = Some("object".into());
   let manifest = Manifest {
@@ -259,7 +259,8 @@ async fn cancellation_has_no_remote_or_local_publish() {
   tokio::fs::write(workspace.root_directory().join("note.md"), "draft")
     .await
     .unwrap();
-  let (_sender, cancel) = watch::channel(true);
+  let cancel = CancellationToken::new();
+  cancel.cancel();
   assert_eq!(
     synchronize(&service, &workspace, &|_| {}, cancel, None)
       .await

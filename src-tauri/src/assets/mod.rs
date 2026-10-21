@@ -35,9 +35,11 @@ fn remove_temporary(path: &Path) {
   let _ = std::fs::remove_file(path);
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 pub struct AssetCapability {
   pub url: String,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
   pub expires_at_ms: u64,
 }
 
@@ -248,6 +250,7 @@ impl AssetService {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn assets_issue_capability(
   window: crate::native_window::TrustedWindow,
   registry: tauri::State<'_, crate::workspace::WorkspaceRegistry>,

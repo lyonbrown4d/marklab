@@ -5,14 +5,15 @@ use std::collections::{HashMap, HashSet};
 const MAX_INPUT_CHARS: usize = 420;
 const MAX_HTML_BYTES: usize = 32_768;
 const MAX_MATH_ITEMS: usize = 64;
+pub use AnalysisPreview as Preview;
 
-#[derive(Serialize)]
-pub struct Preview {
+#[derive(Debug, Serialize, specta::Type)]
+pub struct AnalysisPreview {
   html: String,
   math: Vec<Math>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 struct Math {
   id: String,

@@ -8,21 +8,23 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RenderResult {
   pages: Vec<AssetCapability>,
   warnings: Vec<String>,
   engine_version: &'static str,
 }
+pub use PlantumlCancelRequest as CancelRequest;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CancelRequest {
+pub struct PlantumlCancelRequest {
   request_id: String,
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn plantuml_render(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -58,6 +60,7 @@ pub async fn plantuml_render(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn plantuml_cancel(
   window: TrustedWindow,
   service: State<'_, PlantUmlService>,

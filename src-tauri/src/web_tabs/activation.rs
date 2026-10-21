@@ -2,6 +2,7 @@ use super::*;
 use crate::workspace::WorkspaceRegistry;
 use tauri::State;
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_activate(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -54,7 +55,7 @@ pub async fn web_tabs_activate(
             can_go_back: false,
             can_go_forward: false,
             error: None,
-            status: "loading".into(),
+            status: TabStatus::Loading,
             tab_id: request.tab_id.clone(),
             title: String::new(),
             url: url.to_string(),
@@ -84,7 +85,7 @@ pub async fn web_tabs_activate(
       Ok(view) => view,
       Err(error) => {
         manager.change(&window, &request.tab_id, |v| {
-          v.state.status = "error".into();
+          v.state.status = TabStatus::Error;
           v.state.error = Some(TabError {
             description: bounded_text(&error.message, 1024),
           });
@@ -123,10 +124,10 @@ pub async fn web_tabs_activate(
   let entry = manager.entry(window.label(), &request.tab_id)?;
   if let Some(view) = entry.view {
     create::set_bounds(&view, &bounds)?;
-    if entry.state.url != url.as_str() || entry.state.status == "error" {
+    if entry.state.url != url.as_str() || entry.state.status == TabStatus::Error {
       manager.loading(&window, &request.tab_id, url.to_string());
       view.navigate(url)?;
-    } else if entry.state.status == "ready" {
+    } else if entry.state.status == TabStatus::Ready {
       view.show()?;
     }
   }

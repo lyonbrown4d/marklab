@@ -1,7 +1,7 @@
 import type { Diagnostic } from 'vscode-languageserver-types'
 import { describe, expect, it, vi } from 'vitest'
 import { createPlateMarkdownDiagnosticsSession } from '@/components/plate/plateMarkdownDiagnosticsSession'
-import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import type { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 const deferred = <T>() => {
   let resolve: (value: T) => void = () => undefined
@@ -25,7 +25,7 @@ describe('Plate Markdown diagnostics session', () => {
       closeDocument: vi.fn().mockResolvedValue({ ok: true }),
       completion: vi.fn(),
       diagnostics: vi.fn().mockReturnValueOnce(first.promise).mockResolvedValueOnce([diagnostic]),
-    } satisfies LanguageIntelligenceApi
+    } satisfies typeof languageIntelligenceApi
     const onDiagnostics = vi.fn()
     const session = createPlateMarkdownDiagnosticsSession({
       api,

@@ -61,3 +61,11 @@ pub async fn delete(reference: &str) -> BackendResult<()> {
   .await
   .map_err(|_| unavailable())?
 }
+
+// The custom deserializer accepts null or string, with absence handled by the
+// containing field's serde default. The internal enum is not the wire format.
+impl specta::Type for SecretUpdate {
+  fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+    <Option<String> as specta::Type>::definition(types)
+  }
+}

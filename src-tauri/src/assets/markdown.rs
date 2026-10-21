@@ -3,36 +3,14 @@ use crate::{
   error::{BackendError, BackendResult},
   workspace::{WorkspaceRegistry, safe_asset_path},
 };
-use serde::{Deserialize, Serialize};
+#[path = "markdown_types.rs"]
+mod types;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+pub use types::*;
 
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ImportRequest {
-  source_path: String,
-  document_path: String,
-  strategy: String,
-  title: Option<String>,
-}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct BytesRequest {
-  file_name: String,
-  bytes: Vec<u8>,
-  document_path: String,
-  title: Option<String>,
-}
-#[derive(Serialize)]
-pub struct ImportResult {
-  markdown_target: String,
-  relative_path: Option<String>,
-  asset_dir: Option<String>,
-  copied: bool,
-}
 
 fn relative(root: &Path, path: &Path) -> Option<String> {
   path
@@ -174,6 +152,7 @@ async fn write_asset(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_import_markdown_asset(
   window: WebviewWindow,
   request: ImportRequest,
@@ -234,6 +213,7 @@ pub async fn fs_import_markdown_asset(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_import_markdown_asset_bytes(
   window: WebviewWindow,
   request: BytesRequest,
@@ -248,23 +228,8 @@ pub async fn fs_import_markdown_asset_bytes(
   .await
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ResolveRequest {
-  document_path: String,
-  target: String,
-}
-#[derive(Serialize)]
-pub struct ResolveResult {
-  source_path: String,
-  target: String,
-  relative_path: Option<String>,
-  is_external: bool,
-  media_type: Option<String>,
-  exists: bool,
-}
-
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_resolve_markdown_asset(
   window: WebviewWindow,
   request: ResolveRequest,

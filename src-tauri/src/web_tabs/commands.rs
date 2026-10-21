@@ -17,7 +17,7 @@ pub(super) fn close(window: &TrustedWindow, manager: &WebTabs, id: &str) -> Back
       load.abort();
     }
     entry.state.active = false;
-    entry.state.status = "closed".into();
+    entry.state.status = TabStatus::Closed;
     // Destruction must be attempted even if the owner cannot receive events.
     let closed = if let Some(view) = entry.view {
       native::remove_monitor(&view, entry.monitor);
@@ -25,10 +25,10 @@ pub(super) fn close(window: &TrustedWindow, manager: &WebTabs, id: &str) -> Back
     } else {
       Ok(())
     };
-    let emitted = window.emit_to(
+    let emitted = crate::desktop::event_contracts::WEB_TABS_STATE.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "web-tabs-state",
-      Event::State { state: entry.state },
+      &(Event::State { state: entry.state }),
     );
     closed?;
     emitted?;
@@ -36,6 +36,7 @@ pub(super) fn close(window: &TrustedWindow, manager: &WebTabs, id: &str) -> Back
   Ok(())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_close(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -49,6 +50,7 @@ pub async fn web_tabs_close(
   Ok(success())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_hide(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -67,6 +69,7 @@ pub async fn web_tabs_hide(
   Ok(success())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_set_bounds(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -84,6 +87,7 @@ pub async fn web_tabs_set_bounds(
   Ok(success())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_navigate(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -102,6 +106,7 @@ pub async fn web_tabs_navigate(
   Ok(success())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn web_tabs_set_shortcut_bindings(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -123,6 +128,7 @@ pub async fn web_tabs_set_shortcut_bindings(
 macro_rules! action {
   ($name:ident,$action:expr) => {
     #[tauri::command]
+    #[specta::specta]
     pub async fn $name(
       window: TrustedWindow,
       registry: State<'_, WorkspaceRegistry>,

@@ -1,6 +1,7 @@
 use super::*;
 use futures_util::{StreamExt, stream};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
+use tokio_util::io::ReaderStream;
 pub(super) async fn bounded_response(
   response: reqwest::Response,
   max: u64,
@@ -124,28 +125,7 @@ pub(super) async fn put_file(
       "Upload snapshot size changed",
     ));
   }
-  let chunks = stream::try_unfold((file, 0u64), move |(mut file, read)| async move {
-    let mut buffer = vec![0u8; 64 * 1024];
-    let count = file.read(&mut buffer).await?;
-    if count == 0 {
-      if read != size {
-        return Err(std::io::Error::new(
-          std::io::ErrorKind::UnexpectedEof,
-          "Upload snapshot changed",
-        ));
-      }
-      return Ok(None);
-    }
-    let next = read + count as u64;
-    if next > size {
-      return Err(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Upload snapshot grew",
-      ));
-    }
-    buffer.truncate(count);
-    Ok(Some((buffer, (file, next))))
-  });
+  let chunks = upload_stream(file, size);
   let request = conditional(remote.request(reqwest::Method::PUT, path)?, condition)?
     .header(reqwest::header::CONTENT_LENGTH, size)
     .body(reqwest::Body::wrap_stream(chunks));
@@ -153,3 +133,34 @@ pub(super) async fn put_file(
   check_status(response.status())?;
   Ok(etag(response.headers()))
 }
+
+// ReaderStream owns chunk production; this adapter keeps exact snapshot-length validation.
+fn upload_stream(
+  file: tokio::fs::File,
+  size: u64,
+) -> impl futures_util::Stream<Item = std::io::Result<bytes::Bytes>> {
+  stream::try_unfold(
+    (ReaderStream::with_capacity(file, 64 * 1024), 0u64),
+    move |(mut chunks, read)| async move {
+      match chunks.next().await.transpose()? {
+        Some(chunk) if read + chunk.len() as u64 <= size => {
+          let read = read + chunk.len() as u64;
+          Ok(Some((chunk, (chunks, read))))
+        }
+        Some(_) => Err(std::io::Error::new(
+          std::io::ErrorKind::InvalidData,
+          "Upload snapshot grew",
+        )),
+        None if read == size => Ok(None),
+        None => Err(std::io::Error::new(
+          std::io::ErrorKind::UnexpectedEof,
+          "Upload snapshot changed",
+        )),
+      }
+    },
+  )
+}
+
+#[cfg(test)]
+#[path = "remote_http_tests.rs"]
+mod tests;

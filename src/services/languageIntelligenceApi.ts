@@ -1,10 +1,25 @@
 import { getDesktopRuntime } from '@/runtime/desktop'
-import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import {
+  parseLanguageCompletion,
+  parseLanguageDiagnostics,
+} from '@/services/languageProtocolAdapter'
+import type {
+  LanguageCompletionRequest,
+  LanguageDiagnosticsRequest,
+  LanguageDocumentChangeRequest,
+  LanguageDocumentCloseRequest,
+  LanguageDocumentOpenRequest,
+} from '@/types/languageIntelligence'
 
-export const languageIntelligenceApi: LanguageIntelligenceApi = {
-  openDocument: (request) => getDesktopRuntime().languageIntelligence.openDocument(request),
-  changeDocument: (request) => getDesktopRuntime().languageIntelligence.changeDocument(request),
-  closeDocument: (request) => getDesktopRuntime().languageIntelligence.closeDocument(request),
-  completion: (request) => getDesktopRuntime().languageIntelligence.completion(request),
-  diagnostics: (request) => getDesktopRuntime().languageIntelligence.diagnostics(request),
+export const languageIntelligenceApi = {
+  openDocument: (request: LanguageDocumentOpenRequest) =>
+    getDesktopRuntime().languageIntelligence.openDocument(request),
+  changeDocument: (request: LanguageDocumentChangeRequest) =>
+    getDesktopRuntime().languageIntelligence.changeDocument(request),
+  closeDocument: (request: LanguageDocumentCloseRequest) =>
+    getDesktopRuntime().languageIntelligence.closeDocument(request),
+  completion: async (request: LanguageCompletionRequest) =>
+    parseLanguageCompletion(await getDesktopRuntime().languageIntelligence.completion(request)),
+  diagnostics: async (request: LanguageDiagnosticsRequest) =>
+    parseLanguageDiagnostics(await getDesktopRuntime().languageIntelligence.diagnostics(request)),
 }

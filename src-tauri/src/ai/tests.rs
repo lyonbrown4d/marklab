@@ -11,10 +11,12 @@ async fn provider_metadata_is_durable_redacted_and_url_policies_are_enforced() -
     json!({"id":"local","label":"Local","kind":"ollama","model":"model","baseUrl":"http://127.0.0.1:11434/v1/"}),
   )?;
   let provider = service.update_provider(input).await?;
-  assert_eq!(provider.locality, "local");
+  assert_eq!(provider.locality, ProviderLocality::Local);
   assert!(provider.available);
   assert!(!provider.requires_api_key);
   let public = serde_json::to_value(&provider)?;
+  assert_eq!(public["locality"], "local");
+  assert_eq!(public["apiKeySource"], "none");
   assert!(!public.as_object().unwrap().contains_key("secretRef"));
   assert!(!public.as_object().unwrap().contains_key("apiKey"));
   assert_eq!(
@@ -132,15 +134,17 @@ async fn inline_consent_is_explicit_and_owner_cleanup_preserves_other_window_job
     ..remote
   };
   service.check_consent(&local, true).await?;
-  let (first, first_rx) = tokio::sync::watch::channel(false);
-  let (second, second_rx) = tokio::sync::watch::channel(false);
+  let first = CancellationToken::new();
+  let first_rx = first.clone();
+  let second = CancellationToken::new();
+  let second_rx = second.clone();
   for (id, owner, cancel) in [("first", "window-a", first), ("second", "window-b", second)] {
     service.inner.jobs.lock().await.insert(
       id.into(),
       Job {
         owner: owner.into(),
         session: Some("same-session".into()),
-        channel: "ai-completion-event",
+        channel: crate::desktop::event_contracts::AI_COMPLETION,
         cancel,
       },
     );
@@ -152,8 +156,8 @@ async fn inline_consent_is_explicit_and_owner_cleanup_preserves_other_window_job
       .insert((owner.into(), "same-session".into()), id.into());
   }
   service.cancel_owner("window-a").await;
-  assert!(*first_rx.borrow());
-  assert!(!*second_rx.borrow());
+  assert!(first_rx.is_cancelled());
+  assert!(!second_rx.is_cancelled());
   assert!(service.inner.jobs.lock().await.contains_key("second"));
   assert_eq!(service.inner.attempts.lock().await.len(), 1);
   service.cancel_owner("window-b").await;

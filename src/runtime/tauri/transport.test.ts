@@ -32,14 +32,17 @@ describe('Tauri command boundary', () => {
     const bytes = new Uint8Array([0, 127, 255])
     await invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
       fileName: 'image.png',
+      documentPath: 'note.md',
       bytes: bytes.buffer,
     })
     expect(native.invoke).toHaveBeenLastCalledWith('fs_import_markdown_asset_bytes', {
-      request: { fileName: 'image.png', bytes: [0, 127, 255] },
+      request: { fileName: 'image.png', documentPath: 'note.md', bytes: [0, 127, 255] },
     })
     native.invoke.mockClear()
     await expect(
       invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
+        fileName: 'large.bin',
+        documentPath: 'note.md',
         bytes: new Uint8Array(32 * 1024 * 1024 + 1),
       }),
     ).rejects.toThrow('32 MiB')
@@ -57,12 +60,13 @@ describe('Tauri command boundary', () => {
 
   it('preserves DTOs and maps legacy names without exposing arbitrary native commands', async () => {
     await invokeWorkspaceCommand('fs_read_file', { path: 'notes.md' })
-    await invokeWorkspaceCommand('knowledge.engine.workspaceStatus')
+    await invokeWorkspaceCommand('knowledge.engine.workspaceStatus', { workspaceId: 'workspace' })
     expect(native.invoke.mock.calls).toEqual([
       ['fs_read_file', { request: { path: 'notes.md' } }],
-      ['knowledge_engine_workspace_status', { request: {} }],
+      ['knowledge_engine_workspace_status', { request: { workspaceId: 'workspace' } }],
     ])
     native.invoke.mockClear()
+    // @ts-expect-error Exercise the runtime allowlist for untyped callers.
     await expect(invokeWorkspaceCommand('plugin:shell|execute', { command: 'sh' })).rejects.toThrow(
       'Unsupported command',
     )
@@ -203,6 +207,7 @@ describe('Tauri event bridge', () => {
     stop()
     native.handlers.get('workspace-session-seed')?.({ payload: { version: 5 } })
     expect(handler).toHaveBeenCalledOnce()
+    // @ts-expect-error Exercise runtime rejection for untyped event names.
     expect(() => hub.subscribe('arbitrary-event', handler)).toThrow('Unsupported event')
     hub.dispose()
     expect(native.stops.every((unsubscribe) => unsubscribe.mock.calls.length === 1)).toBe(true)
@@ -223,11 +228,11 @@ it('keeps native readiness attempts private and rejects older workspace seeds', 
   const hub = createEventHub()
   const receive = vi.fn()
   hub.on('workspace-session-seed', receive)
-  hub.publish('workspace-session-seed', { rootPath: '/new', nativeAttempt: 4 })
-  hub.publish('workspace-session-seed', { rootPath: '/old', nativeAttempt: 3 })
+  hub.publish('workspace-session-seed', { state: { rootPath: '/new' }, nativeAttempt: 4 })
+  hub.publish('workspace-session-seed', { state: { rootPath: '/old' }, nativeAttempt: 3 })
   expect(hub.attempt()).toBe(4)
   expect(receive).toHaveBeenCalledOnce()
-  expect(receive).toHaveBeenCalledWith({ rootPath: '/new' })
+  expect(receive).toHaveBeenCalledWith({ state: { rootPath: '/new' } })
 })
 
 it('adapts real Rust buffer status DTOs and rejects late events from another workspace', async () => {
@@ -242,7 +247,12 @@ it('adapts real Rust buffer status DTOs and rejects late events from another wor
     dirty: true,
     session_generation: 8,
   })
-  expect(receive).toHaveBeenCalledWith({ path: 'same.md', revision: 3, dirty: true })
+  expect(receive).toHaveBeenCalledWith({
+    path: 'same.md',
+    revision: 3,
+    dirty: true,
+    session_generation: 8,
+  })
   hub.publish('workspace-generation-changed', { generation: 4 })
   hub.publish('fs-buffer-status', {
     path: 'same.md',
@@ -257,5 +267,10 @@ it('adapts real Rust buffer status DTOs and rejects late events from another wor
     session_generation: 4,
   })
   expect(receive).toHaveBeenCalledTimes(2)
-  expect(receive).toHaveBeenLastCalledWith({ path: 'same.md', revision: 1, dirty: false })
+  expect(receive).toHaveBeenLastCalledWith({
+    path: 'same.md',
+    revision: 1,
+    dirty: false,
+    session_generation: 4,
+  })
 })

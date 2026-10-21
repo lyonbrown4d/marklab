@@ -134,6 +134,7 @@ fn node_details_preview_uses_the_existing_summary_even_in_full_mode() {
       },
     )
     .expect("graph details");
+    let result = serde_json::to_value(result).expect("wire details");
     let item = &result["items"][0];
     assert_eq!(item["content"], "First **line**\nSecond\nThird");
     let html = item["preview"]["html"].as_str().expect("HTML payload");

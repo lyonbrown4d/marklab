@@ -124,28 +124,28 @@ pub fn environment_key(kind: ProviderKind) -> Option<String> {
 }
 pub fn public(provider: StoredProvider) -> PublicProvider {
   let locality = if local(&provider.metadata) {
-    "local"
+    ProviderLocality::Local
   } else {
-    "remote"
+    ProviderLocality::Remote
   };
-  let requires_api_key = locality != "local";
+  let requires_api_key = locality != ProviderLocality::Local;
   let source = if provider.secret_ref.is_some() {
-    "stored"
+    ApiKeySource::Stored
   } else if environment_key(provider.metadata.kind).is_some() {
-    "environment"
+    ApiKeySource::Environment
   } else {
-    "none"
+    ApiKeySource::None
   };
   PublicProvider {
     metadata: provider.metadata,
     created_at: provider.created_at,
     updated_at: provider.updated_at,
     locality,
-    available: source != "none" || !requires_api_key,
+    available: source != ApiKeySource::None || !requires_api_key,
     requires_api_key,
-    has_api_key: source != "none",
+    has_api_key: source != ApiKeySource::None,
     api_key_source: source,
-    masked_api_key: if source == "none" {
+    masked_api_key: if source == ApiKeySource::None {
       None
     } else {
       Some("••••••••")

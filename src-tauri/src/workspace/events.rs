@@ -1,22 +1,23 @@
 use super::{Workspace, WorkspaceRegistry};
-use crate::error::BackendResult;
+use crate::{
+  desktop::event_contracts::{
+    EventName, FS_CHANGED, InvalidationKind, WORKSPACE_TREE_CHANGED, WorkspaceInvalidated,
+  },
+  error::BackendResult,
+};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 
 impl Workspace {
-  pub fn emit_to_owners<R: Runtime, T: Serialize + Clone>(
+  pub(crate) fn emit_to_owners<R: Runtime, T: Serialize>(
     &self,
     app: &AppHandle<R>,
-    event: &str,
+    event: EventName<T>,
     payload: T,
   ) -> BackendResult<()> {
     let registry = app.state::<WorkspaceRegistry>();
     for owner in registry.owners(self.generation)? {
-      app.emit_to(
-        tauri::EventTarget::webview_window(owner),
-        event,
-        payload.clone(),
-      )?;
+      event.emit_to(app, tauri::EventTarget::webview_window(owner), &payload)?;
     }
     Ok(())
   }
@@ -27,9 +28,15 @@ impl Workspace {
     }
     let previous = self.current_revision();
     let revision = self.next_revision();
-    let payload = serde_json::json!({"kind":"invalidated","root":self.root_info(),"generation":self.generation,"previousRevision":previous,"revision":revision});
-    self.emit_to_owners(app, "fs-changed", &payload)?;
-    self.emit_to_owners(app, "workspace-tree-changed", &payload)
+    let payload = WorkspaceInvalidated {
+      kind: InvalidationKind::Invalidated,
+      root: self.root_info(),
+      generation: self.generation,
+      previous_revision: previous,
+      revision,
+    };
+    self.emit_to_owners(app, FS_CHANGED, payload.clone())?;
+    self.emit_to_owners(app, WORKSPACE_TREE_CHANGED, payload.into())
   }
 }
 

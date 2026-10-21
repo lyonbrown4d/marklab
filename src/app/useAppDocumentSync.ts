@@ -69,7 +69,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
 
     let disposed = false
     let unlisten: (() => void) | null = null
-    void listen<unknown>('system-theme-changed', (event) => {
+    void listen('system-theme-changed', (event) => {
       if (isSystemThemePayload(event.payload)) syncSystemAppearance(event.payload.colorMode)
     }).then((nextUnlisten) => {
       if (disposed) {

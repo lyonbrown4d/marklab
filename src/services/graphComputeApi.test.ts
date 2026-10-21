@@ -3,7 +3,11 @@ import { invoke } from '@/runtime/ipc'
 import { graphComputeApi, type GraphLayoutComputeInput } from '@/services/graphComputeApi'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
 vi.mock('@/services/rendererDiagnostics', () => ({ rendererDiagnostics: { warn: vi.fn() } }))
 const input: GraphLayoutComputeInput = {
   mode: 'focus',
@@ -13,6 +17,13 @@ const input: GraphLayoutComputeInput = {
 const result = {
   positions: [{ id: 'a', x: 10, y: 20 }],
   engineVersion: 'native-workspace-map-v1' as const,
+}
+const readRequestId = (payload: unknown): string => {
+  if (!payload || typeof payload !== 'object' || !('requestId' in payload)) {
+    throw new Error('Missing graph request ID')
+  }
+  if (typeof payload.requestId !== 'string') throw new Error('Invalid graph request ID')
+  return payload.requestId
 }
 const pendingNative = () => {
   let resolve!: (value: unknown) => void
@@ -29,23 +40,25 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('graph computation IPC', () => {
   it('uses named commands, bounded inputs and a unique shared request identity per computation', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(result)
+    nativeIpc.invoke.mockResolvedValueOnce(result)
     await expect(graphComputeApi.layout(input)).resolves.toEqual(result)
-    const layoutArgs = vi.mocked(invoke).mock.calls[0]?.[1]
+    const layoutArgs = nativeIpc.invoke.mock.calls[0]?.[1]
     expect(invoke).toHaveBeenNthCalledWith(1, 'fs_compute_workspace_graph_layout', {
       ...input,
       requestId: expect.any(String),
     })
     const communityInput = { nodes: [{ id: 'a', label: 'A' }], edges: [] }
-    const communities = { communities: [{ id: 'group-a', label: 'A', nodeIds: ['a'] }] }
-    vi.mocked(invoke).mockResolvedValueOnce(communities)
+    const communities = {
+      communities: [{ id: 'group-a', label: 'A', nodeIds: ['a'], unlinkedPage: null }],
+    }
+    nativeIpc.invoke.mockResolvedValueOnce(communities)
     await expect(graphComputeApi.communities(communityInput)).resolves.toEqual(communities)
     expect(invoke).toHaveBeenNthCalledWith(2, 'fs_partition_workspace_graph', {
       ...communityInput,
       requestId: expect.any(String),
     })
-    const communityArgs = vi.mocked(invoke).mock.calls[1]?.[1]
-    expect(communityArgs?.requestId).not.toBe(layoutArgs?.requestId)
+    const communityArgs = nativeIpc.invoke.mock.calls[1]?.[1]
+    expect(readRequestId(communityArgs)).not.toBe(readRequestId(layoutArgs))
   })
 
   it('rejects accidental document payloads before crossing IPC', async () => {
@@ -61,9 +74,9 @@ describe('graph computation IPC', () => {
         id: `n${index}`,
         label: index === 0 ? title : `Note ${index}`,
       }))
-      vi.mocked(invoke).mockResolvedValueOnce({ communities: [] })
+      nativeIpc.invoke.mockResolvedValueOnce({ communities: [] })
       await graphComputeApi.communities({ nodes, edges: [] })
-      const payload = vi.mocked(invoke).mock.calls[0]?.[1] as {
+      const payload = nativeIpc.invoke.mock.calls[0]?.[1] as {
         nodes: { id: string; label: string }[]
       }
       expect(payload.nodes).toHaveLength(5_001)
@@ -78,12 +91,12 @@ describe('graph computation IPC', () => {
     { ...result, positions: [{ id: 'a', x: 10 }] },
     { ...result, engineVersion: 'unexpected-engine' },
   ])('rejects incompatible native layout responses: %j', async (response) => {
-    vi.mocked(invoke).mockResolvedValueOnce(response)
+    nativeIpc.invoke.mockResolvedValueOnce(response)
     await expect(graphComputeApi.layout(input)).rejects.toThrow()
   })
 
   it('validates partition results before exposing them to the renderer', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({
+    nativeIpc.invoke.mockResolvedValueOnce({
       communities: [{ id: 'a', label: 'A', nodeIds: [null] }],
     })
     await expect(graphComputeApi.communities({ nodes: [], edges: [] })).rejects.toThrow()
@@ -101,12 +114,12 @@ describe('graph computation IPC', () => {
 
   it('rejects promptly on abort before native finishes and cancels the matching request once', async () => {
     const native = pendingNative()
-    vi.mocked(invoke).mockReturnValueOnce(native.promise).mockResolvedValueOnce(undefined)
+    nativeIpc.invoke.mockReturnValueOnce(native.promise).mockResolvedValueOnce(undefined)
     const controller = new AbortController()
     const remove = vi.spyOn(controller.signal, 'removeEventListener')
     const promise = graphComputeApi.layout(input, controller.signal)
     const outcome = expect(promise).rejects.toMatchObject({ name: 'AbortError' })
-    const requestId = vi.mocked(invoke).mock.calls[0]?.[1]?.requestId
+    const requestId = readRequestId(nativeIpc.invoke.mock.calls[0]?.[1])
     controller.abort()
     controller.abort()
     await outcome
@@ -125,8 +138,8 @@ describe('graph computation IPC', () => {
       const add = vi.spyOn(controller.signal, 'addEventListener')
       const remove = vi.spyOn(controller.signal, 'removeEventListener')
       const failure = new Error('native service unavailable')
-      if (outcome === 'success') vi.mocked(invoke).mockResolvedValueOnce(result)
-      else vi.mocked(invoke).mockRejectedValueOnce(failure)
+      if (outcome === 'success') nativeIpc.invoke.mockResolvedValueOnce(result)
+      else nativeIpc.invoke.mockRejectedValueOnce(failure)
       const promise = graphComputeApi.layout(input, controller.signal)
       if (outcome === 'success') await expect(promise).resolves.toEqual(result)
       else await expect(promise).rejects.toBe(failure)
@@ -141,7 +154,7 @@ describe('graph computation IPC', () => {
   it('consumes late native rejection and reports cancel failure without replacing AbortError', async () => {
     const native = pendingNative()
     const cancelFailure = new Error('cancel failed')
-    vi.mocked(invoke).mockReturnValueOnce(native.promise).mockRejectedValueOnce(cancelFailure)
+    nativeIpc.invoke.mockReturnValueOnce(native.promise).mockRejectedValueOnce(cancelFailure)
     const unhandled = vi.fn()
     process.on('unhandledRejection', unhandled)
     try {

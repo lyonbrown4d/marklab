@@ -1,3 +1,15 @@
+import type {
+  DesktopCommandArgs,
+  DesktopCommandResults,
+  DesktopEventPayloads,
+} from '@/generated/desktop/bindings'
+import type {
+  RuntimeCommandName,
+  RuntimeCommandParameters,
+  RuntimeCommandResult,
+  RuntimeEventName,
+  RuntimeEventPayloads,
+} from '@/runtime/tauri/contract'
 import type { DesktopGitApi } from '@/runtime/git'
 import type { AssetApi } from '@/types/workspaceSession'
 import type { WindowOpeningProgress, WindowOpeningRetryResult } from '@/types/windowOpening'
@@ -35,67 +47,42 @@ export type {
   DesktopUpdateStatus,
 } from '@/types/softwareUpdate'
 
-type DesktopPlatformInfo = {
-  platform: 'windows' | 'macos' | 'linux' | 'unknown'
-}
+type DesktopPlatformInfo = DesktopCommandResults['app_get_platform']
 
 export type DesktopWorkspacePathApi = {
-  copyAbsolutePathToClipboard: (path: string) => Promise<void>
-  openPathInSystem: (path: string) => Promise<void>
+  copyAbsolutePathToClipboard: (
+    path: string,
+  ) => Promise<DesktopCommandResults['workspace_copy_absolute_path']>
+  openPathInSystem: (
+    path: string,
+  ) => Promise<DesktopCommandResults['workspace_open_path_in_system']>
   readTextPreview: (path: string, limitBytes: number) => Promise<WorkspaceTextPreview>
-  revealPathInSystem: (path: string) => Promise<void>
+  revealPathInSystem: (
+    path: string,
+  ) => Promise<DesktopCommandResults['workspace_reveal_path_in_system']>
 }
 
 export type DesktopLinkPreviewApi = {
   capture: (url: string, options: LinkPreviewCaptureOptions) => Promise<LinkPreviewCapture>
-  cancel: (requestId: string) => Promise<void>
-  promote: (requestId: string) => Promise<void>
+  cancel: (requestId: string) => Promise<DesktopCommandResults['link_preview_cancel']>
+  promote: (requestId: string) => Promise<DesktopCommandResults['link_preview_promote']>
   fetch: (url: string) => Promise<LinkPreviewResult>
 }
 
-export type DesktopClipboardContent = {
-  html?: string
-  markdown: string
-  text: string
-}
+export type DesktopClipboardContent = DesktopCommandArgs['clipboard_write']['request']
 
 export type DesktopClipboardApi = {
-  readImage: () => Promise<{
-    dataUrl: string
-    width: number
-    height: number
-  } | null>
+  readImage: () => Promise<DesktopCommandResults['clipboard_read_image']>
   readText: () => Promise<string>
-  write: (content: DesktopClipboardContent) => Promise<{ ok: boolean }>
-  writeText: (text: string) => Promise<{ ok: boolean }>
+  write: (content: DesktopClipboardContent) => Promise<DesktopCommandResults['clipboard_write']>
+  writeText: (text: string) => Promise<DesktopCommandResults['clipboard_write_text']>
 }
-
-export type DesktopCommandArguments = Record<string, unknown> | undefined
 
 export type { DesktopGitApi } from '@/runtime/git'
 
-export type DesktopOpenDialogOptions = {
-  title?: string
-  defaultPath?: string
-  buttonLabel?: string
-  filters?: Array<{
-    name: string
-    extensions: string[]
-  }>
-  multiple?: boolean
-  directory?: boolean
-  file?: boolean
-}
+export type DesktopOpenDialogOptions = DesktopCommandArgs['dialog_open']['request']
 
-export type DesktopSaveDialogOptions = {
-  title?: string
-  defaultPath?: string
-  buttonLabel?: string
-  filters?: Array<{
-    name: string
-    extensions: string[]
-  }>
-}
+export type DesktopSaveDialogOptions = DesktopCommandArgs['dialog_save']['request']
 
 export type DesktopFileDropEvent = {
   paths: string[]
@@ -105,28 +92,15 @@ export type DesktopFileDropEvent = {
   }
 }
 
-export type DesktopLaunchSource = 'startup' | 'second-instance' | 'open-url'
+export type DesktopLaunchSource = DesktopDeepLinkEvent['source']
 
-export type DesktopSingleInstanceEvent = {
-  args: string[]
-  cwd: string
-}
+export type DesktopSingleInstanceEvent = DesktopEventPayloads['single-instance']
 
-export type DesktopDeepLinkEvent = {
-  url: string
-  source: DesktopLaunchSource
-  receivedAt: number
-}
+export type DesktopDeepLinkEvent = DesktopEventPayloads['deep-link']
 
-export type DesktopLaunchInfo = DesktopSingleInstanceEvent & {
-  deepLinks: DesktopDeepLinkEvent[]
-}
+export type DesktopLaunchInfo = DesktopCommandResults['lifecycle_get_launch_info']
 
-export type DesktopUserThemeInfo = {
-  createdAt: number
-  id: string
-  name: string
-}
+export type DesktopUserThemeInfo = DesktopCommandResults['themes_list']['themes'][number]
 
 export type DesktopRuntimeEventEnvelope<T = unknown> = {
   event: string
@@ -135,23 +109,26 @@ export type DesktopRuntimeEventEnvelope<T = unknown> = {
 }
 
 export type DesktopCommandBridgeApi = {
-  invoke: <T = unknown>(command: string, args?: DesktopCommandArguments) => Promise<T>
+  invoke: <C extends RuntimeCommandName>(
+    command: C,
+    ...args: RuntimeCommandParameters<C>
+  ) => Promise<RuntimeCommandResult<C>>
 }
 
 export type DesktopEventBridgeApi = {
-  listen: <T = unknown>(
-    eventName: string,
-    handler: (event: DesktopRuntimeEventEnvelope<T>) => void,
+  listen: <E extends RuntimeEventName>(
+    eventName: E,
+    handler: (event: DesktopRuntimeEventEnvelope<RuntimeEventPayloads[E]>) => void,
   ) => (() => void) | Promise<() => void>
 }
 
 export type DesktopRuntimeApi = {
   aiCompletion: {
-    cancel: (requestId: string) => Promise<{ ok: true }>
+    cancel: (requestId: string) => Promise<DesktopCommandResults['ai_completion_cancel']>
     onEvent: (handler: (event: AiInlineCompletionEvent) => void) => () => void
     start: (input: AiInlineCompletionRequest) => Promise<AiInlineCompletionStartResult>
   }
-  appReady: (signal?: RendererReadySignal) => Promise<{ ok: boolean }>
+  appReady: (signal?: RendererReadySignal) => Promise<DesktopCommandResults['app_ready']>
   assets: AssetApi
   lifecycle: {
     getLaunchInfo: () => Promise<DesktopLaunchInfo>
@@ -165,7 +142,7 @@ export type DesktopRuntimeApi = {
     get: () => Promise<DesktopPlatformInfo>
   }
   menu: {
-    dispatch: (id: string) => Promise<{ ok: boolean }>
+    dispatch: (id: string) => Promise<DesktopCommandResults['menu_dispatch']>
     onCommand: (handler: (id: string) => void) => () => void
   }
   opening: {
@@ -173,61 +150,39 @@ export type DesktopRuntimeApi = {
     retry: () => Promise<WindowOpeningRetryResult>
   }
   dialog: {
-    createWorkspace: (options: { name: string; title?: string }) => Promise<string | null>
+    createWorkspace: (
+      options: DesktopCommandArgs['dialog_create_workspace']['request'],
+    ) => Promise<DesktopCommandResults['dialog_create_workspace']>
     open: (options?: DesktopOpenDialogOptions) => Promise<string | string[] | null>
     save: (options?: DesktopSaveDialogOptions) => Promise<string | null>
   }
   edit: {
-    execute: (action: FocusedEditAction) => Promise<{ ok: true }>
+    execute: (action: FocusedEditAction) => Promise<DesktopCommandResults['edit_execute']>
   }
   clipboard: DesktopClipboardApi
   shell: {
-    openPath: (path: string) => Promise<{
-      ok: boolean
-      path?: string
-      error?: string
-    }>
-    revealPath: (path: string) => Promise<{
-      ok: boolean
-      path?: string
-      error?: string
-    }>
+    openPath: (path: string) => Promise<DesktopCommandResults['shell_open_path']>
+    revealPath: (path: string) => Promise<DesktopCommandResults['shell_reveal_path']>
   }
   settings: {
     recentWorkspaces: RecentWorkspacesApi
     persist: {
-      getItem: (key: string) => Promise<unknown>
+      getItem: (key: string) => Promise<DesktopCommandResults['settings_persist_get']>
       setItem: (
         key: string,
-        value: unknown,
-      ) => Promise<{
-        ok: boolean
-        error?: string
-      }>
-      removeItem: (key: string) => Promise<{
-        ok: boolean
-        error?: string
-      }>
+        value: DesktopCommandArgs['settings_persist_set']['request']['value'],
+      ) => Promise<DesktopCommandResults['settings_persist_set']>
+      removeItem: (key: string) => Promise<DesktopCommandResults['settings_persist_remove']>
     }
   }
   themes: {
-    importCss: (path: string) => Promise<{
-      error?: string
-      ok: boolean
-      theme?: DesktopUserThemeInfo
-    }>
-    list: () => Promise<{
-      error?: string
-      ok: boolean
-      themes: DesktopUserThemeInfo[]
-    }>
-    openFolder: () => Promise<{ error?: string; ok: boolean }>
-    readCss: (id: string | null) => Promise<{
-      css?: string
-      error?: string
-      ok: boolean
-    }>
-    remove: (id: string) => Promise<{ error?: string; ok: boolean }>
+    importCss: (path: string) => Promise<DesktopCommandResults['themes_import_css']>
+    list: () => Promise<DesktopCommandResults['themes_list']>
+    openFolder: () => Promise<DesktopCommandResults['themes_open_folder']>
+    readCss: (
+      id: DesktopCommandArgs['themes_read_css']['request']['id'],
+    ) => Promise<DesktopCommandResults['themes_read_css']>
+    remove: (id: string) => Promise<DesktopCommandResults['themes_remove']>
   }
   updates: {
     check: () => Promise<DesktopUpdateResult>
@@ -245,7 +200,9 @@ export type DesktopRuntimeApi = {
   workspace: DesktopWorkspacePathApi
   workspaceTree: WorkspaceTreeApi
   window: {
-    setVimKeyboardOwnership: (active: boolean) => Promise<void>
+    setVimKeyboardOwnership: (
+      active: boolean,
+    ) => Promise<DesktopCommandResults['window_set_vim_keyboard_ownership']>
     onPresented: (handler: () => void) => () => void
     minimize: () => Promise<void>
     maximize: () => Promise<void>

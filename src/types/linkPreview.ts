@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 const safeHttpUrl = z
@@ -8,12 +9,18 @@ const safeHttpUrl = z
   }, 'Expected a safe HTTP URL')
   .transform((value) => new URL(value).toString())
 
-export const linkPreviewRequestSchema = z.object({ url: safeHttpUrl })
+export const linkPreviewRequestSchema = z.object({
+  url: safeHttpUrl,
+}) satisfies z.ZodType<LinkPreviewRequest>
+
 export const linkPreviewCaptureRequestSchema = linkPreviewRequestSchema.extend({
   priority: z.enum(['background', 'interactive']).default('interactive'),
   requestId: z.uuid(),
-})
-export const linkPreviewCaptureControlSchema = z.object({ requestId: z.uuid() })
+}) satisfies z.ZodType<DesktopCommandArgs['link_preview_capture']['request']>
+
+export const linkPreviewCaptureControlSchema = z.object({
+  requestId: z.uuid(),
+}) satisfies z.ZodType<DesktopCommandArgs['link_preview_cancel']['request']>
 
 const remoteImageCapability = z.string().regex(/^marklab-asset:\/\/remote\/v1\/[A-Za-z0-9_-]{43}$/)
 
@@ -22,7 +29,7 @@ export const linkPreviewCaptureSchema = z.object({
   src: remoteImageCapability,
   url: safeHttpUrl,
   width: z.number().int().positive().max(3840),
-})
+}) satisfies z.ZodType<LinkPreviewCapture>
 
 export const linkPreviewWebpageSchema = z.object({
   canonical: safeHttpUrl.nullable(),
@@ -33,26 +40,33 @@ export const linkPreviewWebpageSchema = z.object({
   site_name: z.string().nullable(),
   title: z.string().nullable(),
   url: safeHttpUrl,
-})
+}) satisfies z.ZodType<LinkPreviewWebpage>
 
 export const linkPreviewImageSchema = z.object({
   kind: z.literal('image'),
   media_type: z.enum(['image/avif', 'image/gif', 'image/jpeg', 'image/png', 'image/webp']),
   src: remoteImageCapability,
   url: safeHttpUrl,
-})
+}) satisfies z.ZodType<Extract<LinkPreviewResult, { kind: 'image' }>>
 
 export const linkPreviewResultSchema = z.discriminatedUnion('kind', [
   linkPreviewWebpageSchema,
   linkPreviewImageSchema,
-])
+]) satisfies z.ZodType<LinkPreviewResult>
 
-export type LinkPreviewRequest = z.infer<typeof linkPreviewRequestSchema>
-export type PreviewCapturePriority = z.infer<typeof linkPreviewCaptureRequestSchema>['priority']
+export type LinkPreviewRequest = DesktopCommandArgs['link_preview_fetch']['request']
+
+export type PreviewCapturePriority = NonNullable<
+  DesktopCommandArgs['link_preview_capture']['request']['priority']
+>
+
 export type LinkPreviewCaptureOptions = Pick<
-  z.infer<typeof linkPreviewCaptureRequestSchema>,
+  DesktopCommandArgs['link_preview_capture']['request'],
   'priority' | 'requestId'
 >
-export type LinkPreviewCapture = z.infer<typeof linkPreviewCaptureSchema>
-export type LinkPreviewResult = z.infer<typeof linkPreviewResultSchema>
-export type LinkPreviewWebpage = z.infer<typeof linkPreviewWebpageSchema>
+
+export type LinkPreviewCapture = DesktopCommandResults['link_preview_capture']
+
+export type LinkPreviewResult = DesktopCommandResults['link_preview_fetch']
+
+export type LinkPreviewWebpage = Extract<LinkPreviewResult, { kind: 'webpage' }>

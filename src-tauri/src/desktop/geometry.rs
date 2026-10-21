@@ -15,7 +15,7 @@ struct Cached {
 #[derive(Default)]
 pub struct GeometryState(Mutex<HashMap<String, Cached>>);
 fn scope(root: &RootInfo) -> BackendResult<String> {
-  crate::database::workspace_key(&root.kind, &root.path)
+  crate::database::workspace_key(root.kind.as_str(), &root.path)
 }
 fn state_error() -> BackendError {
   BackendError::new("WINDOW_STATE_ERROR", "Window geometry state is unavailable")

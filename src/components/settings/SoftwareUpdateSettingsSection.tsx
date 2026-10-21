@@ -84,11 +84,11 @@ const SoftwareUpdateSettingsSection = () => {
           <div className="flex flex-col gap-1.5">
             <Progress
               aria-label={t('settings.softwareUpdateProgress')}
-              aria-valuenow={Math.round(state.progress.percent)}
+              aria-valuenow={Math.round(state.progress.percent ?? 0)}
               value={state.progress.percent}
             />
             <span className="text-xs text-muted-foreground">
-              {Math.round(state.progress.percent)}%
+              {Math.round(state.progress.percent ?? 0)}%
             </span>
           </div>
         )}

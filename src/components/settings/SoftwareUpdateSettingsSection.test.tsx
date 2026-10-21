@@ -79,7 +79,9 @@ describe('SoftwareUpdateSettingsSection', () => {
               ? { code: 'CHECK_FAILED', message: 'offline', operation: 'check' }
               : undefined,
           info:
-            status === 'available' || status === 'downloaded' ? { version: '0.3.0' } : undefined,
+            status === 'available' || status === 'downloaded'
+              ? { version: '0.3.0', releaseNotes: null, releaseDate: null }
+              : undefined,
           progress:
             status === 'downloading'
               ? { bytesPerSecond: 1, percent: 42, total: 100, transferred: 42 }
@@ -106,7 +108,7 @@ describe('SoftwareUpdateSettingsSection', () => {
         currentVersion: '0.2.4',
         installOnQuit: false,
         event: 'available',
-        info: { version: '0.3.0' },
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
         status: 'available',
       })
     })
@@ -122,7 +124,7 @@ describe('SoftwareUpdateSettingsSection', () => {
         currentVersion: '0.2.4',
         installOnQuit: false,
         event: 'download-progress',
-        info: { version: '0.3.0' },
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
         progress: { bytesPerSecond: 1, percent: 42, total: 100, transferred: 42 },
         status: 'downloading',
       })
@@ -142,7 +144,7 @@ describe('SoftwareUpdateSettingsSection', () => {
         currentVersion: '0.2.4',
         installOnQuit: false,
         event: 'downloaded',
-        info: { version: '0.3.0' },
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
         status: 'downloaded',
       })
     })

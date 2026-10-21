@@ -1,5 +1,5 @@
 use super::{
-  Capture, LinkPreviewService, PreviewResult, capture,
+  Capture, ImageMediaType, LinkPreviewService, PreviewResult, capture,
   disk_cache::DiskCache,
   ensure_generation, metadata, network,
   queue::{CaptureQueue, Priority},
@@ -17,7 +17,7 @@ enum Fetched {
   Page(PreviewResult),
   Image {
     url: String,
-    mime: String,
+    media_type: ImageMediaType,
     bytes: Arc<Vec<u8>>,
   },
 }
@@ -42,7 +42,11 @@ fn weight(bytes: usize) -> u32 {
 }
 fn preview_weight(key: &CacheKey, value: &Fetched) -> u32 {
   let size = match value {
-    Fetched::Image { url, mime, bytes } => url.len() + mime.len() + bytes.len(),
+    Fetched::Image {
+      url,
+      media_type,
+      bytes,
+    } => url.len() + media_type.as_str().len() + bytes.len(),
     Fetched::Page(PreviewResult::Webpage {
       url,
       canonical,
@@ -109,11 +113,11 @@ impl LinkPreviewService {
       .map_err(|_| network::failure("Link preview service is closed"))?;
     let response = network::fetch(url).await?;
     crate::blocking::run(move || {
-      if network::raster(&response.mime) {
+      if let Some(media_type) = ImageMediaType::from_mime(&response.mime) {
         network::validate_raster(&response.bytes)?;
         Ok(Fetched::Image {
           url: response.url.into(),
-          mime: response.mime,
+          media_type,
           bytes: Arc::new(response.bytes),
         })
       } else {
@@ -138,11 +142,15 @@ impl LinkPreviewService {
       .map_err(|error| (*error).clone())?;
     match result {
       Fetched::Page(result) => Ok(result),
-      Fetched::Image { url, mime, bytes } => {
-        let capability = issue(window, generation, bytes, mime.clone()).await?;
+      Fetched::Image {
+        url,
+        media_type,
+        bytes,
+      } => {
+        let capability = issue(window, generation, bytes, media_type.as_str().into()).await?;
         Ok(PreviewResult::Image {
           url,
-          media_type: mime,
+          media_type,
           src: capability,
         })
       }

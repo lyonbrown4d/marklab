@@ -29,7 +29,7 @@ const planSchema = z
   .strict()
 
 const loadPlan = async (): Promise<WorkspacePublicationPlan> =>
-  planSchema.parse(await invoke<unknown>('fs_get_workspace_publication_plan'))
+  planSchema.parse(await invoke('fs_get_workspace_publication_plan'))
 
 const exportPublication = async (
   chapters: Array<{ path: string; title: string }>,
@@ -47,7 +47,7 @@ const exportPublication = async (
     ],
   })
   if (!outputPath) return undefined
-  return invoke<string>('export_workspace_publication', { chapters, options, outputPath })
+  return invoke('export_workspace_publication', { chapters, options, outputPath })
 }
 
 const defaultOutputPath = (rootPath: string, title: string, extension: string): string => {

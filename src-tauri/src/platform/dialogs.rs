@@ -9,24 +9,31 @@ use std::path::PathBuf;
 use tauri::Manager;
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder};
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DialogRequest {
+  #[serde(default)]
   title: Option<String>,
+  #[serde(default)]
   default_path: Option<String>,
+  #[serde(default)]
   button_label: Option<String>,
+  #[serde(default)]
   filters: Option<Vec<Filter>>,
+  #[serde(default)]
   multiple: Option<bool>,
+  #[serde(default)]
   directory: Option<bool>,
+  #[serde(default)]
   file: Option<bool>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 struct Filter {
   name: String,
   extensions: Vec<String>,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(untagged)]
 pub enum Selection {
   Single(String),
@@ -90,6 +97,7 @@ fn builder(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn dialog_open(
   window: WebviewWindow,
   request: DialogRequest,
@@ -125,6 +133,7 @@ pub async fn dialog_open(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn dialog_save(
   window: WebviewWindow,
   request: DialogRequest,
@@ -146,13 +155,15 @@ pub async fn dialog_save(
   .map_err(|e| BackendError::new("DIALOG_FAILED", e.to_string()))?
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct CreateWorkspaceRequest {
   name: String,
+  #[serde(default)]
   title: Option<String>,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn dialog_create_workspace(
   window: WebviewWindow,
   request: CreateWorkspaceRequest,
@@ -194,6 +205,7 @@ pub async fn dialog_create_workspace(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn app_get_platform(request: EmptyRequest) -> BackendResult<PlatformInfo> {
   let _ = request;
   Ok(PlatformInfo {
@@ -206,7 +218,7 @@ pub fn app_get_platform(request: EmptyRequest) -> BackendResult<PlatformInfo> {
     },
   })
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct PlatformInfo {
   platform: &'static str,
 }

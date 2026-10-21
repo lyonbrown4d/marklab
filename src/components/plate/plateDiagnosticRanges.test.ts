@@ -236,6 +236,7 @@ describe('Plate diagnostic ranges', () => {
     expect(
       applyPlateDiagnosticAction(editor, markdown, problem(), {
         kind: 'replace-text',
+        isPreferred: false,
         title: 'Invalid replacement',
         edit: {
           path: 'notes/current.md',
@@ -257,6 +258,7 @@ describe('Plate diagnostic ranges', () => {
     const hash = line.indexOf('#')
     const action: MarkdownLanguageCodeAction = {
       kind: 'replace-text',
+      isPreferred: false,
       title: 'Replace missing heading anchor',
       edit: {
         path: 'notes/current.md',

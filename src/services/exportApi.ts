@@ -1,7 +1,11 @@
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 import { saveDialog } from '@/runtime/dialog'
 import { invoke } from '@/runtime/ipc'
 /** Supported export formats. */
-export type ExportFormat = 'pdf' | 'docx' | 'html'
+export type ExportFormat = Exclude<
+  DesktopCommandArgs['export_markdown']['request']['format'],
+  'markdown'
+>
 const FORMAT_CONFIG: Record<
   ExportFormat,
   {
@@ -47,7 +51,7 @@ const exportDocument = async (
       filters: [{ name: config.filterName, extensions: config.extensions }],
     })
     if (!path) return undefined
-    return await invoke<string>('export_markdown', {
+    return await invoke('export_markdown', {
       format,
       outputPath: path,
       sourceDocumentPath: options.activePath,
@@ -59,9 +63,9 @@ const exportDocument = async (
 export const exportApi = {
   exportDocument,
   cancelExport(taskId: string) {
-    return invoke<boolean>('export_cancel', { taskId })
+    return invoke('export_cancel', { taskId })
   },
   openExportedFile(path: string) {
-    return invoke<void>('export_open_output_path', { path })
+    return invoke('export_open_output_path', { path })
   },
 }

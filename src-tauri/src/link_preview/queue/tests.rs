@@ -102,22 +102,22 @@ fn deduplicates_subscribers_and_only_last_cancel_interrupts_running_work() {
   let mut policy = Policy::default();
   let mut first = enqueue(&mut policy, "a", "same", "first", Priority::Background);
   let mut second = enqueue(&mut policy, "a", "same", "second", Priority::Interactive);
-  let (id, _, mut cancellation) = policy.start().unwrap();
+  let (id, _, cancellation) = policy.start().unwrap();
   assert!(policy.start().is_none());
   cancel(&mut policy, "a", "first");
   assert_eq!(
     first.try_recv().unwrap().unwrap_err().code,
     "PREVIEW_CANCELLED"
   );
-  assert!(!cancellation.has_changed().unwrap());
+  assert!(!cancellation.is_cancelled());
   policy.finish(id, Ok(Arc::new(vec![8])));
   assert_eq!(second.try_recv().unwrap().unwrap().as_ref(), &[8]);
 
   let _third = enqueue(&mut policy, "a", "new", "third", Priority::Interactive);
   let (_, _, cancelled) = policy.start().unwrap();
   cancel(&mut policy, "a", "third");
-  assert!(*cancelled.borrow());
-  assert!(cancellation.has_changed().is_err() || *cancellation.borrow_and_update());
+  assert!(cancelled.is_cancelled());
+  assert!(cancellation.is_cancelled());
 }
 
 #[test]
@@ -165,7 +165,7 @@ fn close_rejects_owner_waiters_and_keeps_running_work_counted_until_dropped() {
     owner.try_recv().unwrap().unwrap_err().code,
     "PREVIEW_CANCELLED"
   );
-  assert!(*first.2.borrow());
+  assert!(first.2.is_cancelled());
   let _pending = enqueue(&mut policy, "b", "next", "next", Priority::Interactive);
   assert!(policy.start().is_none());
   policy.finish(first.0, Err(cancelled()));

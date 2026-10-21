@@ -62,6 +62,7 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
         result: restored!.content,
         revision: restored!.revision,
         deleted: restored!.deleteFile,
+        markerSize: 7,
       }
       const next: Draft = {
         content: snapshot.result,

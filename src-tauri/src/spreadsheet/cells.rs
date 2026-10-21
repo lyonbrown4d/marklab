@@ -2,7 +2,7 @@ use super::limits;
 use calamine::DataRef;
 use serde::Serialize;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(untagged)]
 pub enum CellValue {
   Text(String),
@@ -11,7 +11,7 @@ pub enum CellValue {
   Empty,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 pub struct SpreadsheetCell {
   pub value: CellValue,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -20,7 +20,7 @@ pub struct SpreadsheetCell {
   pub format: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Calculation {
   pub status: CalculationStatus,
@@ -28,7 +28,7 @@ pub struct Calculation {
   pub error_count: usize,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum CalculationStatus {
   Cached,

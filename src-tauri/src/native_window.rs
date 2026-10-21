@@ -101,3 +101,11 @@ pub fn is_trusted(webview: &tauri::Webview) -> bool {
     && ["", "index.html", "window-opening.html", "splashscreen.html"]
       .contains(&url.path().trim_start_matches('/'))
 }
+
+// TrustedWindow is injected by Tauri after caller validation; it is never a
+// renderer argument and must not appear in the generated request payload.
+impl specta::function::FunctionArg for TrustedWindow {
+  fn to_datatype(_: &mut specta::Types) -> Option<specta::datatype::DataType> {
+    None
+  }
+}

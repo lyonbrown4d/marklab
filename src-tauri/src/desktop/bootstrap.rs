@@ -131,7 +131,7 @@ async fn initialize(app: &AppHandle) -> BackendResult<()> {
     }
   };
   let root = workspace.root_info();
-  if root.kind == "internal" {
+  if root.kind == crate::workspace::RootKind::Internal {
     seed_internal(app, &locale).await?;
   }
   let mut seed = if explicit {
@@ -150,7 +150,7 @@ async fn initialize(app: &AppHandle) -> BackendResult<()> {
     .insert("rootPath".into(), Value::String(root.path.clone()));
   seed
     .state
-    .insert("rootKind".into(), Value::String(root.kind));
+    .insert("rootKind".into(), Value::String(root.kind.as_str().into()));
   app
     .state::<SettingsStore>()
     .write_session("main", seed, Some(true), explicit)

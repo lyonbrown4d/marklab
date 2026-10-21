@@ -1,5 +1,10 @@
+import type {
+  RuntimeCommandName,
+  RuntimeCommandParameters,
+  RuntimeCommandResult,
+} from '@/runtime/tauri/contract'
 import { browser } from '@wdio/globals'
-import type { DesktopRuntimeApi, DesktopCommandArguments } from '@/runtime/desktop'
+import type { DesktopRuntimeApi } from '@/runtime/desktop'
 
 export const applicationIdentifier = () =>
   browser.execute(async () => {
@@ -14,7 +19,7 @@ export const currentRoot = () =>
   browser.execute(async () => {
     const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
     if (!runtime) return null
-    return runtime.commands.invoke<{ kind: string; path: string }>('fs_get_root_info').then(
+    return runtime.commands.invoke('fs_get_root_info').then(
       (root) => root.path,
       () => null,
     )
@@ -92,7 +97,7 @@ export const openEditor = async (file = 'Editor.md') => {
 export const waitForRustMarker = async (marker: string, path = 'Editor.md') => {
   await browser.waitUntil(
     async () => {
-      const snapshot = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+      const snapshot = await invokeNative('fs_open_buffer_snapshot', {
         path,
       })
       return snapshot.content.includes(marker)
@@ -163,25 +168,32 @@ export const typeAtEditorEnd = async (text: string) => {
   )
 }
 
-export const invokeNative = <T>(command: string, payload?: DesktopCommandArguments): Promise<T> =>
-  browser
-    .execute(
-      async (name, request) => {
-        const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
-        if (!runtime) return { ok: false, error: 'Real Tauri runtime was not initialized' }
-        return runtime.commands.invoke(name, request).then(
-          (value) => ({ ok: true, value }),
-          () => ({ ok: false, error: `Native command failed: ${name}` }),
-        )
-      },
-      command,
-      payload,
-    )
-    .then((result) => {
-      const response = result as { ok: boolean; value?: T; error?: string }
-      if (!response.ok) throw new Error(response.error)
-      return response.value as T
-    })
+type NativeCommandResponse<Result> = { ok: true; value: Result } | { ok: false; error: string }
+
+export const invokeNative = async <C extends RuntimeCommandName>(
+  command: C,
+  ...args: RuntimeCommandParameters<C>
+): Promise<RuntimeCommandResult<C>> => {
+  const response = await browser.execute(
+    async ({
+      name,
+      parameters,
+    }: {
+      name: C
+      parameters: RuntimeCommandParameters<C>
+    }): Promise<NativeCommandResponse<RuntimeCommandResult<C>>> => {
+      const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
+      if (!runtime) return { ok: false, error: 'Real Tauri runtime was not initialized' }
+      return runtime.commands.invoke(name, ...parameters).then(
+        (value) => ({ ok: true, value }),
+        () => ({ ok: false, error: `Native command failed: ${name}` }),
+      )
+    },
+    { name: command, parameters: args },
+  )
+  if (!response.ok) throw new Error(response.error)
+  return response.value
+}
 
 type CloseAcknowledgment = { scheduled: true } | { scheduled: false; error: string }
 
@@ -191,7 +203,7 @@ export const closeThroughApplication = async (marker: string) => {
       const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
       if (!runtime) return { scheduled: false, error: 'Real Tauri runtime is unavailable' }
       return runtime.commands
-        .invoke<{ content: string }>('fs_open_buffer_snapshot', {
+        .invoke('fs_open_buffer_snapshot', {
           path: 'Editor.md',
         })
         .then(

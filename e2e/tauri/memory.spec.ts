@@ -5,7 +5,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { browser } from '@wdio/globals'
 import { Key } from 'webdriverio'
-import type { FsGraph, WorkspaceGraphNodeDetailsResult } from '@/services/fsApiSchemas'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
 import { fixturePaths } from './fixturePaths.js'
 import {
@@ -23,8 +22,7 @@ const file = 'Memory.md'
 const editorSelector = '[data-testid="markdown-editor"][data-state="ready"]'
 const modifier = process.platform === 'darwin' ? Key.Command : Key.Control
 
-const readBuffer = () =>
-  invokeNative<{ content: string }>('fs_open_buffer_snapshot', { path: file })
+const readBuffer = () => invokeNative('fs_open_buffer_snapshot', { path: file })
 
 const switchView = async (icon: 'files' | 'network') => {
   await browser.$(`[data-app-focus-zone="titlebar"] button:has(svg.lucide-${icon})`).click()
@@ -34,7 +32,7 @@ describe('native background resource lifecycle', () => {
   it('keeps editing and undo across graph navigation with real Rust previews', async () => {
     await switchToWorkspace(fixture.alpha)
     await openEditor(file)
-    await invokeNative<number>('fs_flush_buffers')
+    await invokeNative('fs_flush_buffers')
     const savedBefore = await fs.readFile(path.join(fixture.alpha, file), 'utf8')
     assert.match(savedBefore, /alpha-only memory workspace/)
     const textBefore = await browser.$(editorSelector).getText()
@@ -44,13 +42,15 @@ describe('native background resource lifecycle', () => {
 
     await switchView('network')
     await browser.$('.react-flow').waitForDisplayed({ timeout: 90_000 })
-    const graph = await invokeNative<FsGraph>('fs_get_workspace_graph')
+    const graph = await invokeNative('fs_get_workspace_graph')
     assert.ok(graph.revision, 'Real Rust topology did not expose its revision')
     assert.ok(graph.nodes.some((node) => node.id === `file:${file}`))
-    const details = await invokeNative<WorkspaceGraphNodeDetailsResult>(
-      'fs_get_workspace_graph_node_details',
-      { revision: graph.revision, node_ids: [`file:${file}`], mode: 'summary', max_nodes: 1 },
-    )
+    const details = await invokeNative('fs_get_workspace_graph_node_details', {
+      revision: graph.revision,
+      node_ids: [`file:${file}`],
+      mode: 'summary',
+      max_nodes: 1,
+    })
     assert.equal(details.revision, graph.revision)
     assert.equal(details.items.length, 1)
     const item = details.items[0]!
@@ -86,7 +86,7 @@ describe('native background resource lifecycle', () => {
     )
     await waitForRustMarker(marker, file)
     assert.match((await readBuffer()).content, /alpha-only memory workspace/)
-    await invokeNative<number>('fs_flush_buffers')
+    await invokeNative('fs_flush_buffers')
     assert.equal(
       await fs.readFile(path.join(fixture.alpha, file), 'utf8'),
       (await readBuffer()).content,

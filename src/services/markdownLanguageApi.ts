@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import { invoke } from '@/runtime/ipc'
 
@@ -7,19 +8,11 @@ const markdownLanguageDefinitionSchema = z
     line: z.number(),
     column: z.number(),
     endColumn: z.number().optional(),
-    headingSlug: z.string().nullable().optional(),
+    headingSlug: z.string().optional(),
   })
-  .nullable()
+  .nullable() satisfies z.ZodType<MarkdownLanguageDefinition>
 
-type MarkdownLanguageDocumentSymbolWire = {
-  name: string
-  level: number
-  line: number
-  column: number
-  endColumn: number
-  lspKind: number
-  children: MarkdownLanguageDocumentSymbolWire[]
-}
+type MarkdownLanguageDocumentSymbolWire = MarkdownLanguageDocumentSymbol
 
 const markdownLanguageDocumentSymbolSchema: z.ZodType<MarkdownLanguageDocumentSymbolWire> = z.lazy(
   () =>
@@ -41,24 +34,24 @@ const markdownLanguageReferenceSchema = z.object({
   endColumn: z.number(),
   text: z.string(),
   context: z.string(),
-  targetAnchor: z.string().nullable().optional(),
-  targetHeadingSlug: z.string().nullable().optional(),
-})
+  targetAnchor: z.string().nullable(),
+  targetHeadingSlug: z.string().nullable(),
+}) satisfies z.ZodType<MarkdownLanguageReference>
 
 const markdownLanguageTextEditSchema = z.object({
-  path: z.string(),
+  path: z.string().nullable(),
   line: z.number(),
   startColumn: z.number(),
   endColumn: z.number(),
   newText: z.string(),
-})
+}) satisfies z.ZodType<MarkdownLanguageTextEdit>
 
 const markdownLanguageRenameResultSchema = z.object({
-  edits: z.array(markdownLanguageTextEditSchema),
+  edits: z.array(markdownLanguageTextEditSchema.extend({ path: z.string() })),
   appliedEdits: z.number(),
   touchedFiles: z.array(z.string()),
-  rejectReason: z.string().nullable().optional(),
-})
+  rejectReason: z.string().nullable(),
+}) satisfies z.ZodType<MarkdownLanguageRenameResult>
 
 const markdownLanguageCodeActionSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -66,36 +59,49 @@ const markdownLanguageCodeActionSchema = z.discriminatedUnion('kind', [
     kind: z.literal('create-file'),
     path: z.string(),
     content: z.string().optional(),
-    isPreferred: z.boolean().optional(),
+    isPreferred: z.boolean(),
   }),
   z.object({
     title: z.string(),
     kind: z.literal('replace-text'),
     edit: markdownLanguageTextEditSchema,
-    isPreferred: z.boolean().optional(),
+    isPreferred: z.boolean(),
   }),
-])
+]) satisfies z.ZodType<MarkdownLanguageCodeAction>
 
 const markdownLanguageHoverSchema = z
   .object({
     path: z.string(),
     line: z.number(),
-    heading: z.string().nullable().optional(),
+    heading: z.string().nullable(),
     markdown: z.string(),
   })
-  .nullable()
+  .nullable() satisfies z.ZodType<MarkdownLanguageHover>
 
-export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
-export type MarkdownLanguageDocumentSymbol = z.infer<typeof markdownLanguageDocumentSymbolSchema>
-export type MarkdownLanguageReference = z.infer<typeof markdownLanguageReferenceSchema>
-export type MarkdownLanguageTextEdit = z.infer<typeof markdownLanguageTextEditSchema>
-export type MarkdownLanguageRenameResult = z.infer<typeof markdownLanguageRenameResultSchema>
-export type MarkdownLanguageCodeAction = z.infer<typeof markdownLanguageCodeActionSchema>
-export type MarkdownLanguageHover = z.infer<typeof markdownLanguageHoverSchema>
+export type MarkdownLanguageDefinition = DesktopCommandResults['markdown_language_get_definition']
+export type MarkdownLanguageDocumentSymbol =
+  DesktopCommandResults['markdown_language_get_document_symbols'][number]
+export type MarkdownLanguageReference =
+  DesktopCommandResults['markdown_language_get_references'][number]
+export type MarkdownLanguageTextEdit = Extract<
+  DesktopCommandResults['markdown_language_get_code_actions'][number],
+  { kind: 'replace-text' }
+>['edit']
+export type MarkdownLanguageRenameResult =
+  DesktopCommandResults['markdown_language_rename_references']
+export type MarkdownLanguageCodeAction =
+  DesktopCommandResults['markdown_language_get_code_actions'][number]
+export type MarkdownLanguageHover = DesktopCommandResults['markdown_language_get_hover']
 
 export const markdownLanguageApi = {
-  async getDocumentSymbols({ path, content }: { path: string | null; content: string }) {
-    const result = await invoke<unknown>('markdown_language_get_document_symbols', {
+  async getDocumentSymbols({
+    path,
+    content,
+  }: Pick<
+    DesktopCommandArgs['markdown_language_get_document_symbols']['request'],
+    'path' | 'content'
+  >) {
+    const result = await invoke('markdown_language_get_document_symbols', {
       path,
       content,
     })
@@ -107,13 +113,8 @@ export const markdownLanguageApi = {
     content,
     line,
     column,
-  }: {
-    path: string | null
-    content: string
-    line: number
-    column: number
-  }) {
-    const result = await invoke<unknown>('markdown_language_get_definition', {
+  }: DesktopCommandArgs['markdown_language_get_definition']['request']) {
+    const result = await invoke('markdown_language_get_definition', {
       path,
       content,
       line,
@@ -127,13 +128,8 @@ export const markdownLanguageApi = {
     content,
     line,
     column,
-  }: {
-    path: string | null
-    content: string
-    line: number
-    column: number
-  }) {
-    const result = await invoke<unknown>('markdown_language_get_references', {
+  }: DesktopCommandArgs['markdown_language_get_definition']['request']) {
+    const result = await invoke('markdown_language_get_references', {
       path,
       content,
       line,
@@ -148,14 +144,8 @@ export const markdownLanguageApi = {
     line,
     column,
     newName,
-  }: {
-    path: string | null
-    content: string
-    line: number
-    column: number
-    newName: string
-  }) {
-    const result = await invoke<unknown>('markdown_language_rename_references', {
+  }: DesktopCommandArgs['markdown_language_rename_references']['request']) {
+    const result = await invoke('markdown_language_rename_references', {
       path,
       content,
       line,
@@ -170,13 +160,8 @@ export const markdownLanguageApi = {
     content,
     line,
     column,
-  }: {
-    path: string | null
-    content: string
-    line: number
-    column: number
-  }) {
-    const result = await invoke<unknown>('markdown_language_get_code_actions', {
+  }: DesktopCommandArgs['markdown_language_get_definition']['request']) {
+    const result = await invoke('markdown_language_get_code_actions', {
       path,
       content,
       line,
@@ -190,13 +175,8 @@ export const markdownLanguageApi = {
     content,
     line,
     column,
-  }: {
-    path: string | null
-    content: string
-    line: number
-    column: number
-  }) {
-    const result = await invoke<unknown>('markdown_language_get_hover', {
+  }: DesktopCommandArgs['markdown_language_get_definition']['request']) {
+    const result = await invoke('markdown_language_get_hover', {
       path,
       content,
       line,

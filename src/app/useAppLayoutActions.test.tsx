@@ -62,7 +62,7 @@ describe('useAppLayoutActions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     clearPendingSourcePositionNavigation()
-    vi.mocked(fsApi.rebuildSearchIndex).mockResolvedValue(undefined)
+    vi.mocked(fsApi.rebuildSearchIndex).mockResolvedValue(null)
   })
 
   it('queues a workspace-scoped source position before opening a search result', () => {

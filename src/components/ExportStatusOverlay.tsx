@@ -42,7 +42,7 @@ const ExportStatusOverlay = () => {
     let unlisten: (() => void) | undefined
     let disposed = false
 
-    void listen<ExportTaskPayload>('export-task', (event) => {
+    void listen('export-task', (event) => {
       const task = event.payload
       const format = getFormatLabel(task.format)
       const description = getToastDescription(task)

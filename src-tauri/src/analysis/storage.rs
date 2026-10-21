@@ -8,7 +8,7 @@ const MAX_ENTRY: usize = 16 * 1024 * 1024;
 const MAX_DISK: i64 = 128 * 1024 * 1024;
 const TTL_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 const ARCHIVE_VERSION: u8 = 3;
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, specta::Type)]
 struct Archive {
   version: u8,
   document: Document,

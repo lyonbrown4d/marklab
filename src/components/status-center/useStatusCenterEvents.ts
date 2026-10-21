@@ -5,7 +5,6 @@ import {
   summarizeTerminalOutput,
   upsertRecentExportTask,
   type ExportTaskEntry,
-  type ExportTaskPayload,
   type TerminalEventEntry,
 } from '@/components/status-center/statusCenterModel'
 import { listen } from '@/runtime/events'
@@ -31,7 +30,7 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
 
     void Promise.resolve()
       .then(() =>
-        listen<ExportTaskPayload>('export-task', (event) => {
+        listen('export-task', (event) => {
           const task = event.payload
           setExportTasks((current) => upsertRecentExportTask(current, task))
         }),

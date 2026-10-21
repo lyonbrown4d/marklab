@@ -35,7 +35,7 @@ impl Workspace {
     let _commits = self.commit_gate.lock().await;
     let source = self.resolve_async(from).await?;
     let root = self.root_info();
-    let destination = if root.kind == "single" {
+    let destination = if root.kind == crate::workspace::RootKind::Single {
       let directory = self.root_directory();
       let relative = to.to_owned();
       if super::paths::relative_path(&relative)?.components().count() != 1 {
@@ -56,7 +56,7 @@ impl Workspace {
     }
     let target = destination.clone();
     crate::blocking::run(move || rename_exclusive(&source, &target)).await?;
-    if root.kind == "single" {
+    if root.kind == crate::workspace::RootKind::Single {
       self.rename_single_root(destination);
     }
     let mut buffers = self.buffers.lock().await;

@@ -25,7 +25,7 @@ pub fn scan(root: &Path, single: Option<&Path>) -> BackendResult<Vec<Entry>> {
         .file_name()
         .map(|v| v.to_string_lossy().into_owned())
         .unwrap_or_default(),
-      kind: "file".into(),
+      kind: crate::workspace::EntryKind::File,
     }]);
   }
   let mut entries = Vec::new();
@@ -59,9 +59,9 @@ pub fn scan(root: &Path, single: Option<&Path>) -> BackendResult<Vec<Entry>> {
       path: relative,
       name: entry.file_name().to_string_lossy().into_owned(),
       kind: if kind.is_dir() {
-        "folder".into()
+        crate::workspace::EntryKind::Folder
       } else {
-        "file".into()
+        crate::workspace::EntryKind::File
       },
     });
     if entries.len() >= 100_000 {
@@ -81,7 +81,8 @@ impl Workspace {
     let revision = self.current_revision();
     let root = self.root_info();
     let directory = self.root_directory();
-    let single = (root.kind == "single").then(|| PathBuf::from(&root.path));
+    let single =
+      (root.kind == crate::workspace::RootKind::Single).then(|| PathBuf::from(&root.path));
     let entries = self
       .path_snapshots
       .try_get_with(revision, async move {

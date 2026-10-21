@@ -34,7 +34,7 @@ impl AnalysisService {
       }
     };
     let snapshot = workspace.snapshot().await?;
-    let scope = crate::database::workspace_key(&snapshot.root.kind, &snapshot.root.path)?;
+    let scope = crate::database::workspace_key(snapshot.root.kind.as_str(), &snapshot.root.path)?;
     let scope = format!(
       "analysis-v1:{}",
       hex::encode(Sha256::digest(scope.as_bytes()))
@@ -42,7 +42,7 @@ impl AnalysisService {
     let paths: BTreeSet<_> = snapshot
       .entries
       .iter()
-      .filter(|entry| entry.kind == "file")
+      .filter(|entry| entry.kind == crate::workspace::EntryKind::File)
       .filter(|entry| {
         self.excluded_directory.as_ref().is_none_or(|excluded| {
           !workspace

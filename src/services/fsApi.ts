@@ -1,7 +1,10 @@
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
+import type { RuntimeCommandPayload } from '@/runtime/tauri/contract'
 import { z } from 'zod'
 
 import { getDesktopRuntime } from '@/runtime/desktop'
 import { invoke } from '@/runtime/ipc'
+import { parseWorkspaceGraphNodeDetails } from '@/services/fsGraphCompatibility'
 import {
   backgroundTaskStatusSchema,
   fsAssetCapabilitySchema,
@@ -23,10 +26,12 @@ import {
   workspaceOccurrenceSearchResultSetSchema,
   workspaceOccurrenceSearchCancelResultSchema,
   workspaceGraphNodeDetailsRequestSchema,
-  workspaceGraphNodeDetailsResultSchema,
   type WorkspaceOccurrenceSearchRequest,
   type FsBufferUpdateRequest,
   type FsBufferSyncStatus,
+  type FsGraph,
+  type FsSearchResult,
+  type WorkspaceOccurrenceSearchResultSet,
   type WorkspaceGraphNodeDetailsRequest,
   type MarkdownAssetImportStrategy,
 } from '@/services/fsApiSchemas'
@@ -35,59 +40,61 @@ export * from '@/services/fsApiSchemas'
 
 export const fsApi = {
   async getSnapshot() {
-    const result = await invoke<unknown>('fs_get_snapshot')
+    const result = await invoke('fs_get_snapshot')
     return fsSnapshotSchema.parse(result)
   },
   async setRoot(path: string | null) {
-    const result = await invoke<unknown>('fs_set_root', { path })
+    const result = await invoke('fs_set_root', { path })
     return fsRootInfoSchema.parse(result)
   },
   async setSingleFile(path: string) {
-    const result = await invoke<unknown>('fs_set_single_file', { path })
+    const result = await invoke('fs_set_single_file', { path })
     return fsRootInfoSchema.parse(result)
   },
   openFile(path: string) {
-    return invoke<string>('fs_open_file', { path })
+    return invoke('fs_open_file', { path })
   },
   async openBufferSnapshot(path: string) {
-    return fsBufferSnapshotSchema.parse(await invoke<unknown>('fs_open_buffer_snapshot', { path }))
+    return fsBufferSnapshotSchema.parse(await invoke('fs_open_buffer_snapshot', { path }))
   },
   readFile(path: string) {
-    return invoke<string>('fs_read_file', { path })
+    return invoke('fs_read_file', { path })
   },
   async readTextPreview(path: string, limitBytes: number) {
     const limit = fsTextPreviewLimitSchema.parse(limitBytes)
     const result = await getDesktopRuntime().workspace.readTextPreview(path, limit)
     return fsTextPreviewSchema.parse(result)
   },
-  async getWorkspaceGraph() {
-    const result = await invoke<unknown>('fs_get_workspace_graph')
+  async getWorkspaceGraph(): Promise<FsGraph> {
+    const result = await invoke('fs_get_workspace_graph')
     return fsGraphSchema.parse(result)
   },
   async getWorkspaceGraphNodeDetails(request: WorkspaceGraphNodeDetailsRequest) {
     const payload = workspaceGraphNodeDetailsRequestSchema.parse(request)
-    const result = await invoke<unknown>('fs_get_workspace_graph_node_details', payload)
-    return workspaceGraphNodeDetailsResultSchema.parse(result)
+    const result = await invoke('fs_get_workspace_graph_node_details', payload)
+    return parseWorkspaceGraphNodeDetails(result)
   },
-  async searchWorkspace(query: string, limit = 20) {
-    const result = await invoke<unknown>('fs_search_workspace', { query, limit })
+  async searchWorkspace(query: string, limit = 20): Promise<FsSearchResult[]> {
+    const result = await invoke('fs_search_workspace', { query, limit })
     return z.array(fsSearchResultSchema).parse(result)
   },
-  async searchWorkspaceOccurrences(request: WorkspaceOccurrenceSearchRequest) {
+  async searchWorkspaceOccurrences(
+    request: WorkspaceOccurrenceSearchRequest,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
     const payload = workspaceOccurrenceSearchRequestSchema.parse(request)
-    const result = await invoke<unknown>('fs_search_workspace_occurrences', payload)
+    const result = await invoke('fs_search_workspace_occurrences', payload)
     return workspaceOccurrenceSearchResultSetSchema.parse(result)
   },
   async cancelWorkspaceOccurrenceSearch(requestId: string) {
-    const result = await invoke<unknown>('fs_cancel_workspace_occurrence_search', { requestId })
+    const result = await invoke('fs_cancel_workspace_occurrence_search', { requestId })
     return workspaceOccurrenceSearchCancelResultSchema.parse(result)
   },
   rebuildSearchIndex() {
-    return invoke<void>('fs_rebuild_search_index')
+    return invoke('fs_rebuild_search_index')
   },
   async applyBufferUpdate(request: FsBufferUpdateRequest) {
     const payload = fsBufferUpdateRequestSchema.parse(request)
-    const result = await invoke<unknown>('fs_apply_buffer_update', payload)
+    const result = await invoke('fs_apply_buffer_update', payload)
     return fsBufferUpdateResultSchema.parse(result)
   },
   async updateBuffer(path: string, content: string, loadedStatus: FsBufferSyncStatus) {
@@ -114,14 +121,14 @@ export const fsApi = {
     })
   },
   flushBuffers() {
-    return invoke<number>('fs_flush_buffers')
+    return invoke('fs_flush_buffers')
   },
   async getBufferStatus(path: string) {
-    const result = await invoke<unknown>('fs_get_buffer_status', { path })
+    const result = await invoke('fs_get_buffer_status', { path })
     return result == null ? null : fsBufferSyncStatusSchema.parse(result)
   },
   async getBackgroundTasks() {
-    const result = await invoke<unknown>('fs_get_background_tasks')
+    const result = await invoke('fs_get_background_tasks')
     return z.array(backgroundTaskStatusSchema).parse(result)
   },
   createFile(path: string, content?: string) {
@@ -140,7 +147,7 @@ export const fsApi = {
     return invoke('fs_delete_path', { path })
   },
   async getPathMetadata(path: string) {
-    const result = await invoke<unknown>('fs_get_path_metadata', { path })
+    const result = await invoke('fs_get_path_metadata', { path })
     return fsPathMetadataSchema.parse(result)
   },
   async toAssetUrl(relativePath: string) {
@@ -166,13 +173,10 @@ export const fsApi = {
     documentPath,
     strategy,
     title,
-  }: {
-    sourcePath: string
-    documentPath: string
+  }: Omit<DesktopCommandArgs['fs_import_markdown_asset']['request'], 'strategy'> & {
     strategy: MarkdownAssetImportStrategy
-    title?: string | null
   }) {
-    const result = await invoke<unknown>('fs_import_markdown_asset', {
+    const result = await invoke('fs_import_markdown_asset', {
       sourcePath,
       documentPath,
       strategy,
@@ -185,13 +189,8 @@ export const fsApi = {
     bytes,
     documentPath,
     title,
-  }: {
-    fileName: string
-    bytes: ArrayBuffer
-    documentPath: string
-    title?: string | null
-  }) {
-    const result = await invoke<unknown>('fs_import_markdown_asset_bytes', {
+  }: RuntimeCommandPayload<'fs_import_markdown_asset_bytes'>) {
+    const result = await invoke('fs_import_markdown_asset_bytes', {
       fileName,
       bytes,
       documentPath,
@@ -199,8 +198,11 @@ export const fsApi = {
     })
     return fsMarkdownAssetImportResultSchema.parse(result)
   },
-  async resolveMarkdownAsset({ documentPath, target }: { documentPath: string; target: string }) {
-    const result = await invoke<unknown>('fs_resolve_markdown_asset', {
+  async resolveMarkdownAsset({
+    documentPath,
+    target,
+  }: DesktopCommandArgs['fs_resolve_markdown_asset']['request']) {
+    const result = await invoke('fs_resolve_markdown_asset', {
       documentPath,
       target,
     })

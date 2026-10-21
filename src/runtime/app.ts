@@ -1,3 +1,4 @@
+import type { DesktopCommandResults } from '@/generated/desktop/bindings'
 import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 import { emit } from '@/runtime/events'
 import { inferPlatformFromUserAgent } from '@/runtime/environment'
@@ -6,21 +7,9 @@ import type { AppPlatform } from '@/services/appApi'
 import { requestMenuAction } from '@/utils/appEvents'
 import type { RendererReadySignal } from '@/types/rendererReady'
 
-export type AppWindowOpenResult = {
+// Cancellation belongs to the local dialog flow; native window results remain generated.
+export type AppWindowOpenResult = DesktopCommandResults['open_path_in_new_window'] & {
   cancelled?: boolean
-  ok: boolean
-  windowId?: number
-  requestedPath?: string
-  workspacePath?: string
-  rootKind?: 'internal' | 'external' | 'single'
-  sharedWorkspaceSession: boolean
-  error?: string
-  startup?: {
-    constructorCallsAvoided: 0 | 1
-    openingShellLoadsAvoided: 0 | 1
-    preparationDurationMs: number
-    source: 'cold' | 'pool'
-  }
 }
 const normalizePlatform = (raw: string): AppPlatform => {
   if (raw === 'windows' || raw === 'linux' || raw === 'macos') return raw
@@ -43,7 +32,7 @@ export const dispatchMenuAction = async (id: string) => {
 export const setNativeMenuLocale = async (locale: string) => {
   const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
   if (!desktop) return { locale, ok: true }
-  return invoke<{ locale: string; ok: boolean }>('menu_set_locale', { locale })
+  return invoke('menu_set_locale', { locale })
 }
 export const signalAppReady = async (signal: RendererReadySignal = { phase: 'shell' }) => {
   const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
@@ -71,7 +60,7 @@ export const openCurrentWorkspaceInNewWindow = async (): Promise<AppWindowOpenRe
       'Desktop command bridge is not available: open_current_workspace_in_new_window',
     )
   }
-  return invoke<AppWindowOpenResult>('open_current_workspace_in_new_window')
+  return invoke('open_current_workspace_in_new_window')
 }
 export const openPathInNewWindow = async (path: string): Promise<AppWindowOpenResult> => {
   const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
@@ -80,7 +69,7 @@ export const openPathInNewWindow = async (path: string): Promise<AppWindowOpenRe
       'Desktop command bridge is not available: open_path_in_new_window',
     )
   }
-  return invoke<AppWindowOpenResult>('open_path_in_new_window', { path })
+  return invoke('open_path_in_new_window', { path })
 }
 export const selectWorkspaceInNewWindow = async (title?: string): Promise<AppWindowOpenResult> => {
   const desktop = isDesktopRuntime() ? getDesktopRuntime() : null

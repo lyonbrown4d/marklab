@@ -32,7 +32,7 @@ async fn shared_search_preserves_multi_term_folding_prefix_fuzzy_cjk_and_exact_c
   let analysis = AnalysisService::new(database.pool.clone());
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: tokio::fs::canonicalize(root.path())
         .await
         .unwrap()

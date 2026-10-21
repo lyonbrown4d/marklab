@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs'
+import type { RuntimeEventName, RuntimeEventPayloads } from '@/runtime/tauri/contract'
 import {
   listen,
   type RuntimeEvent,
@@ -6,15 +7,15 @@ import {
   type RuntimeUnlistenFn,
 } from '@/runtime/events'
 
-export const fromRuntimeEvent = <T>(
-  eventName: string,
+export const fromRuntimeEvent = <E extends RuntimeEventName>(
+  eventName: E,
   options?: RuntimeListenOptions,
-): Observable<RuntimeEvent<T>> =>
-  new Observable<RuntimeEvent<T>>((subscriber) => {
+): Observable<RuntimeEvent<RuntimeEventPayloads[E]>> =>
+  new Observable<RuntimeEvent<RuntimeEventPayloads[E]>>((subscriber) => {
     let disposed = false
     let unlisten: RuntimeUnlistenFn | null = null
 
-    void listen<T>(
+    void listen(
       eventName,
       (event) => {
         if (!subscriber.closed) subscriber.next(event)

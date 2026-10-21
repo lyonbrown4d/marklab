@@ -173,7 +173,10 @@ async fn workspace_paths_reject_aliases_escape_and_internal_symlink_targets() {
   }
   let registry = WorkspaceRegistry::new(&directory.path().join("other-profile")).unwrap();
   let internal = registry.open_async("internal", None, false).await.unwrap();
-  assert_eq!(internal.root_info().kind, "internal");
+  assert_eq!(
+    internal.root_info().kind,
+    crate::workspace::RootKind::Internal
+  );
 }
 
 #[tokio::test]

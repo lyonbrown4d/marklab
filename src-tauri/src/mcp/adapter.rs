@@ -30,7 +30,7 @@ impl Adapter {
       })?;
     let workspace = Arc::new(Workspace::new(
       RootInfo {
-        kind: "external".into(),
+        kind: crate::workspace::RootKind::External,
         path: config.workspace_root.to_string_lossy().into_owned(),
       },
       1,

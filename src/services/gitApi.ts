@@ -11,6 +11,7 @@ import {
   gitRemoteStatusSchema,
   gitRepoInfoSchema,
   gitStatusSnapshotSchema,
+  type GitFileDiff,
 } from '@/services/gitSchemas'
 import {
   gitBranchSummarySchema,
@@ -56,7 +57,7 @@ export const gitApiForWorkspace = (expectedRoot?: string) => ({
     rootPath: string,
     path: string,
     section: 'staged' | 'unstaged' | 'untracked' | 'conflicts',
-  ) {
+  ): Promise<GitFileDiff> {
     return gitFileDiffSchema.parse(
       await getDesktopRuntime().git.fileDiff(path, section, expectedRoot ?? rootPath),
     )

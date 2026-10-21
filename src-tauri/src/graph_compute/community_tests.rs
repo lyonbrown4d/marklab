@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 use super::{
   GraphCommunityEdge, GraphCommunityNode, GraphCommunityRequest, GraphCommunityResult,
@@ -26,7 +26,7 @@ fn request(count: usize, edges: &[(usize, usize)]) -> GraphCommunityRequest {
 }
 
 fn detect(request: &GraphCommunityRequest) -> GraphCommunityResult {
-  match detect_communities(request, &AtomicBool::new(false)) {
+  match detect_communities(request, &CancellationToken::new()) {
     Ok(result) => result,
     Err(error) => panic!("Unexpected community error: {error}"),
   }
@@ -157,7 +157,7 @@ fn invalid_requests_and_unknown_fields_are_rejected() {
   nul_id.request_id = "invalid\0request".to_owned();
   invalid.push(nul_id);
   for mut request in invalid {
-    let result = detect_communities(&request, &AtomicBool::new(false));
+    let result = detect_communities(&request, &CancellationToken::new());
     assert!(matches!(result, Err(error) if error.code == "INVALID_REQUEST"));
     assert!(matches!(request.normalize(), Err(error) if error.code == "INVALID_REQUEST"));
   }
@@ -172,7 +172,9 @@ fn invalid_requests_and_unknown_fields_are_rejected() {
 
 #[test]
 fn cancelled_requests_return_the_cancellation_contract() {
-  let result = detect_communities(&bridged_cliques(), &AtomicBool::new(true));
+  let cancelled = CancellationToken::new();
+  cancelled.cancel();
+  let result = detect_communities(&bridged_cliques(), &cancelled);
   assert!(matches!(result, Err(error) if error.code == "GRAPH_CANCELLED"));
 }
 

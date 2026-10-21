@@ -100,7 +100,7 @@ describe('native document previews', () => {
     ]) {
       await selectFile(name)
       const editor = await visibleSourceEditor()
-      const before = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+      const before = await invokeNative('fs_open_buffer_snapshot', {
         path: name,
       })
       await browser.$(toggle).click()
@@ -110,7 +110,7 @@ describe('native document previews', () => {
       assert.equal(await editor.isDisplayed(), false)
       await browser.$(toggle).click()
       await editor.waitForDisplayed()
-      const after = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+      const after = await invokeNative('fs_open_buffer_snapshot', {
         path: name,
       })
       assert.equal(after.content, before.content)

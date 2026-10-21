@@ -26,13 +26,13 @@ impl GraphLayoutStore {
     request: GraphLayoutRequest,
   ) -> BackendResult<GraphLayoutResult> {
     request.validate()?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let mut transaction = self.pool.begin().await?;
     let row = sqlx::query("SELECT graph_revision,engine_version,mode,viewport_json FROM graph_layouts WHERE workspace_key=? AND layout_key=?")
             .bind(&key).bind(&request.layout_key).fetch_optional(&mut *transaction).await?;
     let Some(row) = row else {
       return Ok(GraphLayoutResult {
-        r#match: "miss",
+        r#match: GraphLayoutMatch::Miss,
         nodes: Vec::new(),
         viewport: None,
       });
@@ -61,14 +61,18 @@ impl GraphLayoutStore {
     };
     transaction.commit().await?;
     Ok(GraphLayoutResult {
-      r#match: if exact { "exact" } else { "stale" },
+      r#match: if exact {
+        GraphLayoutMatch::Exact
+      } else {
+        GraphLayoutMatch::Stale
+      },
       nodes,
       viewport,
     })
   }
   pub async fn save(&self, root: &RootInfo, value: GraphLayoutSave) -> BackendResult<()> {
     value.validate()?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let mut transaction = self.pool.begin().await?;
     let viewport = value
       .viewport
@@ -115,6 +119,7 @@ fn json_error(error: serde_json::Error) -> BackendError {
   BackendError::new("invalid_graph_data", error.to_string())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_graph_layout(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -125,6 +130,7 @@ pub async fn fs_get_workspace_graph_layout(
   store.get(&workspace.root_info(), request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_save_workspace_graph_layout(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

@@ -102,7 +102,7 @@ describe('useStatusCenterEvents terminal streams', () => {
     expect(screen.getByTestId('terminal-events')).toHaveTextContent('Terminal output: third chunk')
 
     act(() => {
-      terminalExitSubject.next({ id: 'terminal-1', exit_code: 0 })
+      terminalExitSubject.next({ id: 'terminal-1', exit_code: 0, signal: null })
     })
 
     expect(screen.getByTestId('terminal-events')).toHaveTextContent('Terminal exited with code 0')

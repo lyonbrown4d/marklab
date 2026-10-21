@@ -1,3 +1,8 @@
+import type {
+  DesktopCommandArgs,
+  DesktopCommandResults,
+  DesktopEventPayloads,
+} from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 const providerIdSchema = z
@@ -6,8 +11,15 @@ const providerIdSchema = z
   .max(64)
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/)
 
-export const aiCompletionLanguageSchema = z.enum(['auto', 'zh-CN', 'en'])
-export const aiCompletionLengthSchema = z.enum(['short', 'medium', 'long'])
+export const aiCompletionLanguageSchema = z.enum(['auto', 'zh-CN', 'en']) satisfies z.ZodType<
+  AiInlineCompletionRequest['language']
+>
+
+export const aiCompletionLengthSchema = z.enum([
+  'short',
+  'medium',
+  'long',
+]) satisfies z.ZodType<AiCompletionLength>
 
 export const aiInlineCompletionRequestSchema = z
   .object({
@@ -16,29 +28,21 @@ export const aiInlineCompletionRequestSchema = z
     revision: z.number().int().nonnegative().max(2_147_483_647),
     prefix: z.string().min(1).max(8_192),
     suffix: z.string().max(4_096),
-    heading: z.string().max(512).optional(),
+    heading: z.string().max(512).nullish(),
     language: aiCompletionLanguageSchema,
     length: aiCompletionLengthSchema,
     excludedSuggestions: z.array(z.string().min(1).max(512)).max(2),
   })
-  .strict()
+  .strict() satisfies z.ZodType<AiInlineCompletionRequest>
 
 export const aiInlineCompletionStartResultSchema = z
   .object({ requestId: z.string().min(1).max(128) })
-  .strict()
+  .strict() satisfies z.ZodType<AiInlineCompletionStartResult>
 
-export type AiCompletionLength = z.infer<typeof aiCompletionLengthSchema>
-export type AiInlineCompletionRequest = z.infer<typeof aiInlineCompletionRequestSchema>
-export type AiInlineCompletionStartResult = z.infer<typeof aiInlineCompletionStartResultSchema>
+export type AiCompletionLength = DesktopCommandArgs['ai_completion_start']['request']['length']
 
-export type AiInlineCompletionEvent =
-  | { requestId: string; type: 'delta'; delta: string }
-  | {
-      requestId: string
-      type: 'finish'
-      finishReason: string
-      usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
-      warnings: string[]
-    }
-  | { requestId: string; type: 'error'; message: string }
-  | { requestId: string; type: 'cancelled' }
+export type AiInlineCompletionRequest = DesktopCommandArgs['ai_completion_start']['request']
+
+export type AiInlineCompletionStartResult = DesktopCommandResults['ai_completion_start']
+
+export type AiInlineCompletionEvent = DesktopEventPayloads['ai-completion-event']

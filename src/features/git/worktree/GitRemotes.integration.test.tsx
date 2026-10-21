@@ -62,7 +62,7 @@ describe('source control remote operations', () => {
     usePreferencesStore.setState({ locale: 'en-US' })
     await i18n.changeLanguage('en-US')
     vi.mocked(gitApi.getStatus).mockResolvedValue({
-      repo: { is_repository: true, branch: 'main' },
+      repo: { workdir: null, git_dir: null, head: null, is_repository: true, branch: 'main' },
       staged: [],
       unstaged: [],
       untracked: [],

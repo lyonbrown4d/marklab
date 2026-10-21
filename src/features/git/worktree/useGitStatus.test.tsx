@@ -9,7 +9,7 @@ import { useGitStatus } from '@/features/git/worktree/useGitStatus'
 vi.mock('@/services/gitApi', () => ({
   gitApi: {
     getStatus: vi.fn(async () => ({
-      repo: { is_repository: false },
+      repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: false },
       staged: [],
       unstaged: [],
       untracked: [],
@@ -34,9 +34,16 @@ describe('Git status subscription', () => {
     const { client } = setup()
     const invalidate = vi.spyOn(client, 'invalidateQueries')
     const callback = vi.mocked(listen).mock.calls[0]![1]
+    const payload = {
+      kind: 'invalidated' as const,
+      root: { kind: 'external' as const, path: '/repo' },
+      generation: 1,
+      previousRevision: 1,
+      revision: 2,
+    }
     await act(async () => {
-      callback({ event: 'fs-changed', id: 1, payload: {} })
-      callback({ event: 'fs-changed', id: 2, payload: {} })
+      callback({ event: 'fs-changed', id: 1, payload })
+      callback({ event: 'fs-changed', id: 2, payload })
       await vi.advanceTimersByTimeAsync(250)
     })
     expect(invalidate).toHaveBeenCalledTimes(3)

@@ -19,7 +19,7 @@ async fn session_passwords_stay_in_memory_and_bound_profiles_cannot_be_deleted()
       .await?;
   assert!(!stored.contains("session-password-do-not-store"));
   let root = RootInfo {
-    kind: "external".into(),
+    kind: crate::workspace::RootKind::External,
     path: directory
       .path()
       .join("notes")
@@ -30,7 +30,7 @@ async fn session_passwords_stay_in_memory_and_bound_profiles_cannot_be_deleted()
     .set_channel(
       &root,
       Channel {
-        provider: "webdav".into(),
+        provider: crate::sync::SyncProvider::Webdav,
         profile_id: "local".into(),
         remote_root: "/notes".into(),
         auto_sync: false,
@@ -53,7 +53,7 @@ async fn switching_remote_bindings_resets_the_previous_remote_baseline() -> Back
   let service = SyncService::new(database.pool.clone()).await?;
   service.update_profile(serde_json::from_value(json!({"id":"remote","label":"Remote","endpoint":"https://example.com","username":"user","sessionOnly":true}))?).await?;
   let root = RootInfo {
-    kind: "external".into(),
+    kind: crate::workspace::RootKind::External,
     path: directory
       .path()
       .join("notes")
@@ -61,7 +61,7 @@ async fn switching_remote_bindings_resets_the_previous_remote_baseline() -> Back
       .into_owned(),
   };
   let channel = Channel {
-    provider: "webdav".into(),
+    provider: crate::sync::SyncProvider::Webdav,
     profile_id: "remote".into(),
     remote_root: "/one".into(),
     auto_sync: false,

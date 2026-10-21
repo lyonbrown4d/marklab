@@ -29,8 +29,11 @@ impl Workspace {
       return Ok(());
     }
     let root = self.root_directory();
-    let (watcher, mut receiver, overflow) =
-      watch_directory(root, self.root_info().kind != "single").await?;
+    let (watcher, mut receiver, overflow) = watch_directory(
+      root,
+      self.root_info().kind != crate::workspace::RootKind::Single,
+    )
+    .await?;
     let workspace = self.clone();
     crate::blocking::run(move || {
       let mut slot = workspace
@@ -80,7 +83,9 @@ impl Workspace {
         let relative: Vec<String> = paths
           .iter()
           .filter_map(|path| {
-            if single.kind == "single" && path != &PathBuf::from(&single.path) {
+            if single.kind == crate::workspace::RootKind::Single
+              && path != &PathBuf::from(&single.path)
+            {
               return None;
             }
             let relative = super::paths::display_relative(&root, path).ok()?;
@@ -107,7 +112,11 @@ impl Workspace {
         let _ = workspace.invalidate(&app);
         for path in &relative {
           if let Ok(Some(status)) = workspace.buffer_status(path).await {
-            let _ = workspace.emit_to_owners(&app, "fs-buffer-status", status);
+            let _ = workspace.emit_to_owners(
+              &app,
+              crate::desktop::event_contracts::FS_BUFFER_STATUS,
+              status,
+            );
           }
         }
       }

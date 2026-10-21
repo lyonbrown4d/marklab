@@ -21,7 +21,8 @@ use crate::error::{BackendError, BackendResult};
 pub use commands::*;
 use sqlx::SqlitePool;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::sync::{Mutex, Semaphore, watch};
+use tokio::sync::{Mutex, Semaphore};
+use tokio_util::sync::CancellationToken;
 pub use types::*;
 #[derive(Clone)]
 pub struct AiService {
@@ -39,8 +40,8 @@ struct Inner {
 struct Job {
   owner: String,
   session: Option<String>,
-  channel: &'static str,
-  cancel: watch::Sender<bool>,
+  channel: crate::desktop::event_contracts::EventName<GenerationEvent>,
+  cancel: CancellationToken,
 }
 impl AiService {
   pub async fn new(pool: SqlitePool) -> BackendResult<Self> {

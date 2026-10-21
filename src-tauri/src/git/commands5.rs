@@ -3,6 +3,7 @@ use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{error::BackendResult, workspace::WorkspaceRegistry};
 use tauri::{Manager, State};
 #[tauri::command]
+#[specta::specta]
 pub async fn git_branch_switch(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -32,6 +33,7 @@ pub async fn git_branch_switch(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_branch_delete(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -61,6 +63,7 @@ pub async fn git_branch_delete(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_merge(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -90,6 +93,7 @@ pub async fn git_merge(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_rebase(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -119,6 +123,7 @@ pub async fn git_rebase(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_cherry_pick(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -148,6 +153,7 @@ pub async fn git_cherry_pick(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_revert(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

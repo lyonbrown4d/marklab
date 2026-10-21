@@ -143,7 +143,7 @@ impl GraphComputeService {
       let _permit = permit;
       job.check()?;
       let result = catch_unwind(AssertUnwindSafe(|| {
-        community::detect_communities(&request, &job.flag)
+        community::detect_communities(&request, &job.cancelled)
       }))
       .map_err(|_| {
         BackendError::new(

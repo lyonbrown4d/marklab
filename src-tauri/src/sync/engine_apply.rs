@@ -6,13 +6,13 @@ use super::{
 };
 use crate::{error::BackendResult, workspace::Workspace};
 use std::path::Path;
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 pub async fn apply(
   workspace: &Workspace,
   operations: &[Operation],
   prepared: &mut Prepared,
   result: &mut SyncResult,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   let root = workspace.root_directory();
   for operation in operations {
@@ -81,18 +81,17 @@ pub async fn apply(
       Kind::Conflict => {
         let mut conflict = SyncConflict {
           path: operation.path.clone(),
-          status: "unresolved".into(),
+          status: crate::sync::ConflictStatus::Unresolved,
           reason: if operation.local.is_none()
             || operation
               .remote
               .as_ref()
               .is_none_or(|v| v.deleted_at.is_some())
           {
-            "delete_vs_change"
+            crate::sync::ConflictReason::DeleteVsChange
           } else {
-            "both_changed"
-          }
-          .into(),
+            crate::sync::ConflictReason::BothChanged
+          },
           conflict_path: None,
           local_hash: operation.local.as_ref().map(|v| v.hash.clone()),
           remote_hash: operation.remote.as_ref().map(|v| v.hash.clone()),
@@ -131,7 +130,7 @@ pub async fn apply(
 pub async fn conflict_path(
   root: &Path,
   entry: &ManifestEntry,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<(String, bool)> {
   let source = Path::new(&entry.path);
   let stem = source

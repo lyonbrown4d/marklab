@@ -4,9 +4,9 @@ use tauri::{
   AppHandle, Manager,
   menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
 };
-pub fn install(app: &AppHandle, locale: &str) -> BackendResult<&'static str> {
+pub fn install(app: &AppHandle, locale: &str) -> BackendResult<super::policy::MenuLocale> {
   let locale = super::policy::normalize_locale(locale);
-  let zh = locale == "zh-CN";
+  let zh = locale == super::policy::MenuLocale::ZhCn;
   let menu = Menu::new(app)?;
   let mut shortcuts = Vec::new();
   let text = |english: &'static str, chinese: &'static str| if zh { chinese } else { english };
@@ -242,7 +242,8 @@ pub fn install(app: &AppHandle, locale: &str) -> BackendResult<&'static str> {
   *state
     .locale
     .lock()
-    .map_err(|_| BackendError::new("MENU_ERROR", "Menu state is unavailable"))? = locale.into();
+    .map_err(|_| BackendError::new("MENU_ERROR", "Menu state is unavailable"))? =
+    locale.as_str().into();
   if let Some(window) = focused(app) {
     refresh_shortcuts(app, window.label())?;
   }

@@ -33,7 +33,7 @@ describe('useWorkspaceMapNodeDetails', () => {
 
   it('loads only rendered or active nodes and changes detail mode without a topology request', async () => {
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockResolvedValue({
-      items: [{ id: 'file:a.md', content: 'Summary' }],
+      items: [{ id: 'file:a.md', content: 'Summary', preview: { html: '', math: [] } }],
       revision: 'revision-1',
       truncated: false,
     })
@@ -85,7 +85,7 @@ describe('useWorkspaceMapNodeDetails', () => {
     ) => void
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails)
       .mockResolvedValueOnce({
-        items: [{ id: 'file:a.md', content: 'Summary' }],
+        items: [{ id: 'file:a.md', content: 'Summary', preview: { html: '', math: [] } }],
         revision: 'revision-1',
         truncated: false,
       })
@@ -123,7 +123,7 @@ describe('useWorkspaceMapNodeDetails', () => {
     await waitFor(() => expect(fsApi.getWorkspaceGraphNodeDetails).toHaveBeenCalledTimes(2))
     expect(result.current.nodes[0]?.data.content).toBe('Summary')
     resolveFull({
-      items: [{ id: 'file:a.md', content: 'Refreshed' }],
+      items: [{ id: 'file:a.md', content: 'Refreshed', preview: { html: '', math: [] } }],
       revision: 'revision-1',
       truncated: false,
     })
@@ -132,7 +132,7 @@ describe('useWorkspaceMapNodeDetails', () => {
 
   it('rejects details returned for a different graph revision', async () => {
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockResolvedValue({
-      items: [{ id: 'file:a.md', content: 'Stale' }],
+      items: [{ id: 'file:a.md', content: 'Stale', preview: { html: '', math: [] } }],
       revision: 'revision-0',
       truncated: false,
     })
@@ -165,7 +165,7 @@ describe('useWorkspaceMapNodeDetails', () => {
     ) => void
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails)
       .mockResolvedValueOnce({
-        items: [{ id: 'file:a.md', content: 'Old' }],
+        items: [{ id: 'file:a.md', content: 'Old', preview: { html: '', math: [] } }],
         revision: 'revision-1',
         truncated: false,
       })
@@ -194,7 +194,7 @@ describe('useWorkspaceMapNodeDetails', () => {
     await waitFor(() => expect(fsApi.getWorkspaceGraphNodeDetails).toHaveBeenCalledTimes(2))
     expect(result.current.nodes[0]?.data.content).toBeUndefined()
     resolveNext({
-      items: [{ id: 'file:a.md', content: 'New' }],
+      items: [{ id: 'file:a.md', content: 'New', preview: { html: '', math: [] } }],
       revision: 'revision-2',
       truncated: false,
     })
@@ -228,7 +228,7 @@ describe('useWorkspaceMapNodeDetails', () => {
 
   it('debounces visible-set churn and releases inactive batch cache entries', async () => {
     vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockImplementation(async (request) => ({
-      items: request.node_ids.map((id) => ({ id, content: id })),
+      items: request.node_ids.map((id) => ({ id, content: id, preview: { html: '', math: [] } })),
       revision: request.revision,
       truncated: false,
     }))

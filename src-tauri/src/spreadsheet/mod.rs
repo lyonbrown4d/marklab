@@ -23,20 +23,25 @@ use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReadPageRequest {
   pub path: String,
+  #[serde(default)]
   pub source: Option<String>,
+  #[serde(default)]
   pub asset_url: Option<String>,
+  #[serde(default)]
   pub sheet: Option<String>,
+  #[serde(default)]
   pub offset: Option<usize>,
+  #[serde(default)]
   pub limit: Option<usize>,
   #[serde(default)]
   pub recalculate: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SpreadsheetPage {
   pub sheets: Vec<String>,

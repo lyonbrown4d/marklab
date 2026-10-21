@@ -13,7 +13,7 @@ use crate::{
   workspace::{Workspace, WorkspaceRegistry},
 };
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 pub async fn list(
   service: &SyncService,
   workspace: &Workspace,
@@ -35,7 +35,7 @@ async fn compare(
   service: &SyncService,
   workspace: &Workspace,
   path: &str,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<ConflictComparison> {
   super::paths::sync_path(path)?;
   let conflict = service
@@ -65,11 +65,11 @@ pub async fn read(
   service: &SyncService,
   workspace: &Arc<Workspace>,
   request: ConflictRequest,
-  mut cancel: watch::Receiver<bool>,
+  cancel: CancellationToken,
   owner: Option<(&WorkspaceRegistry, &str)>,
 ) -> BackendResult<ConflictComparison> {
   files::cancelled(&cancel)?;
-  let _guard = files::interrupt(&mut cancel, async { Ok(workspace.mutation.lock().await) }).await?;
+  let _guard = files::interrupt(&cancel, async { Ok(workspace.mutation.lock().await) }).await?;
   engine::ensure_binding(workspace, owner)?;
   root(workspace, &request.root_path)?;
   binding(service, workspace, Some(&request.binding)).await?;
@@ -82,17 +82,15 @@ pub async fn resolve(
   service: &SyncService,
   workspace: &Arc<Workspace>,
   request: ResolutionRequest,
-  mut cancel: watch::Receiver<bool>,
+  cancel: CancellationToken,
   owner: Option<(&WorkspaceRegistry, &str)>,
 ) -> BackendResult<ResolutionResult> {
   files::cancelled(&cancel)?;
   root(workspace, &request.root_path)?;
   let channel = binding(service, workspace, Some(&request.binding)).await?;
-  if !["local", "remote"].contains(&request.choice.as_str()) {
-    return Err(failure("Choose the local or remote version"));
-  }
+
   let remote = service.remote(&channel).await?;
-  let _guard = files::interrupt(&mut cancel, async { Ok(workspace.mutation.lock().await) }).await?;
+  let _guard = files::interrupt(&cancel, async { Ok(workspace.mutation.lock().await) }).await?;
   engine::ensure_binding(workspace, owner)?;
   files::cancelled(&cancel)?;
   root(workspace, &request.root_path)?;
@@ -106,7 +104,7 @@ pub async fn resolve(
   {
     return Err(failure("Conflict version changed; review it again"));
   }
-  let removes = if request.choice == "local" {
+  let removes = if request.choice == crate::sync::ConflictChoice::Local {
     comparison.local.hash.is_none()
   } else {
     comparison.saved_remote.hash.is_none()
@@ -114,7 +112,7 @@ pub async fn resolve(
   if removes && !request.confirm_delete {
     return Err(failure("Confirm the deletion before resolving"));
   }
-  let (manifest, etag) = engine::read_manifest(&remote, &mut cancel)
+  let (manifest, etag) = engine::read_manifest(&remote, &cancel)
     .await?
     .ok_or_else(|| failure("Remote manifest is unavailable"))?;
   let remote_entry = manifest
@@ -139,11 +137,13 @@ pub async fn resolve(
     &comparison,
     &remote,
     &etag,
-    &mut cancel,
+    &cancel,
   )
   .await?;
   let mut backup_path = None;
-  if request.choice == "remote" && comparison.local.hash != comparison.saved_remote.hash {
+  if request.choice == crate::sync::ConflictChoice::Remote
+    && comparison.local.hash != comparison.saved_remote.hash
+  {
     if let Some(hash) = &comparison.local.hash {
       backup_path = Some(
         versions::backup(
@@ -163,7 +163,7 @@ pub async fn resolve(
       &comparison,
       &remote,
       &etag,
-      &mut cancel,
+      &cancel,
     )
     .await?;
     if let Some(hash) = &comparison.saved_remote.hash {
@@ -232,7 +232,7 @@ pub async fn resolve(
   files::assert_hash(
     &workspace.root_directory(),
     &request.path,
-    if request.choice == "remote" {
+    if request.choice == crate::sync::ConflictChoice::Remote {
       comparison.saved_remote.hash.as_deref()
     } else {
       comparison.local.hash.as_deref()
@@ -249,7 +249,7 @@ pub async fn resolve(
     )
     .await?;
   }
-  if engine::read_manifest(&remote, &mut cancel)
+  if engine::read_manifest(&remote, &cancel)
     .await?
     .as_ref()
     .map(|(_, value)| value)

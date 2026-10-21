@@ -7,7 +7,9 @@ import { afterAll, afterEach, vi } from 'vitest'
 const nodeEvents = process.getBuiltinModule('node:events')
 const setMaxListeners = nodeEvents.setMaxListeners
 nodeEvents.setMaxListeners = (limit, ...targets) => {
-  const nodeTargets = targets.filter((target) => !(target instanceof window.EventTarget))
+  const nodeTargets = targets.filter(
+    (target) => typeof window === 'undefined' || !(target instanceof window.EventTarget),
+  )
   if (targets.length === 0 || nodeTargets.length > 0) setMaxListeners(limit, ...nodeTargets)
 }
 afterAll(() => {
@@ -23,37 +25,40 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
+// Build-tool tests use Node without a DOM; browser fixtures stay scoped to jsdom.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
 
-class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  globalThis.ResizeObserver = ResizeObserverMock
+  globalThis.PointerEvent = MouseEvent as typeof PointerEvent
+  Object.defineProperties(HTMLElement.prototype, {
+    hasPointerCapture: { configurable: true, value: () => false },
+    setPointerCapture: { configurable: true, value: () => undefined },
+    releasePointerCapture: { configurable: true, value: () => undefined },
+  })
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  })
 }
-
-globalThis.ResizeObserver = ResizeObserverMock
-globalThis.PointerEvent = MouseEvent as typeof PointerEvent
-Object.defineProperties(HTMLElement.prototype, {
-  hasPointerCapture: { configurable: true, value: () => false },
-  setPointerCapture: { configurable: true, value: () => undefined },
-  releasePointerCapture: { configurable: true, value: () => undefined },
-})
-Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-  configurable: true,
-  value: vi.fn(),
-})
 
 class LocalStorageMock implements Storage {
   private readonly store = new Map<string, string>()

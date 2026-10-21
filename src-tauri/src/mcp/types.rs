@@ -1,12 +1,12 @@
 use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(deny_unknown_fields)]
 pub(super) struct Empty {}
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(deny_unknown_fields)]
 pub(super) struct SearchInput {
@@ -22,11 +22,12 @@ fn optional_limit<'de, D: serde::Deserializer<'de>>(
 ) -> Result<Option<usize>, D::Error> {
   usize::deserialize(deserializer).map(Some)
 }
+pub(super) use McpStatus as Status;
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
-pub(super) struct Status {
+pub(super) struct McpStatus {
   pub workspace_root: String,
   pub engine_data_dir: String,
   pub health: Health,
@@ -34,7 +35,7 @@ pub(super) struct Status {
   pub storage: Storage,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Health {
@@ -46,7 +47,7 @@ pub(super) struct Health {
   pub warnings: Vec<String>,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
 pub(super) struct IndexStatus {
@@ -57,7 +58,7 @@ pub(super) struct IndexStatus {
   pub pending_outbox_events: String,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Storage {
@@ -74,7 +75,7 @@ pub(super) struct Storage {
   pub blob_bytes: String,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
 pub(super) struct SearchOutput {
@@ -85,7 +86,7 @@ pub(super) struct SearchOutput {
   pub results: Vec<SearchHit>,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase")]
 pub(super) struct SearchHit {
@@ -99,10 +100,11 @@ pub(super) struct SearchHit {
   pub snippet_highlights: Vec<Highlight>,
   pub score: f64,
 }
+pub(super) use McpHighlight as Highlight;
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, specta::Type)]
 #[schemars(crate = "rmcp::schemars")]
-pub(super) struct Highlight {
+pub(super) struct McpHighlight {
   pub start: usize,
   pub end: usize,
 }

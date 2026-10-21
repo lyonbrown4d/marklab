@@ -8,16 +8,12 @@ use std::{
   collections::{BTreeMap, BTreeSet},
   path::Path,
 };
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 pub struct Scan {
   pub entries: Vec<ManifestEntry>,
   pub skipped: Vec<SkippedFile>,
 }
-pub async fn local(
-  root: &Path,
-  device: &str,
-  cancel: &watch::Receiver<bool>,
-) -> BackendResult<Scan> {
+pub async fn local(root: &Path, device: &str, cancel: &CancellationToken) -> BackendResult<Scan> {
   let root = root.to_owned();
   let device = device.to_owned();
   let cancel = cancel.clone();
@@ -77,7 +73,7 @@ pub async fn local(
         if metadata.len() > MAX_FILE {
           skipped.push(SkippedFile {
             path: relative,
-            reason: "file_too_large".into(),
+            reason: crate::sync::SkipReason::FileTooLarge,
             size: metadata.len(),
           });
           continue;
@@ -106,10 +102,7 @@ pub async fn local(
   .await
   .map_err(|e| failure(&e.to_string()))?
 }
-pub async fn bootstrap(
-  remote: &DavRemote,
-  cancel: &mut watch::Receiver<bool>,
-) -> BackendResult<Scan> {
+pub async fn bootstrap(remote: &DavRemote, cancel: &CancellationToken) -> BackendResult<Scan> {
   let mut pending = vec![String::new()];
   let mut seen = BTreeMap::new();
   let mut entries = Vec::new();

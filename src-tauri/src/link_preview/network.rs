@@ -1,3 +1,4 @@
+use super::ImageMediaType;
 use crate::error::{BackendError, BackendResult};
 use futures_util::StreamExt;
 use std::{
@@ -158,14 +159,7 @@ async fn fetch_inner(mut url: Url) -> BackendResult<Response> {
   Err(failure("Link preview exceeded redirect limit"))
 }
 pub fn raster(mime: &str) -> bool {
-  [
-    "image/avif",
-    "image/gif",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-  ]
-  .contains(&mime)
+  ImageMediaType::from_mime(mime).is_some()
 }
 
 pub fn validate_raster(bytes: &[u8]) -> BackendResult<()> {

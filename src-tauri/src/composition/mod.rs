@@ -45,7 +45,7 @@ pub(super) fn factory_error(error: BackendError) -> Error {
 }
 
 pub(super) fn graph_error(error: Error) -> BackendError {
-  #[derive(Deserialize)]
+  #[derive(Deserialize, specta::Type)]
   struct FactoryFailure {
     code: String,
     message: String,

@@ -31,7 +31,7 @@ describe('exportApi', () => {
   })
 
   it('sends an explicit cancellation command for an active task', async () => {
-    vi.mocked(invoke).mockResolvedValue(undefined)
+    vi.mocked(invoke).mockResolvedValue(null)
 
     await exportApi.cancelExport('export-pdf-1')
 

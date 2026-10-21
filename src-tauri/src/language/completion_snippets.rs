@@ -1,5 +1,5 @@
 use super::{Position, item};
-use serde_json::{Value, json};
+use lsp_types::{CompletionItem, CompletionItemKind, InsertTextFormat};
 
 type Snippet = (
   &'static str,
@@ -60,7 +60,11 @@ const SNIPPETS: &[Snippet] = &[
   ),
 ];
 
-pub(super) fn completions(uri: &str, before: &str, position: Position) -> Option<Vec<Value>> {
+pub(super) fn completions(
+  uri: &str,
+  before: &str,
+  position: Position,
+) -> Option<Vec<CompletionItem>> {
   if uri.to_lowercase().starts_with("marklab-embedded:") {
     return None;
   }
@@ -80,15 +84,22 @@ pub(super) fn completions(uri: &str, before: &str, position: Position) -> Option
       })
       .enumerate()
       .map(|(index, (label, detail, text, keywords))| {
-        let mut value = item(label, text, detail, 15, position, start);
-        value["insertTextFormat"] = json!(2);
-        value["filterText"] = json!(
+        let mut value = item(
+          label,
+          text,
+          detail,
+          CompletionItemKind::SNIPPET,
+          position,
+          start,
+        );
+        value.insert_text_format = Some(InsertTextFormat::SNIPPET);
+        value.filter_text = Some(
           std::iter::once(*label)
             .chain(keywords.iter().copied())
             .collect::<Vec<_>>()
-            .join(" ")
+            .join(" "),
         );
-        value["sortText"] = json!(format!("90{index:02}"));
+        value.sort_text = Some(format!("90{index:02}"));
         value
       })
       .collect(),

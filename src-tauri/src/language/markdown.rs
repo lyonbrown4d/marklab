@@ -1,3 +1,5 @@
+use super::markdown_types::*;
+use super::protocol::position as lsp_position;
 use super::{
   types::{MarkdownRequest, Position},
   utf16,
@@ -10,7 +12,7 @@ use crate::{
   },
   error::BackendResult,
 };
-use serde_json::{Value, json};
+use lsp_types::{Diagnostic, DiagnosticSeverity, Range};
 use std::sync::Arc;
 
 pub fn overlay(index: &Index, request: &MarkdownRequest) -> BackendResult<Index> {
@@ -32,15 +34,15 @@ pub fn overlay(index: &Index, request: &MarkdownRequest) -> BackendResult<Index>
   Ok(index)
 }
 
-pub fn symbols(request: &MarkdownRequest) -> BackendResult<Value> {
+pub fn symbols(request: &MarkdownRequest) -> BackendResult<Vec<MarkdownSymbol>> {
   let file = document::parse(
     request.path.clone().unwrap_or_default(),
     request.content.clone(),
   )?;
   let mut offset = 0;
-  Ok(json!(symbol_level(&file, &mut offset, 0)))
+  Ok(symbol_level(&file, &mut offset, 0))
 }
-fn symbol_level(file: &Document, offset: &mut usize, parent: u8) -> Vec<Value> {
+fn symbol_level(file: &Document, offset: &mut usize, parent: u8) -> Vec<MarkdownSymbol> {
   let mut output = Vec::new();
   while let Some(heading) = file.headings.get(*offset) {
     if heading.level <= parent {
@@ -49,7 +51,15 @@ fn symbol_level(file: &Document, offset: &mut usize, parent: u8) -> Vec<Value> {
     *offset += 1;
     let children = symbol_level(file, offset, heading.level);
     let column = symbol_column(file, heading);
-    output.push(json!({"name":heading.text,"level":heading.level,"line":heading.line,"column":column,"endColumn":column+heading.text.encode_utf16().count().max(1),"lspKind":15,"children":children}));
+    output.push(MarkdownSymbol {
+      name: heading.text.clone(),
+      level: heading.level,
+      line: heading.line,
+      column,
+      end_column: column + heading.text.encode_utf16().count().max(1),
+      lsp_kind: 15,
+      children,
+    });
   }
   output
 }
@@ -86,31 +96,37 @@ pub fn link_at<'a>(index: &'a Index, request: &MarkdownRequest) -> Option<&'a Li
     .find(|link| link.span_start <= offset && offset <= link.span_end)
 }
 
-pub fn definition(index: &Index, request: &MarkdownRequest) -> Value {
-  let Some(link) = link_at(index, request) else {
-    return Value::Null;
-  };
+pub fn definition(index: &Index, request: &MarkdownRequest) -> Option<MarkdownDefinition> {
+  let link = link_at(index, request)?;
   if link.is_external {
-    return Value::Null;
+    return None;
   }
-  let Some(path) = &link.target_path else {
-    return Value::Null;
-  };
+  let path = link.target_path.as_ref()?;
   if !index.paths.contains(path) {
-    return Value::Null;
+    return None;
   }
-  if let Some(anchor) = &link.target_heading_slug {
-    let Some(heading) = index
+  let (line, end_column, heading_slug) = if let Some(anchor) = &link.target_heading_slug {
+    let heading = index
       .files
-      .get(path)
-      .and_then(|file| file.headings.iter().find(|heading| &heading.slug == anchor))
-    else {
-      return Value::Null;
-    };
-    json!({"path":path,"line":heading.line,"column":1,"endColumn":heading.text.encode_utf16().count()+1,"headingSlug":heading.slug})
+      .get(path)?
+      .headings
+      .iter()
+      .find(|heading| &heading.slug == anchor)?;
+    (
+      heading.line,
+      Some(heading.text.encode_utf16().count() + 1),
+      Some(heading.slug.clone()),
+    )
   } else {
-    json!({"path":path,"line":1,"column":1})
-  }
+    (1, None, None)
+  };
+  Some(MarkdownDefinition {
+    path: path.clone(),
+    line,
+    column: 1,
+    end_column,
+    heading_slug,
+  })
 }
 
 pub fn reference_target(
@@ -127,36 +143,56 @@ pub fn reference_target(
   {
     return Some((path.clone(), Some(heading.slug.clone())));
   }
-  let definition = definition(index, request);
-  definition["path"].as_str().map(|path| {
-    (
-      path.into(),
-      definition["headingSlug"].as_str().map(str::to_owned),
-    )
-  })
+  let definition = definition(index, request)?;
+  Some((definition.path, definition.heading_slug))
 }
 
-pub fn references(index: &Index, request: &MarkdownRequest) -> Value {
+pub fn references(index: &Index, request: &MarkdownRequest) -> Vec<MarkdownReference> {
   let Some((path, anchor)) = reference_target(index, request) else {
-    return json!([]);
+    return Vec::new();
   };
-  json!(index.files.values().flat_map(|file|&file.links).filter(|link|!link.is_external&&link.target_path.as_deref()==Some(path.as_str())&&anchor.as_ref().is_none_or(|anchor|link.target_heading_slug.as_ref()==Some(anchor))).map(|link|json!({"path":link.source_path,"line":link.line,"column":link.column,"endColumn":link.column+link.target.encode_utf16().count(),"text":link.text,"context":link.context,"targetAnchor":link.target_anchor,"targetHeadingSlug":link.target_heading_slug})).collect::<Vec<_>>())
+  index
+    .files
+    .values()
+    .flat_map(|file| &file.links)
+    .filter(|link| {
+      !link.is_external
+        && link.target_path.as_deref() == Some(path.as_str())
+        && anchor
+          .as_ref()
+          .is_none_or(|anchor| link.target_heading_slug.as_ref() == Some(anchor))
+    })
+    .map(|link| MarkdownReference {
+      path: link.source_path.clone(),
+      line: link.line,
+      column: link.column,
+      end_column: link.column + link.target.encode_utf16().count(),
+      text: link.text.clone(),
+      context: link.context.clone(),
+      target_anchor: link.target_anchor.clone(),
+      target_heading_slug: link.target_heading_slug.clone(),
+    })
+    .collect()
 }
 
-pub fn hover(index: &Index, request: &MarkdownRequest) -> Value {
-  let Some(link) = link_at(index, request) else {
-    return Value::Null;
-  };
+pub fn hover(index: &Index, request: &MarkdownRequest) -> Option<MarkdownHover> {
+  let link = link_at(index, request)?;
   if link.is_external {
-    return Value::Null;
+    return None;
   }
   let path = link.target_path.as_deref().unwrap_or(&link.target);
   if index.paths.contains(path) && !index.files.contains_key(path) {
-    return json!({"path":path,"line":link.line,"heading":null,"markdown":format!("### Local file\n\n`{path}`\n\nThis workspace file can be opened as a preview.")});
+    return Some(MarkdownHover {
+      path: path.into(),
+      line: link.line,
+      heading: None,
+      markdown: format!(
+        "### Local file\n\n`{path}`\n\nThis workspace file can be opened as a preview."
+      ),
+    });
   }
-  let definition = definition(index, request);
-  if !definition.is_null() {
-    let line = definition["line"].as_u64().unwrap_or(1);
+  if let Some(definition) = definition(index, request) {
+    let line = definition.line;
     let heading = link
       .target_heading_slug
       .as_ref()
@@ -172,7 +208,12 @@ pub fn hover(index: &Index, request: &MarkdownRequest) -> Value {
     let title = heading
       .clone()
       .unwrap_or_else(|| "Markdown document".into());
-    return json!({"path":path,"line":line,"heading":heading,"markdown":format!("### {title}\n\n{path}:{line}")});
+    return Some(MarkdownHover {
+      path: path.into(),
+      line,
+      heading,
+      markdown: format!("### {title}\n\n{path}:{line}"),
+    });
   }
   let message = if index.files.contains_key(path) {
     format!(
@@ -185,70 +226,51 @@ pub fn hover(index: &Index, request: &MarkdownRequest) -> Value {
       link.target
     )
   };
-  json!({"path":path,"line":link.line,"heading":null,"markdown":message})
+  Some(MarkdownHover {
+    path: path.into(),
+    line: link.line,
+    heading: None,
+    markdown: message,
+  })
 }
 
-pub fn code_actions(index: &Index, request: &MarkdownRequest) -> Value {
-  let Some(link) = link_at(index, request) else {
-    return json!([]);
-  };
-  if link.is_external {
-    return json!([]);
-  }
-  let Some(path) = &link.target_path else {
-    return json!([]);
-  };
-  if !index.paths.contains(path) {
-    let mut action = json!({"title":format!("Create missing Markdown file \"{path}\""),"kind":"create-file","path":path,"isPreferred":true});
-    if let Some(anchor) = &link.target_anchor {
-      action["content"] = json!(format!("# {}\n", anchor.replace(['-', '_'], " ")));
-    }
-    return json!([action]);
-  }
-  let Some(anchor) = &link.target_heading_slug else {
-    return json!([]);
-  };
-  let Some(file) = index.files.get(path) else {
-    return json!([]);
-  };
-  if file.headings.iter().any(|heading| &heading.slug == anchor) {
-    return json!([]);
-  }
-  if link.offset >= link.end_offset
-    || request.content.get(link.offset..link.end_offset) != Some(link.target.as_str())
-  {
-    return json!([]);
-  }
-  let Some(hash) = link.target.find('#') else {
-    return json!([]);
-  };
-  let mut actions = Vec::new();
-  for (n, heading) in heading_replacements::closest(anchor, &file.headings)
+pub use code_actions::code_actions;
+#[path = "code_actions.rs"]
+mod code_actions;
+
+pub fn diagnostics(index: &Index, file: &Document) -> Vec<Diagnostic> {
+  let mut diagnostics = crate::analysis::diagnostics(index, file)
     .into_iter()
-    .enumerate()
-  {
-    actions.push(json!({"title":format!("Replace missing heading anchor with #{}",heading.slug),"kind":"replace-text","isPreferred":n==0,"edit":{"path":request.path,"line":link.line,"startColumn":link.column+link.target[..hash].encode_utf16().count(),"endColumn":link.column+link.target.encode_utf16().count(),"newText":format!("#{}",heading.slug)}}));
-  }
-  actions.push(json!({"title":"Remove missing heading anchor","kind":"replace-text","isPreferred":actions.is_empty(),"edit":{"path":request.path,"line":link.line,"startColumn":link.column+link.target[..hash].encode_utf16().count(),"endColumn":link.column+link.target.encode_utf16().count(),"newText":""}}));
-  json!(actions)
-}
-
-pub fn diagnostics(index: &Index, file: &Document) -> Value {
-  let mut diagnostics = crate::analysis::diagnostics(index,file).into_iter().map(|diagnostic|json!({"message":diagnostic["message"],"range":{"start":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["start_column"].as_u64().unwrap_or(1)-1},"end":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["end_column"].as_u64().unwrap_or(2)-1}},"severity":2,"source":"markdown"})).collect::<Vec<_>>();
+    .map(|diagnostic| {
+      let line = diagnostic["line"].as_u64().unwrap_or(1) as usize - 1;
+      Diagnostic {
+        message: diagnostic["message"].as_str().unwrap_or_default().into(),
+        range: Range::new(
+          lsp_position(
+            line,
+            diagnostic["start_column"].as_u64().unwrap_or(1) as usize - 1,
+          ),
+          lsp_position(
+            line,
+            diagnostic["end_column"].as_u64().unwrap_or(2) as usize - 1,
+          ),
+        ),
+        severity: Some(DiagnosticSeverity::WARNING),
+        source: Some("markdown".into()),
+        ..Diagnostic::default()
+      }
+    })
+    .collect::<Vec<_>>();
   diagnostics.extend(reference_diagnostics::compute(&file.content));
   diagnostics.sort_by(|left, right| {
-    for field in ["line", "character"] {
-      let order = left["range"]["start"][field]
-        .as_u64()
-        .cmp(&right["range"]["start"][field].as_u64());
-      if !order.is_eq() {
-        return order;
-      }
-    }
-    left["message"].as_str().cmp(&right["message"].as_str())
+    left
+      .range
+      .start
+      .cmp(&right.range.start)
+      .then(left.message.cmp(&right.message))
   });
   diagnostics.dedup();
-  json!(diagnostics)
+  diagnostics
 }
 
 #[path = "heading_replacements.rs"]

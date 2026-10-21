@@ -37,7 +37,7 @@ describe('useWorkspaceAnalysisInvalidation', () => {
 
     act(() => {
       handlers.get('fs-buffer-status')?.({
-        payload: { path: 'notes/today.md', revision: 2, dirty: false },
+        payload: { path: 'notes/today.md', revision: 2, dirty: false, session_generation: 3 },
       })
     })
 
@@ -60,7 +60,7 @@ describe('useWorkspaceAnalysisInvalidation', () => {
       await act(async () => Promise.resolve())
       act(() => {
         handlers.get('fs-buffer-status')?.({
-          payload: { path: 'notes/today.md', revision: 1, dirty: true },
+          payload: { path: 'notes/today.md', revision: 1, dirty: true, session_generation: 3 },
         })
       })
       unmount()

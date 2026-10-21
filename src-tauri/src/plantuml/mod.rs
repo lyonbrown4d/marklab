@@ -13,7 +13,7 @@ use tokio::sync::Semaphore;
 pub const MAX_SOURCE_BYTES: usize = 128 * 1024;
 pub const ENGINE_VERSION: &str = "puml-0.2.6";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RenderRequest {
   pub source: String,

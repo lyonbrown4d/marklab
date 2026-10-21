@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 export const MAX_BUFFER_PATCH_CHANGES = 1_000
@@ -9,8 +10,9 @@ export const fsBufferStatusSchema = z
     path: z.string(),
     revision: z.number().int().nonnegative(),
     dirty: z.boolean(),
+    session_generation: z.number().int().nonnegative(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<FsBufferStatus>
 
 export const fsBufferTextChangeSchema = z
   .object({
@@ -18,11 +20,9 @@ export const fsBufferTextChangeSchema = z
     delete_length: z.number().int().nonnegative(),
     insert_text: z.string(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<FsBufferTextChange>
 
-export const fsBufferSyncStatusSchema = fsBufferStatusSchema
-  .extend({ session_generation: z.number().int().nonnegative() })
-  .strict()
+export const fsBufferSyncStatusSchema = fsBufferStatusSchema satisfies z.ZodType<FsBufferSyncStatus>
 
 const fsBufferPatchSchema = z
   .object({
@@ -51,7 +51,7 @@ const fsBufferPatchSchema = z
         path: ['changes'],
       })
     }
-  })
+  }) satisfies z.ZodType<Extract<FsBufferUpdateRequest['update'], { kind: 'patch' }>>
 
 export const fsBufferUpdateRequestSchema = z
   .object({
@@ -65,7 +65,7 @@ export const fsBufferUpdateRequestSchema = z
         .strict(),
     ]),
   })
-  .strict()
+  .strict() satisfies z.ZodType<FsBufferUpdateRequest>
 
 export const fsBufferUpdateResultSchema = z.discriminatedUnion('kind', [
   fsBufferSyncStatusSchema.extend({ kind: z.literal('applied') }).strict(),
@@ -84,15 +84,23 @@ export const fsBufferUpdateResultSchema = z.discriminatedUnion('kind', [
       session_generation: z.number().int().nonnegative(),
     })
     .strict(),
-])
+]) satisfies z.ZodType<FsBufferUpdateResult>
 
-export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
-export type FsBufferSyncStatus = z.infer<typeof fsBufferSyncStatusSchema>
-export type FsBufferTextChange = z.infer<typeof fsBufferTextChangeSchema>
-export type FsBufferUpdateRequest = z.infer<typeof fsBufferUpdateRequestSchema>
-export type FsBufferUpdateResult = z.infer<typeof fsBufferUpdateResultSchema>
+export type FsBufferStatus = NonNullable<DesktopCommandResults['fs_get_buffer_status']>
+
+export type FsBufferSyncStatus = NonNullable<DesktopCommandResults['fs_get_buffer_status']>
+
+export type FsBufferTextChange = Extract<
+  FsBufferUpdateRequest['update'],
+  { kind: 'patch' }
+>['changes'][number]
+
+export type FsBufferUpdateRequest = DesktopCommandArgs['fs_apply_buffer_update']['request']
+
+export type FsBufferUpdateResult = DesktopCommandResults['fs_apply_buffer_update']
 
 export const fsBufferSnapshotSchema = fsBufferSyncStatusSchema
   .extend({ content: z.string() })
-  .strict()
-export type FsBufferSnapshot = z.infer<typeof fsBufferSnapshotSchema>
+  .strict() satisfies z.ZodType<FsBufferSnapshot>
+
+export type FsBufferSnapshot = DesktopCommandResults['fs_open_buffer_snapshot']

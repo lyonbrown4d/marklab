@@ -48,13 +48,13 @@ pub async fn view(
     })
     .on_new_window(move |url, _| {
       if let Ok(url) = normalize(url.as_str()) {
-        let _ = new_owner.emit_to(
+        let _ = crate::desktop::event_contracts::WEB_TABS_STATE.emit_to(
+          new_owner.app_handle(),
           tauri::EventTarget::webview_window(new_owner.label()),
-          "web-tabs-state",
-          Event::OpenRequested {
+          &(Event::OpenRequested {
             tab_id: new_id.clone(),
             url: url.into(),
-          },
+          }),
         );
       }
       NewWindowResponse::Deny

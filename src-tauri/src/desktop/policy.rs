@@ -1,3 +1,20 @@
+#[derive(serde::Deserialize, specta::Type)]
+#[serde(rename_all = "kebab-case")]
+pub enum RendererReadyPhase {
+  Shell,
+  WorkspaceInteractive,
+  WorkspaceError,
+}
+impl RendererReadyPhase {
+  pub(super) fn as_str(&self) -> &'static str {
+    match self {
+      Self::Shell => "shell",
+      Self::WorkspaceInteractive => "workspace-interactive",
+      Self::WorkspaceError => "workspace-error",
+    }
+  }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
   Loading,
@@ -22,11 +39,26 @@ pub fn ready_action(current: Phase, signal: &str) -> ReadyAction {
     _ => ReadyAction::Ignore,
   }
 }
-pub fn normalize_locale(locale: &str) -> &'static str {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
+pub enum MenuLocale {
+  #[serde(rename = "en-US")]
+  EnUs,
+  #[serde(rename = "zh-CN")]
+  ZhCn,
+}
+impl MenuLocale {
+  pub(super) fn as_str(self) -> &'static str {
+    match self {
+      Self::EnUs => "en-US",
+      Self::ZhCn => "zh-CN",
+    }
+  }
+}
+pub fn normalize_locale(locale: &str) -> MenuLocale {
   if locale.to_ascii_lowercase().starts_with("zh") {
-    "zh-CN"
+    MenuLocale::ZhCn
   } else {
-    "en-US"
+    MenuLocale::EnUs
   }
 }
 pub fn choose_startup_target(
@@ -74,7 +106,26 @@ pub fn visible_rectangle(
 mod tests {
   use super::*;
   #[test]
+  fn menu_locale_normalizes_chinese_and_preserves_english_fallback_wire_names() {
+    for (input, expected) in [
+      ("zh-TW", "zh-CN"),
+      ("ZH-cn", "zh-CN"),
+      ("en-GB", "en-US"),
+      ("fr", "en-US"),
+      ("", "en-US"),
+    ] {
+      let locale = normalize_locale(input);
+      assert_eq!(locale.as_str(), expected);
+      assert_eq!(serde_json::to_value(locale).unwrap(), expected);
+    }
+  }
+  #[test]
   fn shell_and_timeout_do_not_present_an_unready_workspace() {
+    for value in ["shell", "workspace-interactive", "workspace-error"] {
+      let phase: RendererReadyPhase = serde_json::from_value(serde_json::json!(value)).unwrap();
+      assert_eq!(phase.as_str(), value);
+    }
+    assert!(serde_json::from_value::<RendererReadyPhase>(serde_json::json!("ready")).is_err());
     assert_eq!(
       ready_action(Phase::Loading, "shell"),
       ReadyAction::KeepLoading

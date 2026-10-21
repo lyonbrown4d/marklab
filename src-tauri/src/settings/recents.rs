@@ -1,4 +1,4 @@
-use super::types::REMOVED_WORKSPACES;
+use super::types::{REMOVED_WORKSPACES, RecentWorkspaceStatus};
 use super::{RecentWorkspace, SettingsStore, json_error};
 use crate::{database::workspace_key, error::BackendResult};
 use serde_json::Value;
@@ -22,16 +22,18 @@ impl SettingsStore {
     for path in self.recent_paths().await? {
       let status = match tokio::fs::metadata(&path).await {
         Ok(metadata) if metadata.is_dir() => match tokio::fs::read_dir(&path).await {
-          Ok(_) => "available",
-          Err(_) => "unavailable",
+          Ok(_) => RecentWorkspaceStatus::Available,
+          Err(_) => RecentWorkspaceStatus::Unavailable,
         },
         Ok(metadata) if metadata.is_file() => match tokio::fs::File::open(&path).await {
-          Ok(_) => "available",
-          Err(_) => "unavailable",
+          Ok(_) => RecentWorkspaceStatus::Available,
+          Err(_) => RecentWorkspaceStatus::Unavailable,
         },
-        Ok(_) => "unavailable",
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => "missing",
-        Err(_) => "unavailable",
+        Ok(_) => RecentWorkspaceStatus::Unavailable,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+          RecentWorkspaceStatus::Missing
+        }
+        Err(_) => RecentWorkspaceStatus::Unavailable,
       };
       entries.push(RecentWorkspace { path, status });
     }

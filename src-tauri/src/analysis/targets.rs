@@ -1,4 +1,4 @@
-use super::document::{Document, Link, slug};
+use super::document::{Document, Link, LinkKind, slug};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ pub fn resolve(link: &mut Link, documents: &[String], paths: &BTreeSet<String>) 
   let relative = normalize(&link.source_path, &path);
   let target = if path.is_empty() {
     Some(link.source_path.clone())
-  } else if link.link_type == "wiki" {
+  } else if link.link_type == LinkKind::Wiki {
     relative
       .as_ref()
       .filter(|path| paths.contains(*path))

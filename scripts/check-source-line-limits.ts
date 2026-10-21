@@ -15,6 +15,8 @@ const normalizePath = (filePath: string) => filePath.replaceAll('\\', '/')
 const collectSourceFiles = (directory: string): string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = path.join(directory, entry.name)
+    // Generated IPC declarations are owned by the Rust contract exporter.
+    if (normalizePath(entryPath) === 'src/generated/desktop') return []
     if (entry.isDirectory()) return collectSourceFiles(entryPath)
     return SOURCE_EXTENSIONS.has(path.extname(entry.name)) ? [entryPath] : []
   })

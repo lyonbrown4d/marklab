@@ -56,7 +56,7 @@ by relative paths are not loaded; embedded raster data images are supported.
 ## Development
 
 Install the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/)
-and Rust 1.99.1 or newer. Use Node.js 24 LTS and pnpm 12.11.2 (pinned in
+and Rust 1.99.1 or newer. Use Node.js 24 LTS and pnpm 12.14.0 (pinned in
 `package.json`) for build tooling; the Tauri app does not embed Node.js.
 Dependency build permissions, including `canvas`, are declared in
 `pnpm-workspace.yaml` using `allowBuilds`. Newly published packages can be installed
@@ -66,6 +66,13 @@ immediately because this project sets `minimumReleaseAge: 0`.
 pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+Rust defines the desktop IPC types, commands, and event payloads. Development,
+type checking, tests, lint, and renderer builds regenerate the TypeScript bindings
+when the Rust contracts change. Generated files live in `src/generated/desktop/`
+and are excluded from Git; do not edit or commit them. Run `pnpm bindings:generate`
+to regenerate them explicitly. Generation uses the repository's
+`src-tauri/target/` directory and does not open an application window.
 
 `pnpm dev` opens the official standalone React DevTools and waits for its backend
 before starting Tauri. Its blocking development HTML script installs the React hook

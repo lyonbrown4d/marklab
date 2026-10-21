@@ -103,7 +103,7 @@ describe('quality gates', () => {
     const viteConfig = fileText('../../vite.config.ts')
 
     expect(packageJson.scripts?.['test:coverage:critical']).toBe(
-      'vitest run --coverage --maxWorkers=2',
+      'pnpm bindings:generate && vitest run --coverage --maxWorkers=2',
     )
     expect(viteConfig).toContain("provider: 'v8'")
     expect(viteConfig).toContain('perFile: true')

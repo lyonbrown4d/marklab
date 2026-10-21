@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 import { invoke } from '@/runtime/ipc'
@@ -13,7 +14,7 @@ const requestSchema = z
     layoutKey: text(512),
     mode: modeSchema,
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutRequest>
 const nodeSchema = z
   .object({
     collapsed: z.boolean(),
@@ -25,32 +26,32 @@ const nodeSchema = z
     x: coordinate,
     y: coordinate,
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutNode>
 const viewportSchema = z
   .object({ x: coordinate, y: coordinate, zoom: z.number().min(0.1).max(4) })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutViewport>
 const saveSchema = requestSchema.extend({
   nodes: z.array(nodeSchema).max(5_000),
-  viewport: viewportSchema.nullable(),
-})
+  viewport: viewportSchema.nullable().default(null),
+}) satisfies z.ZodType<GraphLayoutSave>
 const resultSchema = z
   .object({
     match: z.enum(['exact', 'miss', 'stale']),
     nodes: z.array(nodeSchema).max(5_000),
     viewport: viewportSchema.nullable(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutResult>
 
-export type GraphLayoutRequest = z.infer<typeof requestSchema>
-export type GraphLayoutSave = z.infer<typeof saveSchema>
-export type GraphLayoutNode = z.infer<typeof nodeSchema>
-export type GraphLayoutViewport = z.infer<typeof viewportSchema>
-export type GraphLayoutResult = z.infer<typeof resultSchema>
+export type GraphLayoutRequest = DesktopCommandArgs['fs_get_workspace_graph_layout']['request']
+export type GraphLayoutSave = DesktopCommandArgs['fs_save_workspace_graph_layout']['request']
+export type GraphLayoutNode = GraphLayoutSave['nodes'][number]
+export type GraphLayoutViewport = NonNullable<GraphLayoutSave['viewport']>
+export type GraphLayoutResult = DesktopCommandResults['fs_get_workspace_graph_layout']
 
 export const graphLayoutApi = {
   async get(request: GraphLayoutRequest): Promise<GraphLayoutResult> {
     const payload = requestSchema.parse(request)
-    return resultSchema.parse(await invoke<unknown>('fs_get_workspace_graph_layout', payload))
+    return resultSchema.parse(await invoke('fs_get_workspace_graph_layout', payload))
   },
   async save(value: GraphLayoutSave): Promise<void> {
     await invoke('fs_save_workspace_graph_layout', saveSchema.parse(value))

@@ -107,5 +107,5 @@ export const flushRendererFixture = (page: Page) =>
   page.evaluate(async () => {
     const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
     if (!runtime) throw new Error('Tauri renderer adapter was not initialized')
-    return runtime.commands.invoke<number>('fs_flush_buffers')
+    return runtime.commands.invoke('fs_flush_buffers')
   })

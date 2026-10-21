@@ -1,4 +1,6 @@
-use super::{UpdateResult, UpdateService};
+use super::{
+  UpdateErrorCode, UpdateEventKind, UpdateOperation, UpdateResult, UpdateService, UpdateStatus,
+};
 use crate::error::{BackendError, BackendResult};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
@@ -35,8 +37,8 @@ impl UpdateService {
     update: Update,
     path: PathBuf,
   ) -> BackendResult<UpdateResult> {
-    self.state.lock().await.status = "installing".into();
-    self.publish(app, "installing").await?;
+    self.state.lock().await.status = UpdateStatus::Installing;
+    self.publish(app, UpdateEventKind::Installing).await?;
     let result = crate::blocking::run(move || {
       let bytes = std::fs::read(&path)?;
       update
@@ -48,10 +50,15 @@ impl UpdateService {
     .await;
     if let Err(error) = result {
       return self
-        .failure(app, "INSTALL_FAILED", "install", error.message)
+        .failure(
+          app,
+          UpdateErrorCode::InstallFailed,
+          UpdateOperation::Install,
+          error.message,
+        )
         .await;
     }
-    self.publish(app, "installing").await?;
+    self.publish(app, UpdateEventKind::Installing).await?;
     app.restart()
   }
 }

@@ -55,8 +55,18 @@ const makeGraph = (numbers = Array.from({ length: 82 }, (_, index) => index)): G
 })
 const graph = makeGraph()
 const communities: GraphCommunity[] = [
-  { id: 'community:a', label: 'Group A', nodeIds: graph.nodes.slice(0, 41).map(({ id }) => id) },
-  { id: 'community:b', label: 'Group B', nodeIds: graph.nodes.slice(41).map(({ id }) => id) },
+  {
+    id: 'community:a',
+    label: 'Group A',
+    nodeIds: graph.nodes.slice(0, 41).map(({ id }) => id),
+    unlinkedPage: null,
+  },
+  {
+    id: 'community:b',
+    label: 'Group B',
+    nodeIds: graph.nodes.slice(41).map(({ id }) => id),
+    unlinkedPage: null,
+  },
 ]
 const canvasIds = () =>
   JSON.parse(screen.getByTestId('community-canvas').getAttribute('data-nodes')!) as string[]
@@ -212,6 +222,7 @@ describe('WorkspaceGraphPage community views', () => {
         id: 'community:c',
         label: 'Group C',
         nodeIds: updated.nodes.slice(41).map(({ id }) => id),
+        unlinkedPage: null,
       }
       vi.mocked(graphComputeApi.communities).mockResolvedValue({
         communities: [communities[0]!, replacement],

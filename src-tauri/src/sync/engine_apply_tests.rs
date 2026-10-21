@@ -22,12 +22,13 @@ async fn cancellation_while_buffer_invalidation_waits_does_not_delete_local_file
   tokio::fs::write(&target, "retained text").await.unwrap();
   let workspace = Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: root.to_string_lossy().into(),
     },
     1,
   );
-  let (sender, cancel) = watch::channel(false);
+  let sender = CancellationToken::new();
+  let cancel = sender.clone();
   let fingerprint = files::inspect(&root, "note.md", &cancel)
     .await
     .unwrap()
@@ -67,7 +68,7 @@ async fn cancellation_while_buffer_invalidation_waits_does_not_delete_local_file
       value = &mut applying => panic!("Deletion finished before buffer gate released: {value:?}"),
       reached = reached_rx => reached.unwrap(),
   }
-  sender.send(true).unwrap();
+  sender.cancel();
   assert!(futures_util::poll!(&mut applying).is_pending());
   drop(buffers);
   assert_eq!(applying.await.unwrap_err().code, "SYNC_CANCELLED");

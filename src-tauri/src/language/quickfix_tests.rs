@@ -21,7 +21,7 @@ async fn fixture() -> (tempfile::TempDir, Arc<Index>) {
     .unwrap();
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: directory
         .path()
         .canonicalize()
@@ -59,7 +59,7 @@ async fn missing_anchor_fix_ranks_later_close_heading_first_and_limits_suggestio
     ..request
   };
   let index = overlay(&index, &request).unwrap();
-  let actions = code_actions(&index, &request);
+  let actions = serde_json::to_value(code_actions(&index, &request)).unwrap();
   let actions = actions.as_array().unwrap();
   assert_eq!(actions.len(), 4);
   assert_eq!(actions[0]["edit"]["newText"], "#details");
@@ -101,7 +101,7 @@ async fn anchor_fixes_require_an_exact_writable_destination_and_local_asset_hove
     let request = request(content);
     let index = overlay(&index, &request).unwrap();
     assert_eq!(
-      code_actions(&index, &request),
+      serde_json::to_value(code_actions(&index, &request)).unwrap(),
       serde_json::json!([]),
       "{content}"
     );
@@ -109,7 +109,7 @@ async fn anchor_fixes_require_an_exact_writable_destination_and_local_asset_hove
   for content in ["[Image](picture.png)", "[Image](picture.png#fragment)"] {
     let request = request(content);
     let index = overlay(&index, &request).unwrap();
-    let hover = hover(&index, &request);
+    let hover = serde_json::to_value(hover(&index, &request)).unwrap();
     assert_eq!(hover["path"], "picture.png");
     assert!(hover["heading"].is_null());
     assert_eq!(

@@ -27,15 +27,8 @@ export type PlateDocumentFindWorkerMatch = {
   regex: PlateDocumentFindRegexContext
 }
 
-export type PlateDocumentFindWorkerRequest = {
-  id: number
+export type PlateDocumentFindWorkerScan = {
   options: PlateDocumentFindWorkerOptions
   query: string
   source: PlateDocumentFindTextBlock[]
 }
-
-export type PlateDocumentFindWorkerResponse =
-  | { id: number; matches: PlateDocumentFindWorkerMatch[]; ok: true }
-  | { error: string; id: number; ok: false }
-
-export type PlateDocumentFindWorkerScan = Omit<PlateDocumentFindWorkerRequest, 'id'>

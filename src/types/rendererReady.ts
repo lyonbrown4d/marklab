@@ -1,8 +1,9 @@
-export const rendererReadyPhases = ['shell', 'workspace-interactive', 'workspace-error'] as const
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 
-export type RendererReadyPhase = (typeof rendererReadyPhases)[number]
-
-export type RendererReadySignal = {
-  error?: string
-  phase: RendererReadyPhase
-}
+export const rendererReadyPhases = [
+  'shell',
+  'workspace-interactive',
+  'workspace-error',
+] as const satisfies readonly RendererReadyPhase[]
+export type RendererReadySignal = DesktopCommandArgs['app_ready']['request']
+export type RendererReadyPhase = RendererReadySignal['phase']

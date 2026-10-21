@@ -4,14 +4,14 @@ use std::collections::BTreeSet;
 
 pub const ENGINE_VERSION: &str = "native-workspace-map-v1";
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum GraphLayoutMode {
   Overview,
   Focus,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutComputeNode {
   pub id: String,
@@ -21,14 +21,14 @@ pub struct GraphLayoutComputeNode {
   pub group: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutComputeEdge {
   pub source: String,
   pub target: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutComputeRequest {
   pub request_id: String,
@@ -37,7 +37,7 @@ pub struct GraphLayoutComputeRequest {
   pub edges: Vec<GraphLayoutComputeEdge>,
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphLayoutPosition {
   pub id: String,
@@ -45,7 +45,7 @@ pub struct GraphLayoutPosition {
   pub y: f64,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphLayoutComputeResult {
   pub positions: Vec<GraphLayoutPosition>,

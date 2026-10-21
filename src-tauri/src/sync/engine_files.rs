@@ -6,9 +6,9 @@ use std::{
   io::{Read, Write},
   path::{Path, PathBuf},
 };
-use tokio::sync::watch;
-pub fn cancelled(cancel: &watch::Receiver<bool>) -> BackendResult<()> {
-  if *cancel.borrow() {
+use tokio_util::sync::CancellationToken;
+pub fn cancelled(cancel: &CancellationToken) -> BackendResult<()> {
+  if cancel.is_cancelled() {
     Err(BackendError::new(
       "SYNC_CANCELLED",
       "Workspace sync was cancelled",
@@ -18,18 +18,14 @@ pub fn cancelled(cancel: &watch::Receiver<bool>) -> BackendResult<()> {
   }
 }
 pub async fn interrupt<T>(
-  cancel: &mut watch::Receiver<bool>,
+  cancel: &CancellationToken,
   future: impl std::future::Future<Output = BackendResult<T>>,
 ) -> BackendResult<T> {
   cancelled(cancel)?;
-  let cancellation = async {
-    loop {
-      if cancel.changed().await.is_err() || *cancel.borrow() {
-        break;
-      }
-    }
-  };
-  tokio::select! {result=future=>result,_=cancellation=>Err(BackendError::new("SYNC_CANCELLED","Workspace sync was cancelled"))}
+  tokio::select! {
+    result = future => result,
+    _ = cancel.cancelled() => Err(BackendError::new("SYNC_CANCELLED", "Workspace sync was cancelled")),
+  }
 }
 pub fn target(root: &Path, relative: &str) -> BackendResult<PathBuf> {
   let relative = paths::sync_path(relative)?;
@@ -71,7 +67,7 @@ pub struct Fingerprint {
 pub fn fingerprint(
   root: &Path,
   path: &str,
-  cancel: Option<&watch::Receiver<bool>>,
+  cancel: Option<&CancellationToken>,
 ) -> BackendResult<Option<Fingerprint>> {
   let target = target(root, path)?;
   let before = match std::fs::symlink_metadata(&target) {
@@ -126,7 +122,7 @@ pub fn target_check(root: &Path, path: &str) -> BackendResult<()> {
 pub async fn inspect(
   root: &Path,
   path: &str,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<Option<Fingerprint>> {
   let root = root.to_path_buf();
   let path = path.to_owned();
@@ -139,7 +135,7 @@ pub async fn assert_hash(
   root: &Path,
   path: &str,
   expected: Option<&str>,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   let current = inspect(root, path, cancel).await?;
   if current.as_ref().map(|v| v.hash.as_str()) != expected {
@@ -155,7 +151,7 @@ pub async fn snapshot(
   path: &str,
   expected: &str,
   size: u64,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<tempfile::NamedTempFile> {
   let root = root.to_owned();
   let path = path.to_owned();
@@ -192,7 +188,7 @@ pub async fn snapshot(
   .await
   .map_err(|e| failure(&e.to_string()))?
 }
-pub async fn retry<T, F, Fut>(cancel: &mut watch::Receiver<bool>, mut work: F) -> BackendResult<T>
+pub async fn retry<T, F, Fut>(cancel: &CancellationToken, mut work: F) -> BackendResult<T>
 where
   F: FnMut() -> Fut,
   Fut: std::future::Future<Output = BackendResult<T>>,

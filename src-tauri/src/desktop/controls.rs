@@ -7,13 +7,14 @@ use std::{collections::HashSet, sync::Mutex};
 use tauri::{Manager, State};
 #[derive(Default)]
 pub struct VimOwnership(pub Mutex<HashSet<String>>);
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct VimRequest {
   active: bool,
 }
-#[derive(Serialize)]
-pub struct OkResult {
+pub use DesktopOkResult as OkResult;
+#[derive(Serialize, specta::Type)]
+pub struct DesktopOkResult {
   pub(super) ok: bool,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub(super) error: Option<String>,
@@ -27,6 +28,7 @@ impl OkResult {
   }
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn window_set_vim_keyboard_ownership(
   window: WebviewWindow,
   state: State<'_, VimOwnership>,
@@ -48,12 +50,13 @@ pub async fn window_set_vim_keyboard_ownership(
   }
   Ok(())
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct FullscreenRequest {
   fullscreen: bool,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn window_set_fullscreen(
   window: WebviewWindow,
   request: FullscreenRequest,
@@ -61,7 +64,7 @@ pub async fn window_set_fullscreen(
   window.set_fullscreen(request.fullscreen)?;
   Ok(())
 }
-#[derive(Clone, Copy, Deserialize)]
+#[derive(Clone, Copy, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum EditAction {
   Undo,
@@ -71,12 +74,13 @@ pub enum EditAction {
   Paste,
   SelectAll,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct EditRequest {
   action: EditAction,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn edit_execute(
   window: WebviewWindow,
   request: EditRequest,
@@ -85,7 +89,7 @@ pub async fn edit_execute(
   Ok(EditResult::success())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct EditResult {
   pub(super) ok: bool,
   pub(super) error: Option<String>,

@@ -51,7 +51,8 @@ async fn shared_workspace_events_reach_each_owner_once_and_never_another_root_or
     let received = received.clone();
     let label = window.label().to_owned();
     window.listen("fs-buffer-status", move |event| {
-      let revision: u64 = serde_json::from_str(event.payload()).expect("revision");
+      let value: serde_json::Value = serde_json::from_str(event.payload()).expect("status");
+      let revision = value["revision"].as_u64().expect("revision");
       received
         .lock()
         .expect("events")
@@ -71,7 +72,16 @@ async fn shared_workspace_events_reach_each_owner_once_and_never_another_root_or
       .push("raw-window".into())
   });
   workspace
-    .emit_to_owners(app.handle(), "fs-buffer-status", 7u64)
+    .emit_to_owners(
+      app.handle(),
+      crate::desktop::event_contracts::FS_BUFFER_STATUS,
+      crate::workspace::BufferStatus {
+        path: "a.md".into(),
+        revision: 7,
+        dirty: false,
+        session_generation: workspace.generation,
+      },
+    )
     .expect("scoped fanout");
   let mut events = received.lock().expect("events").clone();
   events.sort();
@@ -80,7 +90,7 @@ async fn shared_workspace_events_reach_each_owner_once_and_never_another_root_or
   received.lock().expect("events").clear();
   // Recents/updater-style app broadcasts must continue reaching all root owners.
   app
-    .emit("fs-buffer-status", 8u64)
+    .emit("fs-buffer-status", serde_json::json!({"revision":8}))
     .expect("global broadcast");
   let events = received.lock().expect("events");
   assert!(events.contains(&"window-a:8".into()));

@@ -51,10 +51,10 @@ export const createNativeApis = (events: TauriEventHub): NativeSurfaces => ({
     recentWorkspaces: {
       list: () => request('recent_workspaces_list'),
       remove: async (path) => {
-        const result = await request<{ ok: boolean; error?: string }>('recent_workspaces_remove', {
+        const result = await request('recent_workspaces_remove', {
           path,
         })
-        if (!result.ok) throw new Error(result.error ?? 'Unable to remove workspace history')
+        if (!result.ok) throw new Error('Unable to remove workspace history')
       },
       watch: async (handler) => events.on('recent-workspaces-changed', handler),
     },

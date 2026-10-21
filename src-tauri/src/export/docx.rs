@@ -8,12 +8,12 @@ use crate::error::{BackendError, BackendResult};
 use docx_rs::*;
 use std::collections::BTreeMap;
 use std::io::Cursor;
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 pub fn render(
   documents: &[SourceDocument],
   options: &PublicationOptions,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<u8>> {
   let (width, height) = options.dimensions_mm();
   let margin = twips(options.margin_mm() as f64) as i32;
@@ -127,7 +127,7 @@ impl Block {
 pub(super) struct Context<'a> {
   pub(super) document: &'a SourceDocument,
   pub(super) notes: BTreeMap<String, Vec<Node>>,
-  pub(super) cancelled: &'a AtomicBool,
+  pub(super) cancelled: &'a CancellationToken,
   pub(super) max_image_width_pt: f64,
 }
 fn twips(mm: f64) -> u32 {

@@ -1,12 +1,9 @@
 use crate::error::{BackendError, BackendResult};
 use std::{
   collections::BTreeMap,
-  sync::{
-    Arc, Mutex,
-    atomic::{AtomicBool, Ordering},
-  },
+  sync::{Arc, Mutex},
 };
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 
 pub(super) type Jobs = Arc<Mutex<BTreeMap<(String, JobKind, String), Arc<Job>>>>;
 
@@ -17,25 +14,22 @@ pub(super) enum JobKind {
 }
 
 pub(super) struct Job {
-  cancelled: watch::Sender<bool>,
-  pub(super) flag: AtomicBool,
+  pub(super) cancelled: CancellationToken,
 }
 
 impl Job {
   pub(super) fn new() -> Self {
     Self {
-      cancelled: watch::channel(false).0,
-      flag: AtomicBool::new(false),
+      cancelled: CancellationToken::new(),
     }
   }
 
   pub(super) fn cancel(&self) {
-    self.flag.store(true, Ordering::Release);
-    self.cancelled.send_replace(true);
+    self.cancelled.cancel();
   }
 
   pub(super) fn check(&self) -> BackendResult<()> {
-    if *self.cancelled.borrow() {
+    if self.cancelled.is_cancelled() {
       Err(cancelled())
     } else {
       Ok(())
@@ -43,8 +37,7 @@ impl Job {
   }
 
   pub(super) async fn wait_cancelled(&self) {
-    let mut receiver = self.cancelled.subscribe();
-    let _ = receiver.wait_for(|cancelled| *cancelled).await;
+    self.cancelled.cancelled().await;
   }
 }
 

@@ -45,7 +45,11 @@ impl Workspace {
           })
           .collect();
         for status in statuses {
-          let _ = workspace.emit_to_owners(&app, "fs-buffer-status", status);
+          let _ = workspace.emit_to_owners(
+            &app,
+            crate::desktop::event_contracts::FS_BUFFER_STATUS,
+            status,
+          );
         }
         match result {
           Ok(count) => {

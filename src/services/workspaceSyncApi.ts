@@ -20,7 +20,7 @@ export const workspaceSyncApi = {
   listWebDavProfiles: (): Promise<WebDavProfile[]> => runtime().webDavProfiles.list(),
   saveWebDavProfile: (input: WebDavProfileInput): Promise<WebDavProfile> =>
     runtime().webDavProfiles.update(input),
-  deleteWebDavProfile: (id: string): Promise<{ ok: true }> => runtime().webDavProfiles.delete(id),
+  deleteWebDavProfile: (id: string) => runtime().webDavProfiles.delete(id),
   testWebDavProfile: (id: string) => runtime().webDavProfiles.test(id),
   getChannels: (): Promise<WorkspaceSyncChannels> => runtime().channels.get(),
   setChannel: (channel: WorkspaceSyncChannel): Promise<WorkspaceSyncChannels> =>

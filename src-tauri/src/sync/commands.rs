@@ -1,11 +1,14 @@
+use super::events::announce_changes;
 use super::*;
+use crate::desktop::event_contracts::{SYNC_PROGRESS, SyncProgressEvent};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{
   error::{BackendError, BackendResult},
   workspace::WorkspaceRegistry,
 };
-use tauri::{Emitter, Manager, State};
+use tauri::{Manager, State};
 #[tauri::command]
+#[specta::specta]
 pub async fn webdav_profile_list(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -17,6 +20,7 @@ pub async fn webdav_profile_list(
   service.list_profiles().await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn webdav_profile_update(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -27,6 +31,7 @@ pub async fn webdav_profile_update(
   service.update_profile(request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn webdav_profile_delete(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -38,6 +43,7 @@ pub async fn webdav_profile_delete(
   Ok(OkResult { ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn webdav_profile_test(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -49,6 +55,7 @@ pub async fn webdav_profile_test(
   Ok(OkResult { ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_channels_get(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -62,6 +69,7 @@ pub async fn sync_channels_get(
   })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_channels_set(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -73,6 +81,7 @@ pub async fn sync_channels_set(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_channels_remove(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -85,6 +94,7 @@ pub async fn sync_channels_remove(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_start(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -105,10 +115,13 @@ pub async fn sync_start(
   let outcome = {
     let _configuration = service.inner.configuration.read().await;
     let on_progress = |progress: SyncProgress| {
-      let _ = window.emit_to(
+      let _ = SYNC_PROGRESS.emit_to(
+        window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),
-        "sync-progress",
-        serde_json::json!({"requestId":request.request_id,"progress":progress}),
+        &SyncProgressEvent {
+          request_id: request.request_id.clone(),
+          progress,
+        },
       );
     };
     engine::synchronize(
@@ -151,6 +164,7 @@ pub async fn sync_start(
   Ok(outcome)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_cancel(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -164,7 +178,7 @@ pub async fn sync_cancel(
   let mut cancelled = false;
   for run in runs.values() {
     if run.owner == window.label() && run.request_id == request.request_id {
-      let _ = run.cancel.send(true);
+      run.cancel.cancel();
       cancelled = true;
     }
   }
@@ -174,6 +188,7 @@ pub async fn sync_cancel(
   })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_conflicts_list(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -185,6 +200,7 @@ pub async fn sync_conflicts_list(
   conflicts::list(&service, &workspace, &request.root_path).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_conflicts_read(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -215,6 +231,7 @@ pub async fn sync_conflicts_read(
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn sync_conflicts_resolve(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -250,12 +267,13 @@ impl SyncService {
     root: &str,
     owner: &str,
     request_id: &str,
-  ) -> Option<watch::Receiver<bool>> {
+  ) -> Option<CancellationToken> {
     let mut runs = self.inner.runs.lock().await;
     if runs.contains_key(root) {
       return None;
     }
-    let (cancel, receiver) = watch::channel(false);
+    let cancel = CancellationToken::new();
+    let receiver = cancel.clone();
     runs.insert(
       root.into(),
       Run {
@@ -275,18 +293,4 @@ impl SyncService {
       runs.remove(root);
     }
   }
-}
-
-async fn announce_changes(
-  window: &WebviewWindow,
-  workspace: &crate::workspace::Workspace,
-  previous: u64,
-) {
-  let revision = workspace.current_revision();
-  if revision == previous || workspace.ensure_active().is_err() {
-    return;
-  }
-  let payload = serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous,"revision":revision});
-  let _ = workspace.emit_to_owners(window.app_handle(), "fs-changed", &payload);
-  let _ = workspace.emit_to_owners(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous,"revision":revision}));
 }

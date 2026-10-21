@@ -1,3 +1,4 @@
+import type { DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import { invoke } from '@/runtime/ipc'
 
@@ -13,9 +14,9 @@ const resultSchema = z.object({
     .min(1)
     .max(16),
   warnings: z.array(z.string()).max(20),
-})
+}) satisfies z.ZodType<PlantUmlPreviewResult>
 
-export type PlantUmlPreviewResult = z.infer<typeof resultSchema>
+export type PlantUmlPreviewResult = DesktopCommandResults['plantuml_render']
 
 export const plantumlApi = {
   async render(source: string, signal: AbortSignal): Promise<PlantUmlPreviewResult> {
@@ -26,7 +27,7 @@ export const plantumlApi = {
     }
     signal.addEventListener('abort', cancel, { once: true })
     try {
-      const result = await invoke<unknown>('plantuml_render', { requestId, source })
+      const result = await invoke('plantuml_render', { requestId, source })
       signal.throwIfAborted()
       return resultSchema.parse(result)
     } finally {

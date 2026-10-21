@@ -1,22 +1,24 @@
 use crate::error::{BackendError, BackendResult};
 use serde::Serialize;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager};
-#[derive(Clone, Serialize)]
+use tauri::{AppHandle, Manager};
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "kebab-case")]
 pub enum Source {
   Startup,
   SecondInstance,
   OpenUrl,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DeepLink {
   url: String,
   source: Source,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
   received_at: u64,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchInfo {
   args: Vec<String>,
@@ -64,10 +66,10 @@ pub fn publish(app: &AppHandle, value: &str, source: Source) -> BackendResult<()
         .interactive(window.label())
     })
     .is_some_and(|window| {
-      window
+      crate::desktop::event_contracts::DEEP_LINK
         .emit_to(
+          window.app_handle(),
           tauri::EventTarget::webview_window(window.label()),
-          "deep-link",
           &payload,
         )
         .is_ok()
@@ -87,9 +89,9 @@ pub fn flush(app: &AppHandle, window: &tauri::WebviewWindow) -> BackendResult<()
     .lock()
     .map_err(|_| BackendError::new("STATE_ERROR", "Launch history is unavailable"))?;
   while let Some(payload) = links.pending.first() {
-    window.emit_to(
+    crate::desktop::event_contracts::DEEP_LINK.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "deep-link",
       payload,
     )?;
     links.pending.remove(0);

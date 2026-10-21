@@ -6,7 +6,7 @@ use crate::{
 };
 use serde_json::Value;
 use std::path::Path;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 pub async fn restore_window(app: &AppHandle, seed: PersistedValue) -> BackendResult<String> {
   let gate = app.state::<super::lifecycle::LifecycleGate>();
   let _operation = gate.0.lock().await;
@@ -75,30 +75,71 @@ pub async fn open_target(
   }
   let mut switched = false;
   let result: BackendResult<String> = async {
-        let metadata = tokio::fs::metadata(path).await?;
-        if !metadata.is_file() && !metadata.is_dir() { return Err(BackendError::new("INVALID_PATH", "Open target is not a file or directory")); }
-        let workspace = super::windows::bind_root(app, &label, Some(path), metadata.is_file()).await?;
-        // Binding is committed before watcher setup; later failures must keep the new root hidden.
-        switched = true;
-        app.state::<WorkspaceRegistry>().start_watcher(&label, app.clone()).await?;
-        super::lifecycle::cleanup_window(app, &label).await?;
-        app.state::<crate::terminal::TerminalState>().reopen_window(&label)?;
-        let root = workspace.root_info();
-        let seed = PersistedValue {
-            state: serde_json::json!({"rootPath":root.path,"rootKind":root.kind,"tabs":[],"activeTabId":null}).as_object().cloned().unwrap_or_default(),
-            ..PersistedValue::default()
-        };
-        app.state::<SettingsStore>().write_session(&label, seed.clone(), Some(true), true).await?;
-        if let Some(window) = crate::native_window::get(app, &label) {
-            super::geometry::activate(&window, &root).await?;
-            window.emit_to(tauri::EventTarget::webview_window(window.label()), "workspace-session-seed", super::startup::seed(app, &label, seed)?)?;
-            let revision = workspace.current_revision();
-            let delta = serde_json::json!({"kind":"invalidated","root":root,"generation":workspace.generation,"previousRevision":revision,"revision":revision});
-            window.emit_to(tauri::EventTarget::webview_window(window.label()), "fs-changed", &delta)?; window.emit_to(tauri::EventTarget::webview_window(window.label()), "workspace-tree-changed", &delta)?;
-            if let Some(boot) = app.state::<super::startup::StartupState>().boot(&label)? { super::startup::schedule_timeout(app, &label, boot.attempt); }
-        } else { create(app, &label, None).await?; }
-        Ok(label.clone())
-    }.await;
+    let metadata = tokio::fs::metadata(path).await?;
+    if !metadata.is_file() && !metadata.is_dir() {
+      return Err(BackendError::new(
+        "INVALID_PATH",
+        "Open target is not a file or directory",
+      ));
+    }
+    let workspace = super::windows::bind_root(app, &label, Some(path), metadata.is_file()).await?;
+    // Binding is committed before watcher setup; later failures must keep the new root hidden.
+    switched = true;
+    app
+      .state::<WorkspaceRegistry>()
+      .start_watcher(&label, app.clone())
+      .await?;
+    super::lifecycle::cleanup_window(app, &label).await?;
+    app
+      .state::<crate::terminal::TerminalState>()
+      .reopen_window(&label)?;
+    let root = workspace.root_info();
+    let seed = PersistedValue {
+      state:
+        serde_json::json!({"rootPath":root.path,"rootKind":root.kind,"tabs":[],"activeTabId":null})
+          .as_object()
+          .cloned()
+          .unwrap_or_default(),
+      ..PersistedValue::default()
+    };
+    app
+      .state::<SettingsStore>()
+      .write_session(&label, seed.clone(), Some(true), true)
+      .await?;
+    if let Some(window) = crate::native_window::get(app, &label) {
+      super::geometry::activate(&window, &root).await?;
+      crate::desktop::event_contracts::WORKSPACE_SESSION_SEED.emit_to(
+        window.app_handle(),
+        tauri::EventTarget::webview_window(window.label()),
+        &(super::startup::seed(app, &label, seed)?),
+      )?;
+      let revision = workspace.current_revision();
+      let delta = super::event_contracts::WorkspaceInvalidated {
+        kind: super::event_contracts::InvalidationKind::Invalidated,
+        root,
+        generation: workspace.generation,
+        previous_revision: revision,
+        revision,
+      };
+      super::event_contracts::FS_CHANGED.emit_to(
+        window.app_handle(),
+        tauri::EventTarget::webview_window(window.label()),
+        &delta,
+      )?;
+      super::event_contracts::WORKSPACE_TREE_CHANGED.emit_to(
+        window.app_handle(),
+        tauri::EventTarget::webview_window(window.label()),
+        &delta.into(),
+      )?;
+      if let Some(boot) = app.state::<super::startup::StartupState>().boot(&label)? {
+        super::startup::schedule_timeout(app, &label, boot.attempt);
+      }
+    } else {
+      create(app, &label, None).await?;
+    }
+    Ok(label.clone())
+  }
+  .await;
   if let Err(error) = &result {
     if was_interactive && !switched {
       if let Some(previous) = previous_boot {

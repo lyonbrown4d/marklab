@@ -1,109 +1,121 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  PlateDocumentFindWorkerClient,
-  type PlateDocumentFindWorkerPort,
-} from '@/services/plateDocumentFindWorkerClient'
-
-class FakeWorker implements PlateDocumentFindWorkerPort {
-  onerror: ((event: ErrorEvent) => void) | null = null
-  onmessage: ((event: MessageEvent<unknown>) => void) | null = null
-  readonly sent: unknown[] = []
-  terminated = false
-
-  postMessage(message: unknown) {
-    this.sent.push(message)
-  }
-
-  terminate() {
-    this.terminated = true
-  }
-
-  emit(data: unknown) {
-    this.onmessage?.({ data } as MessageEvent<unknown>)
-  }
-}
+import { PlateDocumentFindWorkerClient } from '@/services/plateDocumentFindWorkerClient'
+import { createComlinkTestWorker } from '@/test/comlinkTestWorker'
+import { plateDocumentFindWorkerApi } from '@/workers/plateDocumentFindWorkerApi'
 
 const request = {
   options: { matchCase: false, useRegex: true as const, wholeWord: false },
   query: 'alpha',
   source: [{ entries: [{ path: [0, 0], text: 'alpha' }] }],
 }
+const clients: PlateDocumentFindWorkerClient[] = []
+const pendingApi = { scan: () => new Promise(() => {}) }
+const createClient = (api: object = plateDocumentFindWorkerApi, timeoutMs?: number) => {
+  const testWorker = createComlinkTestWorker(api)
+  const client = new PlateDocumentFindWorkerClient(() => testWorker.worker, timeoutMs)
+  clients.push(client)
+  return { client, ...testWorker }
+}
 
 describe('PlateDocumentFindWorkerClient', () => {
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    clients.splice(0).forEach((client) => client.terminate())
+    vi.useRealTimers()
+  })
 
-  it('resolves structured matches returned by the worker', async () => {
-    const worker = new FakeWorker()
-    const client = new PlateDocumentFindWorkerClient(() => worker)
-    const pending = client.scan(request)
+  it('returns structured matches and forwards model errors', async () => {
+    const { client } = createClient()
     const match = {
       anchor: { offset: 0, path: [0, 0] },
       focus: { offset: 5, path: [0, 0] },
       regex: { captures: [], groups: {}, match: 'alpha', prefix: '', suffix: '' },
     }
 
-    worker.emit({ id: 1, matches: [match], ok: true })
-
-    await expect(pending).resolves.toEqual([match])
+    await expect(client.scan(request)).resolves.toEqual([match])
+    await expect(client.scan({ ...request, query: '[' })).rejects.toThrow('invalidRegex')
+    await expect(client.scan(request)).resolves.toEqual([match])
   })
 
-  it('terminates a busy worker on cancellation and ignores its stale response', async () => {
-    const firstWorker = new FakeWorker()
-    const secondWorker = new FakeWorker()
-    const workers = [firstWorker, secondWorker]
+  it('terminates a busy worker on cancellation and starts a replacement', async () => {
+    const first = createComlinkTestWorker(pendingApi)
+    const second = createComlinkTestWorker(plateDocumentFindWorkerApi)
+    const workers = [first.worker, second.worker]
     const client = new PlateDocumentFindWorkerClient(() => workers.shift()!)
+    clients.push(client)
     const controller = new AbortController()
     const stale = client.scan(request, controller.signal)
+    const rejected = expect(stale).rejects.toMatchObject({ name: 'AbortError' })
 
     controller.abort()
-    await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
-    expect(firstWorker.terminated).toBe(true)
-    expect(workers).toHaveLength(1)
 
-    const current = client.scan({ ...request, query: 'beta' })
-    expect(workers).toHaveLength(0)
-    const replacement = {
-      anchor: { offset: 0, path: [0, 0] },
-      focus: { offset: 4, path: [0, 0] },
-      regex: { captures: [], groups: {}, match: 'beta', prefix: '', suffix: '' },
-    }
-    firstWorker.emit({ id: 1, matches: [], ok: true })
-    secondWorker.emit({ id: 2, matches: [replacement], ok: true })
-
-    await expect(current).resolves.toEqual([replacement])
+    await rejected
+    expect(first.worker.terminate).toHaveBeenCalledOnce()
+    expect(first.listeners.size).toBe(0)
+    await expect(client.scan(request)).resolves.toHaveLength(1)
   })
 
-  it('terminates a pathological scan after its execution budget', async () => {
+  it('terminates pathological scans and rejects pending peers after their execution budget', async () => {
     vi.useFakeTimers()
-    const worker = new FakeWorker()
-    const client = new PlateDocumentFindWorkerClient(() => worker, 50)
-    const pending = client.scan(request)
-    const rejected = expect(pending).rejects.toThrow('scanTimedOut')
+    const { client, worker, listeners } = createClient(pendingApi, 50)
+    const rejected = expect(client.scan(request)).rejects.toThrow('scanTimedOut')
+    const peerRejected = expect(client.scan(request)).rejects.toThrow(
+      'restarted after cancellation',
+    )
 
     await vi.advanceTimersByTimeAsync(50)
 
-    await rejected
-    expect(worker.terminated).toBe(true)
+    await Promise.all([rejected, peerRejected])
+    expect(worker.terminate).toHaveBeenCalledOnce()
+    expect(listeners.size).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('rejects a postMessage failure without leaving a timed task behind', async () => {
+  it.each(['error', 'messageerror', 'terminate'] as const)(
+    'rejects pending calls and removes listeners on %s',
+    async (failure) => {
+      vi.useFakeTimers()
+      const { client, worker, listeners } = createClient(pendingApi)
+      const rejected = expect(client.scan(request)).rejects.toThrow(
+        failure === 'error' ? 'crashed' : failure === 'messageerror' ? 'decoded' : 'terminated',
+      )
+      if (failure === 'error') worker.onerror?.({ message: 'crashed' } as ErrorEvent)
+      else if (failure === 'messageerror') {
+        worker.onmessageerror?.(new MessageEvent('messageerror'))
+      } else client.terminate()
+
+      await rejected
+      expect(worker.terminate).toHaveBeenCalledOnce()
+      expect(listeners.size).toBe(0)
+      expect(vi.getTimerCount()).toBe(0)
+    },
+  )
+
+  it('cleans up transport failures without leaving timed tasks or RPC listeners', async () => {
     vi.useFakeTimers()
-    const worker = new FakeWorker()
+    const { client, worker, listeners } = createClient(pendingApi, 50)
     worker.postMessage = () => {
       throw new Error('clone failed')
     }
-    const client = new PlateDocumentFindWorkerClient(() => worker, 50)
 
     await expect(client.scan(request)).rejects.toThrow('clone failed')
-    await vi.advanceTimersByTimeAsync(50)
-    expect(worker.terminated).toBe(false)
+    expect(worker.terminate).toHaveBeenCalledOnce()
+    expect(listeners.size).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('reports worker construction failures through the async boundary', async () => {
-    const client = new PlateDocumentFindWorkerClient(() => {
+  it('rejects construction failures asynchronously and skips pre-aborted requests', async () => {
+    const createWorker = vi.fn(() => {
       throw new Error('worker unavailable')
     })
+    const client = new PlateDocumentFindWorkerClient(createWorker)
+    clients.push(client)
+    const controller = new AbortController()
+    controller.abort()
 
+    await expect(client.scan(request, controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    expect(createWorker).not.toHaveBeenCalled()
     await expect(client.scan(request)).rejects.toThrow('worker unavailable')
   })
 })

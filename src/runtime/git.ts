@@ -1,56 +1,117 @@
+import type { DesktopCommandResults } from '@/generated/desktop/bindings'
 import type { GitHistoryOptions, GitResetMode } from '@/types/gitOperations'
 import type { GitConflictSaveRequest } from '@/types/gitConflicts'
 import type { GitOpenFileRequest } from '@/types/gitPreview'
 
 type Scope = string | undefined
 export type DesktopGitApi = {
-  openFile: (request: GitOpenFileRequest, expectedRoot?: Scope) => Promise<unknown>
-  discover: (expectedRoot?: Scope) => Promise<unknown>
-  init: (expectedRoot?: Scope) => Promise<unknown>
-  status: (expectedRoot?: Scope) => Promise<unknown>
+  openFile: (
+    request: GitOpenFileRequest,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_open_file']>
+  discover: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_discover']>
+  init: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_init']>
+  status: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_status']>
   fileDiff: (
     path: string,
     section: 'staged' | 'unstaged' | 'untracked' | 'conflicts',
     expectedRoot?: Scope,
-  ) => Promise<unknown>
-  commitAll: (message: string, expectedRoot?: Scope) => Promise<unknown>
-  remoteStatus: (expectedRoot?: Scope) => Promise<unknown>
-  setRemote: (name: string, url: string, expectedRoot?: Scope) => Promise<unknown>
-  removeRemote: (name: string, expectedRoot?: Scope) => Promise<unknown>
-  fetch: (remote?: string, expectedRoot?: Scope) => Promise<unknown>
-  pull: (expectedRoot?: Scope) => Promise<unknown>
+  ) => Promise<DesktopCommandResults['git_file_diff']>
+  commitAll: (
+    message: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_commit_all']>
+  remoteStatus: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_remote_status']>
+  setRemote: (
+    name: string,
+    url: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_remote_set']>
+  removeRemote: (
+    name: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_remote_remove']>
+  fetch: (remote?: string, expectedRoot?: Scope) => Promise<DesktopCommandResults['git_fetch']>
+  pull: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_pull']>
   push: (
     options?: { remote?: string; setUpstream?: boolean },
     expectedRoot?: Scope,
-  ) => Promise<unknown>
-  stage: (paths: string[], expectedRoot?: Scope) => Promise<unknown>
-  unstage: (paths: string[], expectedRoot?: Scope) => Promise<unknown>
-  discard: (paths: string[], expectedRoot?: Scope) => Promise<unknown>
-  commitStaged: (message: string, expectedRoot?: Scope) => Promise<unknown>
-  history: (options?: GitHistoryOptions, expectedRoot?: Scope) => Promise<unknown>
-  branches: (expectedRoot?: Scope) => Promise<unknown>
-  createBranch: (name: string, startPoint?: string, expectedRoot?: Scope) => Promise<unknown>
-  switchBranch: (name: string, expectedRoot?: Scope) => Promise<unknown>
-  deleteBranch: (name: string, force?: boolean, expectedRoot?: Scope) => Promise<unknown>
-  merge: (name: string, expectedRoot?: Scope) => Promise<unknown>
-  rebase: (name: string, expectedRoot?: Scope) => Promise<unknown>
-  cherryPick: (commit: string, expectedRoot?: Scope) => Promise<unknown>
-  revert: (commit: string, mainline?: number, expectedRoot?: Scope) => Promise<unknown>
-  reset: (commit: string, mode: GitResetMode, expectedRoot?: Scope) => Promise<unknown>
-  stashes: (expectedRoot?: Scope) => Promise<unknown>
-  saveStash: (message?: string, expectedRoot?: Scope) => Promise<unknown>
-  applyStash: (ref: string, expectedRoot?: Scope, expectedHash?: string) => Promise<unknown>
-  dropStash: (ref: string, expectedRoot?: Scope, expectedHash?: string) => Promise<unknown>
-  operationState: (expectedRoot?: Scope) => Promise<unknown>
-  conflict: (path: string, expectedRoot?: Scope) => Promise<unknown>
-  saveConflict: (request: GitConflictSaveRequest, expectedRoot?: Scope) => Promise<unknown>
-  continueOperation: (expectedRoot?: Scope) => Promise<unknown>
-  abortOperation: (expectedRoot?: Scope) => Promise<unknown>
-  commitFiles: (commit: string, expectedRoot?: Scope) => Promise<unknown>
+  ) => Promise<DesktopCommandResults['git_push']>
+  stage: (paths: string[], expectedRoot?: Scope) => Promise<DesktopCommandResults['git_stage']>
+  unstage: (paths: string[], expectedRoot?: Scope) => Promise<DesktopCommandResults['git_unstage']>
+  discard: (paths: string[], expectedRoot?: Scope) => Promise<DesktopCommandResults['git_discard']>
+  commitStaged: (
+    message: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_commit_staged']>
+  history: (
+    options?: GitHistoryOptions,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_history']>
+  branches: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_branches']>
+  createBranch: (
+    name: string,
+    startPoint?: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_branch_create']>
+  switchBranch: (
+    name: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_branch_switch']>
+  deleteBranch: (
+    name: string,
+    force?: boolean,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_branch_delete']>
+  merge: (name: string, expectedRoot?: Scope) => Promise<DesktopCommandResults['git_merge']>
+  rebase: (name: string, expectedRoot?: Scope) => Promise<DesktopCommandResults['git_rebase']>
+  cherryPick: (
+    commit: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_cherry_pick']>
+  revert: (
+    commit: string,
+    mainline?: number,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_revert']>
+  reset: (
+    commit: string,
+    mode: GitResetMode,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_reset']>
+  stashes: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_stashes']>
+  saveStash: (
+    message?: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_stash_save']>
+  applyStash: (
+    ref: string,
+    expectedRoot?: Scope,
+    expectedHash?: string,
+  ) => Promise<DesktopCommandResults['git_stash_apply']>
+  dropStash: (
+    ref: string,
+    expectedRoot?: Scope,
+    expectedHash?: string,
+  ) => Promise<DesktopCommandResults['git_stash_drop']>
+  operationState: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_operation_state']>
+  conflict: (path: string, expectedRoot?: Scope) => Promise<DesktopCommandResults['git_conflict']>
+  saveConflict: (
+    request: GitConflictSaveRequest,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_conflict_save']>
+  continueOperation: (
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_operation_continue']>
+  abortOperation: (expectedRoot?: Scope) => Promise<DesktopCommandResults['git_operation_abort']>
+  commitFiles: (
+    commit: string,
+    expectedRoot?: Scope,
+  ) => Promise<DesktopCommandResults['git_commit_files']>
   commitDiff: (
     commit: string,
     path: string,
     oldPath?: string,
     expectedRoot?: Scope,
-  ) => Promise<unknown>
+  ) => Promise<DesktopCommandResults['git_commit_diff']>
 }

@@ -16,16 +16,22 @@ describe('native IPC error and binary boundaries', () => {
     const source = new Uint8Array([10, 20, 30, 40])
     await invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
       fileName: 'view.bin',
+      documentPath: 'note.md',
       bytes: source.subarray(1, 3),
     })
     expect(native.invoke).toHaveBeenCalledExactlyOnceWith('fs_import_markdown_asset_bytes', {
-      request: { fileName: 'view.bin', bytes: [20, 30] },
+      request: { fileName: 'view.bin', documentPath: 'note.md', bytes: [20, 30] },
     })
   })
 
   it('rejects JSON-shaped binary substitutes before any native operation', async () => {
     await expect(
-      invokeWorkspaceCommand('fs_import_markdown_asset_bytes', { bytes: [1, 2] }),
+      invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
+        fileName: 'invalid.bin',
+        documentPath: 'note.md',
+        // @ts-expect-error Exercise the runtime boundary for untyped callers.
+        bytes: [1, 2],
+      }),
     ).rejects.toThrow('Asset import requires binary bytes.')
     expect(native.invoke).not.toHaveBeenCalled()
   })

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 const SERVICE: &str = "app.marklab.tauri.git";
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 struct Credential {
   username: String,
   token: String,
@@ -65,24 +65,25 @@ pub fn lookup(
   Ok(Some((credential.username, credential.token)))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct SaveRequest {
   url: String,
   username: String,
   token: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct RemoveRequest {
   url: String,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct CredentialResult {
   ok: bool,
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_credentials_save(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -121,6 +122,7 @@ pub async fn git_credentials_save(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_credentials_remove(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,

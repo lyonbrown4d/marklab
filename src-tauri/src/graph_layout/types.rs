@@ -1,6 +1,6 @@
 use crate::error::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutRequest {
   pub engine_version: String,
@@ -8,7 +8,7 @@ pub struct GraphLayoutRequest {
   pub layout_key: String,
   pub mode: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutNode {
   pub collapsed: bool,
@@ -20,14 +20,14 @@ pub struct GraphLayoutNode {
   pub x: f64,
   pub y: f64,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct GraphLayoutViewport {
   pub x: f64,
   pub y: f64,
   pub zoom: f64,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphLayoutSave {
   pub engine_version: String,
@@ -35,11 +35,19 @@ pub struct GraphLayoutSave {
   pub layout_key: String,
   pub mode: String,
   pub nodes: Vec<GraphLayoutNode>,
+  #[serde(default)]
   pub viewport: Option<GraphLayoutViewport>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum GraphLayoutMatch {
+  Exact,
+  Miss,
+  Stale,
+}
+#[derive(Debug, Serialize, specta::Type)]
 pub struct GraphLayoutResult {
-  pub r#match: &'static str,
+  pub r#match: GraphLayoutMatch,
   pub nodes: Vec<GraphLayoutNode>,
   pub viewport: Option<GraphLayoutViewport>,
 }

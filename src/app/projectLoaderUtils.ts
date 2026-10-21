@@ -10,10 +10,14 @@ import {
   type WorkspaceTreeChildrenResult,
 } from '@/types/workspaceTree'
 
+// The loaded tree projection keeps only renderer entry fields; native snapshots
+// remain assignable without requiring unused names on cached UI entries.
+export type WorkspaceLoadSnapshot = Pick<FsSnapshot, 'root'> & { entries: FileEntry[] }
+
 export type LoadWorkspaceOptions = {
   activeTabId?: string | null
   preserveCurrentRoute?: boolean
-  snapshot?: FsSnapshot
+  snapshot?: WorkspaceLoadSnapshot
   tabs?: WorkspaceTab[]
 }
 
@@ -125,7 +129,7 @@ export const fetchWorkspaceLoadProjection = async (
   tabs: WorkspaceTab[],
 ): Promise<{
   generation: number
-  snapshot: FsSnapshot
+  snapshot: WorkspaceLoadSnapshot
   revision: number
   nextCursor: string | null
 }> => {

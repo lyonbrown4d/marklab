@@ -9,7 +9,7 @@ pub(super) fn prepare_root(
 ) -> BackendResult<RootInfo> {
   match path {
     None => Ok(RootInfo {
-      kind: "internal".into(),
+      kind: crate::workspace::RootKind::Internal,
       path: internal.canonicalize()?.to_string_lossy().into_owned(),
     }),
     Some(value) => {
@@ -29,11 +29,11 @@ pub(super) fn prepare_root(
       }
       Ok(RootInfo {
         kind: if single {
-          "single".into()
+          crate::workspace::RootKind::Single
         } else if target == internal.canonicalize()? {
-          "internal".into()
+          crate::workspace::RootKind::Internal
         } else {
-          "external".into()
+          crate::workspace::RootKind::External
         },
         path: target.to_string_lossy().into_owned(),
       })

@@ -19,7 +19,7 @@ async fn simultaneous_index_and_projection_requests_share_real_work() {
     let calls = calls.clone();
     service.project_cached(first.clone(), "summary", (), move |index, ()| {
       calls.fetch_add(1, Ordering::SeqCst);
-      Ok(serde_json::json!({"files":index.files.len()}))
+      Ok(super::queries::summary(index))
     })
   }))
   .await;
@@ -118,10 +118,10 @@ async fn invalidated_projection_cannot_publish_as_current_after_finishing_late()
   let generation = index.generation;
   let pending = tokio::spawn(async move {
     worker
-      .project_cached(index, "late", (), move |_, ()| {
+      .project_cached(index, "late", (), move |index, ()| {
         signal.notify_one();
         wait.recv().expect("release worker");
-        Ok(serde_json::json!("obsolete"))
+        Ok(super::queries::summary(index))
       })
       .await
   });
@@ -134,10 +134,12 @@ async fn invalidated_projection_cannot_publish_as_current_after_finishing_late()
   );
   let index = service.index(workspace).await.expect("new epoch");
   let current = service
-    .project_cached(index, "late", (), |_, ()| Ok(serde_json::json!("current")))
+    .project_cached(index, "late", (), |index, ()| {
+      Ok(super::queries::summary(index))
+    })
     .await
     .expect("new result");
-  assert_eq!(*current, serde_json::json!("current"));
+  assert_eq!(current.file_count, 3);
 }
 #[tokio::test]
 async fn projection_cache_enforces_entry_budget_and_expiration() {
@@ -149,8 +151,8 @@ async fn projection_cache_enforces_entry_budget_and_expiration() {
   let index = service.index(workspace).await.expect("index");
   for request in 0u8..4 {
     service
-      .project_cached(index.clone(), "bounded", request, |_, value| {
-        Ok(serde_json::json!(value))
+      .project_cached(index.clone(), "bounded", request, |index, _value| {
+        Ok(super::queries::summary(index))
       })
       .await
       .expect("query");
@@ -172,6 +174,28 @@ async fn persisted_graph_reuses_topology_with_current_revision_and_rejects_chang
     })
     .await
     .expect("persisted graph");
+  let hit = service
+    .project_cached(
+      index.clone(),
+      "graph",
+      (),
+      |_, ()| -> crate::error::BackendResult<super::graph::WorkspaceGraph> {
+        panic!("graph cache hit must not rebuild or copy topology")
+      },
+    )
+    .await
+    .expect("in memory topology");
+  assert!(Arc::ptr_eq(&graph, &hit));
+  let stored: String =
+    sqlx::query_scalar("SELECT payload FROM analysis_cache_graphs WHERE scope=?")
+      .bind(&index.scope)
+      .fetch_one(&service.pool)
+      .await
+      .expect("stored topology");
+  let wire: serde_json::Value = serde_json::from_str(&stored).expect("old topology wire shape");
+  assert!(wire.get("revision").is_none());
+  assert_eq!(wire["mode"], "mindmap");
+  assert_eq!(wire["nodes"], serde_json::to_value(&graph.nodes).unwrap());
   let reopened = AnalysisService::new(service.pool.clone());
   workspace.next_revision();
   let current = reopened
@@ -181,14 +205,22 @@ async fn persisted_graph_reuses_topology_with_current_revision_and_rejects_chang
   assert_eq!(index.scope, current.scope);
   assert_eq!(index.fingerprint, current.fingerprint);
   let hydrated = reopened
-    .project_cached(current.clone(), "graph", (), |_, ()| {
-      panic!("valid graph must hydrate without recomputing")
-    })
+    .project_cached(
+      current.clone(),
+      "graph",
+      (),
+      |_, ()| -> crate::error::BackendResult<super::graph::WorkspaceGraph> {
+        panic!("valid graph must hydrate without recomputing")
+      },
+    )
     .await
     .expect("hydrated topology");
-  assert_eq!(hydrated["nodes"], graph["nodes"]);
-  assert_eq!(hydrated["revision"], super::graph::revision(&current));
-  assert_ne!(hydrated["revision"], graph["revision"]);
+  assert_eq!(
+    serde_json::to_value(&hydrated.nodes).unwrap(),
+    serde_json::to_value(&graph.nodes).unwrap()
+  );
+  assert_eq!(hydrated.revision, super::graph::revision(&current));
+  assert_ne!(hydrated.revision, graph.revision);
   tokio::fs::rename(
     directory.path().join("target.md"),
     directory.path().join("renamed.md"),
@@ -205,7 +237,10 @@ async fn persisted_graph_reuses_topology_with_current_revision_and_rejects_chang
     })
     .await
     .expect("new topology");
-  assert_ne!(rebuilt["nodes"], hydrated["nodes"]);
+  assert_ne!(
+    serde_json::to_value(&rebuilt.nodes).unwrap(),
+    serde_json::to_value(&hydrated.nodes).unwrap()
+  );
   sqlx::query("UPDATE analysis_cache_graphs SET payload='broken graph'")
     .execute(&service.pool)
     .await

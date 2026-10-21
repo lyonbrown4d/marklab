@@ -1,3 +1,4 @@
+use super::markdown_types::RenameResult;
 use super::{
   types::{Change, MarkdownRequest, Position, Range},
   utf16,
@@ -7,10 +8,9 @@ use crate::{
   error::{BackendError, BackendResult},
 };
 use serde::Serialize;
-use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Edit {
   pub path: String,
@@ -20,7 +20,7 @@ pub struct Edit {
   pub new_text: String,
 }
 pub struct RenamePlan {
-  pub result: Value,
+  pub result: RenameResult,
   pub source: Option<Source>,
   pub external: Vec<External>,
 }
@@ -222,7 +222,15 @@ pub fn prepare(index: &Index, request: &MarkdownRequest) -> BackendResult<Rename
       });
     }
   }
-  let result = json!({"edits":edits.into_iter().filter(|edit|&edit.path==path).collect::<Vec<_>>(),"appliedEdits":external.iter().map(|edit|edit.edit_count).sum::<usize>(),"touchedFiles":external.iter().map(|edit|edit.path.clone()).collect::<Vec<_>>(),"rejectReason":null});
+  let result = RenameResult {
+    edits: edits
+      .into_iter()
+      .filter(|edit| &edit.path == path)
+      .collect(),
+    applied_edits: external.iter().map(|edit| edit.edit_count).sum(),
+    touched_files: external.iter().map(|edit| edit.path.clone()).collect(),
+    reject_reason: None,
+  };
   Ok(RenamePlan {
     result,
     source: Some(Source {
@@ -248,7 +256,12 @@ fn heading_content_start(line: &str) -> usize {
 
 fn reject(reason: &str) -> RenamePlan {
   RenamePlan {
-    result: json!({"edits":[],"appliedEdits":0,"touchedFiles":[],"rejectReason":reason}),
+    result: RenameResult {
+      edits: Vec::new(),
+      applied_edits: 0,
+      touched_files: Vec::new(),
+      reject_reason: Some(reason.into()),
+    },
     source: None,
     external: Vec::new(),
   }

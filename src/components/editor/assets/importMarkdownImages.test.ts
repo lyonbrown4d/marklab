@@ -19,6 +19,7 @@ describe('importMarkdownImages', () => {
   it('imports a local path and inserts the workspace-relative Markdown target', async () => {
     vi.mocked(fsApi.importMarkdownAsset).mockResolvedValue({
       copied: true,
+      asset_dir: null,
       markdown_target: 'Guide.assets/diagram.png',
       relative_path: 'docs/Guide.assets/diagram.png',
     })
@@ -67,6 +68,7 @@ describe('importMarkdownImages', () => {
     editor = {}
     finishImport({
       copied: true,
+      asset_dir: null,
       markdown_target: 'First.assets/image.png',
       relative_path: 'image.png',
     })
@@ -79,6 +81,7 @@ describe('importMarkdownImages', () => {
     const controller = new AbortController()
     vi.mocked(fsApi.importMarkdownAsset).mockResolvedValue({
       copied: true,
+      asset_dir: null,
       markdown_target: 'Page.assets/image.png',
       relative_path: 'Page.assets/image.png',
     })
@@ -122,6 +125,7 @@ describe('importMarkdownImages', () => {
   it('imports a browser clipboard blob through the typed binary boundary', async () => {
     vi.mocked(fsApi.importMarkdownAssetBytes).mockResolvedValue({
       copied: true,
+      asset_dir: null,
       markdown_target: 'Page.assets/paste.png',
       relative_path: 'Page.assets/paste.png',
     })

@@ -1,9 +1,12 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import type { Diagnostic } from 'vscode-languageserver-types'
-import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import type { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 type SessionOptions = {
-  api: LanguageIntelligenceApi
+  api: Pick<
+    typeof languageIntelligenceApi,
+    'openDocument' | 'changeDocument' | 'closeDocument' | 'diagnostics'
+  >
   onDiagnostics: (content: string, diagnostics: Diagnostic[]) => void
   onError: (error: unknown) => void
   path: string

@@ -82,7 +82,7 @@ describe('useProjectLoader', () => {
     vi.mocked(fsApi.setRoot).mockResolvedValue({ kind: 'external', path: 'D:/next' })
     vi.mocked(fsApi.setSingleFile).mockResolvedValue({ kind: 'single', path: 'D:/next.md' })
     vi.mocked(fsApi.getSnapshot).mockResolvedValue({
-      entries: [{ kind: 'file', path: 'Untitled.md' }],
+      entries: [{ kind: 'file', path: 'Untitled.md', name: 'Untitled.md' }],
       root: { kind: 'internal', path: '/app-data/workspace' },
     })
     vi.mocked(workspaceTreeApi.listChildren).mockResolvedValue({

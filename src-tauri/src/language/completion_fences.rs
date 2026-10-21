@@ -1,5 +1,5 @@
 use super::{Position, item};
-use serde_json::Value;
+use lsp_types::{CompletionItem, CompletionItemKind};
 
 const LANGUAGES: &[&str] = &[
   "bash",
@@ -17,7 +17,7 @@ const LANGUAGES: &[&str] = &[
   "typescript",
   "yaml",
 ];
-pub(super) fn completions(before: &str, position: Position) -> Option<Vec<Value>> {
+pub(super) fn completions(before: &str, position: Position) -> Option<Vec<CompletionItem>> {
   let fence = before.rfind("```")?;
   if fence > 0 && !before[..fence].chars().next_back()?.is_whitespace() {
     return None;
@@ -49,7 +49,7 @@ pub(super) fn completions(before: &str, position: Position) -> Option<Vec<Value>
           language,
           language,
           "Code fence language",
-          14,
+          CompletionItemKind::KEYWORD,
           position,
           before[..fence + 3].encode_utf16().count(),
         )

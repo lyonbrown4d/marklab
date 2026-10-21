@@ -82,7 +82,7 @@ fn entry(id: &str, active: bool, touched: u64) -> Entry {
       can_go_back: false,
       can_go_forward: false,
       error: None,
-      status: "loading".into(),
+      status: TabStatus::Loading,
       tab_id: id.into(),
       title: String::new(),
       url: "https://example.com/".into(),

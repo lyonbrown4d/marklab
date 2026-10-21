@@ -9,32 +9,40 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
-use tauri::{Emitter, Manager};
-#[derive(Deserialize)]
+use super::policy::RendererReadyPhase;
+use tauri::Manager;
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct ReadyRequest {
-  phase: String,
+  phase: RendererReadyPhase,
+  #[serde(default)]
   error: Option<String>,
+  #[serde(default, with = "crate::ipc_number")]
+  #[specta(type = Option<u64>)]
   attempt: Option<u64>,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn app_ready(window: WebviewWindow, request: ReadyRequest) -> BackendResult<OkResult> {
-  if !["shell", "workspace-interactive", "workspace-error"].contains(&request.phase.as_str()) {
-    return Err(BackendError::new(
-      "INVALID_REQUEST",
-      "Invalid renderer phase",
-    ));
-  }
   let _lifecycle = super::lifecycle_guard(window.app_handle()).await;
-  super::startup::ready(&window, &request.phase, request.error, request.attempt).await?;
-  window.emit_to(
+  super::startup::ready(
+    &window,
+    request.phase.as_str(),
+    request.error,
+    request.attempt,
+  )
+  .await?;
+  crate::desktop::event_contracts::SYSTEM_THEME_CHANGED.emit_to(
+    window.app_handle(),
     tauri::EventTarget::webview_window(window.label()),
-    "system-theme-changed",
-    serde_json::json!({"colorMode":if window.theme()?==tauri::Theme::Dark{"dark"}else{"light"}}),
+    &(crate::desktop::event_contracts::SystemThemeChanged {
+      color_mode: window.theme()?.into(),
+    }),
   )?;
   Ok(OkResult::success())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_session_seed(
   window: WebviewWindow,
   request: EmptyRequest,
@@ -70,10 +78,12 @@ pub async fn workspace_session_seed(
       .insert("activeTabId".into(), serde_json::Value::Null);
   }
   seed.state.insert("rootPath".into(), root.path.into());
-  seed.state.insert("rootKind".into(), root.kind.into());
+  seed
+    .state
+    .insert("rootKind".into(), root.kind.as_str().into());
   super::startup::seed(app, &owner, seed)
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowOpenResult {
   ok: bool,
@@ -81,7 +91,7 @@ pub struct WindowOpenResult {
   #[serde(skip_serializing_if = "Option::is_none")]
   workspace_path: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  root_kind: Option<String>,
+  root_kind: Option<crate::workspace::RootKind>,
   #[serde(skip_serializing_if = "Option::is_none")]
   error: Option<String>,
 }
@@ -111,6 +121,7 @@ fn open_result(
   }
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn open_path_in_new_window(
   window: WebviewWindow,
   request: PathRequest,
@@ -119,6 +130,7 @@ pub async fn open_path_in_new_window(
   open_result(window.app_handle(), result, false)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn open_path_in_current_window(
   window: WebviewWindow,
   request: PathRequest,
@@ -128,6 +140,7 @@ pub async fn open_path_in_current_window(
   open_result(window.app_handle(), result, false)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn open_current_workspace_in_new_window(
   window: WebviewWindow,
   request: EmptyRequest,
@@ -142,11 +155,14 @@ pub async fn open_current_workspace_in_new_window(
     .await?
     .unwrap_or_default();
   seed.state.insert("rootPath".into(), root.path.into());
-  seed.state.insert("rootKind".into(), root.kind.into());
+  seed
+    .state
+    .insert("rootKind".into(), root.kind.as_str().into());
   let result = super::windows::restore_window(window.app_handle(), seed).await;
   open_result(window.app_handle(), result, true)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn retry_window_open(
   window: WebviewWindow,
   request: EmptyRequest,
@@ -204,12 +220,13 @@ pub async fn retry_window_open(
   }
   Ok(OkResult::success())
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct MenuRequest {
   id: String,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn menu_dispatch(window: WebviewWindow, request: MenuRequest) -> BackendResult<OkResult> {
   if !super::menus::valid_action(&request.id) {
     return Err(BackendError::new(
@@ -227,25 +244,26 @@ pub async fn menu_dispatch(window: WebviewWindow, request: MenuRequest) -> Backe
     "window.open_current_workspace_in_new_window" => {
       open_current_workspace_in_new_window(window.clone(), EmptyRequest {}).await?;
     }
-    _ => window.emit_to(
+    _ => crate::desktop::event_contracts::MENU_ACTION.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "menu-action",
-      request.id,
+      &((request.id).to_string()),
     )?,
   }
   Ok(OkResult::success())
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct LocaleRequest {
   locale: String,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct LocaleResult {
-  locale: &'static str,
+  locale: super::policy::MenuLocale,
   ok: bool,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn menu_set_locale(
   window: WebviewWindow,
   request: LocaleRequest,
@@ -257,6 +275,7 @@ pub async fn menu_set_locale(
   Ok(LocaleResult { locale, ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn lifecycle_get_launch_info(
   window: WebviewWindow,
   request: EmptyRequest,
@@ -265,6 +284,7 @@ pub async fn lifecycle_get_launch_info(
   super::launch::info(window.app_handle())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn window_close_commit(
   window: WebviewWindow,
   request: EmptyRequest,

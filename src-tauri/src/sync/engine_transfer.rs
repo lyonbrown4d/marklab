@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{error::BackendResult, workspace::Workspace};
 use std::{collections::BTreeMap, path::Path};
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 pub struct Prepared {
   pub remote: BTreeMap<String, ManifestEntry>,
   pub baseline: BTreeMap<String, ManifestEntry>,
@@ -27,7 +27,7 @@ pub async fn prepare(
   remote: &DavRemote,
   root: &Path,
   preparation: Preparation<'_>,
-  cancel: &mut watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<Prepared> {
   let Preparation {
     operations,
@@ -123,7 +123,7 @@ pub async fn prepare(
 async fn verify_object(
   remote: &DavRemote,
   entry: &ManifestEntry,
-  cancel: &mut watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   let temporary = files::temporary(None).await?;
   let path = manifest::content_path(&ManifestEntry {
@@ -145,7 +145,7 @@ async fn ensure_object(
   remote: &DavRemote,
   entry: &ManifestEntry,
   snapshot: &Path,
-  cancel: &mut watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   match verify_object(remote, entry, cancel).await {
     Ok(()) => return Ok(()),
@@ -176,7 +176,7 @@ async fn ensure_object(
 pub async fn assert_local(
   workspace: &Workspace,
   operations: &[Operation],
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   workspace.ensure_active()?;
   for operation in operations.iter().filter(|v| {

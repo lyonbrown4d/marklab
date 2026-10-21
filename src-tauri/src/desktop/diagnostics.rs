@@ -15,7 +15,7 @@ struct Rate {
   started: Instant,
   count: u32,
 }
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum Level {
   Debug,
@@ -23,23 +23,27 @@ pub enum Level {
   Info,
   Warn,
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct ErrorReport {
   message: String,
+  #[serde(default)]
   name: Option<String>,
+  #[serde(default)]
   stack: Option<String>,
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct Report {
+  #[serde(default)]
   error: Option<ErrorReport>,
   event: String,
   level: Level,
+  #[serde(default)]
   message: Option<String>,
   scope: String,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct ReportResult {
   ok: bool,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -104,6 +108,7 @@ impl Diagnostics {
   }
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn diagnostics_renderer_report(
   window: TrustedWindow,
   state: State<'_, Diagnostics>,
@@ -131,12 +136,13 @@ pub async fn diagnostics_renderer_report(
     reason: None,
   })
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct CloseError {
   message: String,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn window_report_close_error(
   window: TrustedWindow,
   request: CloseError,

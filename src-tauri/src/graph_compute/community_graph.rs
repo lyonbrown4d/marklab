@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 use crate::error::{BackendError, BackendResult};
 
@@ -13,7 +13,10 @@ pub(super) struct CommunityGraph<'a> {
 }
 
 impl<'a> CommunityGraph<'a> {
-  pub fn new(request: &'a GraphCommunityRequest, cancelled: &AtomicBool) -> BackendResult<Self> {
+  pub fn new(
+    request: &'a GraphCommunityRequest,
+    cancelled: &CancellationToken,
+  ) -> BackendResult<Self> {
     if !valid_id(&request.request_id) {
       return Err(invalid("Invalid graph request ID"));
     }

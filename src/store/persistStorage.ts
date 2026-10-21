@@ -1,4 +1,6 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
+import { z } from 'zod'
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 import { RENDERER_PERSIST_KEYS, type RendererPersistKey } from '@/types/persistenceKeys'
 import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 type IdleHandle =
@@ -28,10 +30,12 @@ const cancelIdle = (handle: IdleHandle | null) => {
   globalThis.clearTimeout(handle.id)
 }
 
-const cloneJsonValue = <T>(value: T): T => {
+type SettingsJsonValue = DesktopCommandArgs['settings_persist_set']['request']['value']
+const settingsJsonValueSchema = z.json() satisfies z.ZodType<SettingsJsonValue>
+
+const cloneJsonValue = (value: unknown): SettingsJsonValue => {
   const serialized = JSON.stringify(value)
-  if (serialized === undefined) return null as T
-  return JSON.parse(serialized) as T
+  return serialized === undefined ? null : settingsJsonValueSchema.parse(JSON.parse(serialized))
 }
 
 export const createIdleJsonStorage = <S>(

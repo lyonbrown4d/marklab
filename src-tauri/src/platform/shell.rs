@@ -10,7 +10,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::AsyncReadExt;
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct ShellResult {
   ok: bool,
   path: String,
@@ -46,6 +46,7 @@ async fn perform(window: WebviewWindow, path: PathBuf, reveal: bool) -> BackendR
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn shell_open_path(
   window: WebviewWindow,
   request: PathRequest,
@@ -55,6 +56,7 @@ pub async fn shell_open_path(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn shell_reveal_path(
   window: WebviewWindow,
   request: PathRequest,
@@ -71,6 +73,7 @@ async fn workspace_path(window: &WebviewWindow, path: String) -> BackendResult<P
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_open_path_in_system(
   window: WebviewWindow,
   request: PathRequest,
@@ -80,6 +83,7 @@ pub async fn workspace_open_path_in_system(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_open_path_in_system(
   window: WebviewWindow,
   request: PathRequest,
@@ -88,6 +92,7 @@ pub async fn fs_open_path_in_system(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_reveal_path_in_system(
   window: WebviewWindow,
   request: PathRequest,
@@ -97,6 +102,7 @@ pub async fn workspace_reveal_path_in_system(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_copy_absolute_path(
   window: WebviewWindow,
   request: PathRequest,
@@ -116,19 +122,21 @@ pub async fn workspace_copy_absolute_path(
   .map_err(|e| BackendError::new("CLIPBOARD_FAILED", e.to_string()))?
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct PreviewRequest {
   path: String,
   limit_bytes: usize,
 }
-#[derive(Serialize)]
-pub struct Preview {
+pub use PlatformPreview as Preview;
+#[derive(Serialize, specta::Type)]
+pub struct PlatformPreview {
   content: String,
   truncated: bool,
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_read_text_preview(
   window: WebviewWindow,
   request: PreviewRequest,

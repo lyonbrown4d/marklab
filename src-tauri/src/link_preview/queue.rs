@@ -13,7 +13,7 @@ pub(super) type Bytes = Arc<Vec<u8>>;
 pub(super) type Key = (String, u64, String);
 type ResultSender = oneshot::Sender<BackendResult<Bytes>>;
 type Operation = BoxFuture<'static, BackendResult<Bytes>>;
-#[derive(Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum Priority {
   Background,
@@ -139,12 +139,12 @@ async fn run(mut receiver: mpsc::Receiver<Command>) {
   let mut policy = policy::Policy::default();
   let mut running = FuturesUnordered::new();
   loop {
-    while let Some((id, job, mut cancel)) = policy.start() {
+    while let Some((id, job, cancel)) = policy.start() {
       running.push(
         async move {
           let result = tokio::select! {
               biased;
-              _ = cancel.changed() => Err(cancelled()),
+              _ = cancel.cancelled() => Err(cancelled()),
               result = job => result,
           };
           (id, result)

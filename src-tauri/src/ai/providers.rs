@@ -3,22 +3,38 @@ use super::{
   policy, secrets,
 };
 use crate::error::{BackendError, BackendResult};
-use sqlx::Row;
+use sqlx::types::Json;
+
+#[derive(sqlx::FromRow)]
+struct ProviderRow {
+  metadata_json: Json<ProviderMetadata>,
+  created_at: String,
+  updated_at: String,
+  secret_ref: Option<String>,
+}
 impl AiService {
   pub async fn stored_provider(&self, id: &str) -> BackendResult<StoredProvider> {
     policy::validate_id(id)?;
-    let row = sqlx::query(
+    let row = sqlx::query_as::<_, ProviderRow>(
       "SELECT metadata_json,created_at,updated_at,secret_ref FROM ai_providers WHERE id=?",
     )
     .bind(id)
     .fetch_optional(&self.inner.pool)
-    .await?
+    .await
+    .map_err(|error| {
+      if let sqlx::Error::ColumnDecode { source, .. } = &error
+        && let Some(error) = source.downcast_ref::<serde_json::Error>()
+      {
+        return BackendError::new("INVALID_REQUEST", error.to_string());
+      }
+      error.into()
+    })?
     .ok_or_else(|| BackendError::new("AI_PROVIDER_NOT_FOUND", "AI provider was not found"))?;
     let provider = StoredProvider {
-      metadata: serde_json::from_str(row.get("metadata_json"))?,
-      created_at: row.get("created_at"),
-      updated_at: row.get("updated_at"),
-      secret_ref: row.get("secret_ref"),
+      metadata: row.metadata_json.0,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      secret_ref: row.secret_ref,
     };
     policy::validate_stored(&provider, id)?;
     Ok(provider)
@@ -74,7 +90,7 @@ impl AiService {
       secret_ref: reference.clone(),
     };
     let saved=sqlx::query("INSERT INTO ai_providers(id,metadata_json,created_at,updated_at,secret_ref) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET metadata_json=excluded.metadata_json,updated_at=excluded.updated_at,secret_ref=excluded.secret_ref")
-            .bind(&provider.metadata.id).bind(serde_json::to_string(&provider.metadata)?).bind(&provider.created_at).bind(&provider.updated_at).bind(reference.clone()).execute(&self.inner.pool).await;
+            .bind(&provider.metadata.id).bind(Json(&provider.metadata)).bind(&provider.created_at).bind(&provider.updated_at).bind(reference.clone()).execute(&self.inner.pool).await;
     if let Err(error) = saved {
       if let Some(reference) = created {
         let _ = secrets::delete(&reference).await;

@@ -11,6 +11,8 @@ pub mod graph_compute;
 pub mod graph_layout;
 pub mod history;
 pub mod html_preview;
+mod ipc_json;
+mod ipc_number;
 pub mod language;
 pub mod link_preview;
 pub mod mcp;
@@ -35,3 +37,9 @@ pub fn run() {
 mod desktop;
 #[cfg(all(feature = "e2e-testing", not(debug_assertions)))]
 compile_error!("The e2e-testing driver must never be included in a release build");
+
+/// Generate frontend contracts without constructing a desktop application.
+#[cfg(feature = "ipc-codegen")]
+pub fn export_desktop_bindings(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+  desktop::export_bindings(path)
+}

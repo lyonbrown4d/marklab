@@ -1,5 +1,6 @@
 [package]
 name = "marklab-desktop"
+default-run = "marklab-desktop"
 version = "0.2.8"
 description = "Marklab desktop application"
 authors = ["Marklab"]
@@ -11,7 +12,13 @@ name = "marklab_desktop"
 crate-type = ["rlib"]
 
 [features]
+ipc-codegen = ["dep:specta-typescript", "tauri-specta/typescript"]
 e2e-testing = ["dep:tauri-plugin-wdio-webdriver", "tauri/custom-protocol"]
+
+[[bin]]
+name = "generate-desktop-bindings"
+path = "src/bin/generate_desktop_bindings.rs"
+required-features = ["ipc-codegen"]
 
 [build-dependencies]
 tauri-build = { version = "2.7.3", features = [] }
@@ -29,9 +36,14 @@ tauri-plugin-updater = "2"
 tauri-plugin-wdio-webdriver = { version = "=1.5.0", optional = true }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = "1"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "function", "serde_json", "chrono", "uuid"] }
+specta-typescript = { version = "=0.0.12", optional = true }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+tokio-util = { version = "0.7", features = ["rt", "io"] }
+lsp-types = "0.97"
 thiserror = "2"
 tokio = { version = "1.53.3", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
-sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono", "json"] }
 portable-pty = "0.9"
 sha2 = "0.11.1"
 hex = "0.4.3"

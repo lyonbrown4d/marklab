@@ -3,6 +3,7 @@ use crate::{
   error::{BackendError, BackendResult},
   workspace::Workspace,
 };
+pub use AnalysisSearchRequest as SearchRequest;
 use regex::RegexBuilder;
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -10,34 +11,38 @@ use std::sync::{
   atomic::{AtomicBool, Ordering},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct SearchRequest {
+pub struct AnalysisSearchRequest {
   pub query: String,
+  #[serde(default)]
   pub limit: Option<usize>,
 }
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct OccurrenceOptions {
   pub case_sensitive: bool,
   pub whole_word: bool,
   pub use_regex: bool,
 }
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct OccurrenceRequest {
   pub request_id: String,
   pub query: String,
+  #[serde(default)]
   pub limit: Option<usize>,
   pub options: OccurrenceOptions,
 }
-#[derive(Deserialize)]
+pub use AnalysisCancelRequest as CancelRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CancelRequest {
+pub struct AnalysisCancelRequest {
   pub request_id: String,
 }
-#[derive(Debug, Serialize)]
-pub struct SearchResult {
+pub use AnalysisSearchResult as SearchResult;
+#[derive(Debug, Serialize, specta::Type)]
+pub struct AnalysisSearchResult {
   pub path: String,
   pub title: String,
   pub line: usize,
@@ -47,12 +52,13 @@ pub struct SearchResult {
   pub snippet_highlights: Vec<Highlight>,
   pub score: f64,
 }
-#[derive(Debug, Serialize)]
-pub struct Highlight {
+pub use AnalysisHighlight as Highlight;
+#[derive(Debug, Serialize, specta::Type)]
+pub struct AnalysisHighlight {
   pub start: usize,
   pub end: usize,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OccurrenceResult {
   pub request_id: String,

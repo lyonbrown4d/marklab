@@ -13,3 +13,4 @@ src/components/ui/checkbox.tsx
 src/components/ui/list-classic-node.tsx
 
 **/target/
+src/generated/desktop/

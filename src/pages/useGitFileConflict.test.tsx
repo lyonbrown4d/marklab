@@ -10,11 +10,13 @@ const { getStatus } = vi.hoisted(() => ({ getStatus: vi.fn() }))
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: vi.fn(() => true) }))
 vi.mock('@/services/gitApi', () => ({ gitApiForWorkspace: vi.fn(() => ({ getStatus })) }))
 const status = (conflicted = false, repository = true): GitStatusSnapshot => ({
-  repo: { is_repository: repository },
+  repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: repository },
   staged: [],
   unstaged: [],
   untracked: [],
-  conflicts: conflicted ? [{ path: 'note.md', status: 'conflicted', detail: 'UU' }] : [],
+  conflicts: conflicted
+    ? [{ old_path: null, path: 'note.md', status: 'conflicted', detail: 'UU' }]
+    : [],
 })
 const options = {
   rootKind: 'external' as const,

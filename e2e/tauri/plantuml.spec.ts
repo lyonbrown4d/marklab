@@ -44,7 +44,7 @@ describe('native PlantUML previews', () => {
     await browser.$('button[data-file-tree-node]=Diagram.puml').click()
     const sourceEditor = await browser.$('.monaco-editor')
     await sourceEditor.waitForDisplayed({ timeout: 45_000 })
-    const before = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+    const before = await invokeNative('fs_open_buffer_snapshot', {
       path: 'Diagram.puml',
     })
     assert.match(before.content, /native-plantuml/)
@@ -55,7 +55,7 @@ describe('native PlantUML previews', () => {
     assert.equal(await sourceEditor.isDisplayed(), false)
     await browser.$(toggle).click()
     await sourceEditor.waitForDisplayed()
-    const after = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+    const after = await invokeNative('fs_open_buffer_snapshot', {
       path: 'Diagram.puml',
     })
     assert.equal(after.content, before.content, 'Preview switching changed the editor buffer')

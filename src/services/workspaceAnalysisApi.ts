@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import pLimit from 'p-limit'
 import { invoke } from '@/runtime/ipc'
@@ -10,13 +11,16 @@ const headingSchema = z.object({
   slug: z.string(),
   text: z.string(),
   level: z.number().int().min(1).max(6),
+  line: z.number().int().positive(),
+  column: z.number().int().positive(),
 })
 
 const navigationLinkSchema = z.object({
   source_path: z.string(),
-  target_path: z.string(),
-  target_anchor: z.string().nullable().optional(),
-  target_heading_slug: z.string().nullable().optional(),
+  target_path: z.string().nullable(),
+  is_external: z.boolean(),
+  target_anchor: z.string().nullable(),
+  target_heading_slug: z.string().nullable(),
   target: z.string(),
   text: z.string(),
   context: z.string(),
@@ -31,8 +35,8 @@ const backlinkSchema = z.object({
   context: z.string(),
   line: z.number().int().positive(),
   column: z.number().int().positive(),
-  target_anchor: z.string().nullable().optional(),
-  target_heading_slug: z.string().nullable().optional(),
+  target_anchor: z.string().nullable(),
+  target_heading_slug: z.string().nullable(),
 })
 
 const missingLinkSchema = z.object({
@@ -55,7 +59,7 @@ const diagnosticSchema = z.object({
   start_column: z.number().int().positive(),
   end_column: z.number().int().positive(),
   message: z.string(),
-  severity: z.enum(['error', 'warning']),
+  severity: z.literal('warning'),
 })
 
 const assetReferenceSchema = z.object({
@@ -105,7 +109,7 @@ export const workspaceDocumentInsightsSchema = z.object({
     missing_count: z.number().int().nonnegative(),
     orphan: z.boolean(),
   }),
-})
+}) satisfies z.ZodType<WorkspaceDocumentInsightsResult>
 
 export const workspaceNavigationResultSchema = z.object({
   ready: z.literal(true),
@@ -126,7 +130,7 @@ export const workspaceNavigationResultSchema = z.object({
     missing_link_total: z.number().int().nonnegative(),
   }),
   limit: z.number().int().positive(),
-})
+}) satisfies z.ZodType<WorkspaceNavigationResult>
 
 export const workspaceKnowledgeSummarySchema = z.object({
   ready: z.literal(true),
@@ -143,18 +147,18 @@ export const workspaceKnowledgeSummarySchema = z.object({
     linked: z.number().int().nonnegative(),
     structured: z.number().int().nonnegative(),
   }),
-})
+}) satisfies z.ZodType<WorkspaceKnowledgeSummaryResult>
 
 const workspacePageRequestSchema = z
   .object({
-    folder: z.string().optional(),
-    issues_only: z.boolean().optional(),
-    query: z.string().optional(),
-    sort: z.enum(['title', 'path', 'headings', 'links', 'issues']).optional(),
-    offset: z.number().int().nonnegative().optional(),
-    limit: z.number().int().min(1).max(WORKSPACE_PAGE_LIMIT).optional(),
+    folder: z.string().nullish(),
+    issues_only: z.boolean().nullish(),
+    query: z.string().nullish(),
+    sort: z.enum(['title', 'path', 'headings', 'links', 'issues']).nullish(),
+    offset: z.number().int().nonnegative().nullish(),
+    limit: z.number().int().min(1).max(WORKSPACE_PAGE_LIMIT).nullish(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspacePageRequest>
 
 export const workspacePageResultSchema = z.object({
   ready: z.literal(true),
@@ -174,27 +178,25 @@ export const workspacePageResultSchema = z.object({
   total: z.number().int().nonnegative(),
   offset: z.number().int().nonnegative(),
   limit: z.number().int().positive(),
-})
+}) satisfies z.ZodType<WorkspacePageResult>
 
-export type WorkspaceNavigationScope = 'all' | 'files' | 'headings'
+export type WorkspaceNavigationScope = NonNullable<WorkspaceNavigationRequest['scope']>
 
-export type WorkspaceNavigationRequest = {
-  active_path?: string | null
-  query?: string
-  scope?: WorkspaceNavigationScope
-  limit?: number
-}
+export type WorkspaceNavigationRequest =
+  DesktopCommandArgs['fs_query_workspace_navigation']['request']
 
-export type WorkspaceNavigationResult = z.infer<typeof workspaceNavigationResultSchema>
-export type WorkspaceKnowledgeSummaryResult = z.infer<typeof workspaceKnowledgeSummarySchema>
-export type WorkspaceDocumentInsightsResult = z.infer<typeof workspaceDocumentInsightsSchema>
-export type WorkspacePageRequest = z.input<typeof workspacePageRequestSchema>
+export type WorkspaceNavigationResult = DesktopCommandResults['fs_query_workspace_navigation']
+export type WorkspaceKnowledgeSummaryResult =
+  DesktopCommandResults['fs_get_workspace_knowledge_summary']
+export type WorkspaceDocumentInsightsResult =
+  DesktopCommandResults['fs_get_workspace_document_insights']
+export type WorkspacePageRequest = DesktopCommandArgs['fs_query_workspace_pages']['request']
 export type WorkspacePageQuery = Omit<WorkspacePageRequest, 'offset' | 'limit'>
-export type WorkspacePageResult = z.infer<typeof workspacePageResultSchema>
+export type WorkspacePageResult = DesktopCommandResults['fs_query_workspace_pages']
 
 const queryPages = async (request: WorkspacePageRequest): Promise<WorkspacePageResult> => {
   const payload = workspacePageRequestSchema.parse(request)
-  const result = await invoke<unknown>('fs_query_workspace_pages', payload)
+  const result = await invoke('fs_query_workspace_pages', payload)
   return workspacePageResultSchema.parse(result)
 }
 
@@ -223,16 +225,18 @@ const queryAllPages = async (request: WorkspacePageQuery): Promise<WorkspacePage
 
 export const workspaceAnalysisApi = {
   queryAllPages,
-  async queryNavigation(request: WorkspaceNavigationRequest) {
-    const result = await invoke<unknown>('fs_query_workspace_navigation', request)
+  async queryNavigation(request: WorkspaceNavigationRequest): Promise<WorkspaceNavigationResult> {
+    const result = await invoke('fs_query_workspace_navigation', request)
     return workspaceNavigationResultSchema.parse(result)
   },
-  async getKnowledgeSummary() {
-    const result = await invoke<unknown>('fs_get_workspace_knowledge_summary')
+  async getKnowledgeSummary(): Promise<WorkspaceKnowledgeSummaryResult> {
+    const result = await invoke('fs_get_workspace_knowledge_summary')
     return workspaceKnowledgeSummarySchema.parse(result)
   },
-  async getDocumentInsights(request: { path: string; asset_limit?: number }) {
-    const result = await invoke<unknown>('fs_get_workspace_document_insights', request)
+  async getDocumentInsights(
+    request: DesktopCommandArgs['fs_get_workspace_document_insights']['request'],
+  ): Promise<WorkspaceDocumentInsightsResult> {
+    const result = await invoke('fs_get_workspace_document_insights', request)
     return workspaceDocumentInsightsSchema.parse(result)
   },
 }

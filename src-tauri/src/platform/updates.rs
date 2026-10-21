@@ -5,7 +5,7 @@ mod types;
 use crate::error::{BackendError, BackendResult};
 pub use commands::*;
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::{Update, UpdaterExt};
 use tokio::sync::Mutex;
 pub use types::*;
@@ -42,16 +42,16 @@ impl UpdateService {
     }
   }
 
-  async fn publish(&self, app: &AppHandle, event: &str) -> BackendResult<UpdateResult> {
+  async fn publish(&self, app: &AppHandle, event: UpdateEventKind) -> BackendResult<UpdateResult> {
     let state = self.state.lock().await.clone();
-    app.emit(
-      "updates-event",
-      UpdateEvent {
+    crate::desktop::event_contracts::UPDATES_EVENT.emit(
+      app,
+      &UpdateEvent {
         state: state.clone(),
-        event: event.into(),
+        event,
       },
     )?;
-    if event == "downloaded" {
+    if event == UpdateEventKind::Downloaded {
       let owner = app
         .windows()
         .into_keys()
@@ -73,30 +73,29 @@ impl UpdateService {
   async fn failure(
     &self,
     app: &AppHandle,
-    code: &str,
-    operation: &str,
+    code: UpdateErrorCode,
+    operation: UpdateOperation,
     message: String,
   ) -> BackendResult<UpdateResult> {
     let mut state = self.state.lock().await;
-    state.status = if code == "UNAVAILABLE" {
-      "unavailable"
+    state.status = if code == UpdateErrorCode::Unavailable {
+      UpdateStatus::Unavailable
     } else {
-      "error"
-    }
-    .into();
+      UpdateStatus::Error
+    };
     state.error = Some(UpdateError {
-      code: code.into(),
-      operation: operation.into(),
+      code,
+      operation,
       message,
     });
     drop(state);
     self
       .publish(
         app,
-        if code == "UNAVAILABLE" {
-          "unavailable"
+        if code == UpdateErrorCode::Unavailable {
+          UpdateEventKind::Unavailable
         } else {
-          "error"
+          UpdateEventKind::Error
         },
       )
       .await
@@ -111,8 +110,8 @@ impl UpdateService {
       return self
         .failure(
           app,
-          "UNAVAILABLE",
-          "availability",
+          UpdateErrorCode::Unavailable,
+          UpdateOperation::Availability,
           "Signed Tauri updates are not configured for this build.".into(),
         )
         .await;
@@ -121,16 +120,16 @@ impl UpdateService {
       self.state.lock().await.status.as_str(),
       "downloaded" | "installing"
     ) {
-      return self.publish(app, "downloaded").await;
+      return self.publish(app, UpdateEventKind::Downloaded).await;
     }
     {
       let mut state = self.state.lock().await;
-      state.status = "checking".into();
+      state.status = UpdateStatus::Checking;
       state.error = None;
       state.info = None;
       state.progress = None;
     }
-    self.publish(app, "checking").await?;
+    self.publish(app, UpdateEventKind::Checking).await?;
     let result = match app.updater() {
       Ok(updater) => updater.check().await,
       Err(error) => Err(error),
@@ -139,24 +138,28 @@ impl UpdateService {
       Ok(update) => {
         let mut state = self.state.lock().await;
         state.status = if update.is_some() {
-          "available"
+          UpdateStatus::Available
         } else {
-          "not-available"
-        }
-        .into();
+          UpdateStatus::NotAvailable
+        };
         state.info = update.as_ref().map(|u| UpdateInfo {
           version: u.version.clone(),
           release_notes: u.body.clone(),
           release_date: u.date.map(|d| d.to_string()),
         });
-        let event = state.status.clone();
+        let event = state.status;
         drop(state);
         *self.available.lock().await = update;
-        self.publish(app, &event).await
+        self.publish(app, event.into()).await
       }
       Err(error) => {
         self
-          .failure(app, "CHECK_FAILED", "check", error.to_string())
+          .failure(
+            app,
+            UpdateErrorCode::CheckFailed,
+            UpdateOperation::Check,
+            error.to_string(),
+          )
           .await
       }
     }
@@ -177,15 +180,15 @@ impl UpdateService {
       return self
         .failure(
           app,
-          "DOWNLOAD_FAILED",
-          "download",
+          UpdateErrorCode::DownloadFailed,
+          UpdateOperation::Download,
           "Update downloads require HTTPS.".into(),
         )
         .await;
     }
     {
       let mut state = self.state.lock().await;
-      state.status = "downloading".into();
+      state.status = UpdateStatus::Downloading;
       state.error = None;
     }
     let started = std::time::Instant::now();
@@ -213,11 +216,11 @@ impl UpdateService {
           };
           if let Ok(mut state) = self.state.try_lock() {
             state.progress = Some(progress.clone());
-            let _ = owner.emit(
-              "updates-event",
-              UpdateEvent {
+            let _ = crate::desktop::event_contracts::UPDATES_EVENT.emit(
+              &owner,
+              &UpdateEvent {
                 state: state.clone(),
-                event: "download-progress".into(),
+                event: UpdateEventKind::DownloadProgress,
               },
             );
           }
@@ -229,7 +232,12 @@ impl UpdateService {
       Ok(bytes) => bytes,
       Err(error) => {
         return self
-          .failure(app, "DOWNLOAD_FAILED", "download", error.to_string())
+          .failure(
+            app,
+            UpdateErrorCode::DownloadFailed,
+            UpdateOperation::Download,
+            error.to_string(),
+          )
           .await;
       }
     };
@@ -246,7 +254,7 @@ impl UpdateService {
     if let Some(previous) = self.artifact.lock().await.replace(path) {
       let _ = tokio::fs::remove_file(previous).await;
     }
-    self.state.lock().await.status = "downloaded".into();
-    self.publish(app, "downloaded").await
+    self.state.lock().await.status = UpdateStatus::Downloaded;
+    self.publish(app, UpdateEventKind::Downloaded).await
   }
 }

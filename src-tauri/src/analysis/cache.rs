@@ -1,3 +1,4 @@
+use super::projections::{CachedProjection, Projection};
 use super::{
   AnalysisService, Index,
   document::Document,
@@ -5,7 +6,6 @@ use super::{
 };
 use crate::error::{BackendError, BackendResult};
 use serde::Serialize;
-use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::sync::{Arc, atomic::Ordering};
 pub(super) fn document_weight(document: &Document) -> u32 {
@@ -49,31 +49,16 @@ pub(super) fn index_weight(index: &Index) -> u32 {
     )
     .min(u32::MAX as usize) as u32
 }
-pub(super) fn value_weight(value: &Value) -> u32 {
-  match value {
-    Value::String(value) => value.len().saturating_add(32).min(u32::MAX as usize) as u32,
-    Value::Array(values) => values.iter().fold(32u32, |size, value| {
-      size.saturating_add(value_weight(value)).saturating_add(16)
-    }),
-    Value::Object(values) => values.iter().fold(64u32, |size, (key, value)| {
-      size
-        .saturating_add(key.len().min(u32::MAX as usize) as u32)
-        .saturating_add(value_weight(value))
-        .saturating_add(48)
-    }),
-    _ => 16,
-  }
-}
 impl AnalysisService {
-  pub async fn project_cached<R: Serialize + Send + 'static>(
+  pub(super) async fn project_cached<R: Serialize + Send + 'static, T: Projection>(
     &self,
     index: Arc<Index>,
     kind: &'static str,
     request: R,
-    task: impl FnOnce(&Index, R) -> BackendResult<Value> + Send + 'static,
-  ) -> BackendResult<Arc<Value>> {
+    task: impl FnOnce(&Index, R) -> BackendResult<T> + Send + 'static,
+  ) -> BackendResult<Arc<T>> {
     let bytes = serde_json::to_vec(&request)?;
-    let query = format!("{kind}:{}", hex::encode(Sha256::digest(bytes)));
+    let query = format!("{}:{kind}:{}", T::KIND, hex::encode(Sha256::digest(bytes)));
     let epoch = index.epoch;
     let key = QueryKey {
       generation: index.generation,
@@ -84,10 +69,10 @@ impl AnalysisService {
     let result = self
       .queries
       .try_get_with(key, async {
-        if kind == "graph"
+        if T::KIND == "graph"
           && let Some(value) = self.disk_graph(&index).await
         {
-          return Ok(Arc::new(value));
+          return Ok(CachedProjection::Graph(Arc::new(value)));
         }
         let computed = {
           let _permit = self.workers.clone().acquire_owned().await.map_err(|_| {
@@ -100,19 +85,32 @@ impl AnalysisService {
               .map_err(|error| BackendError::new("ANALYSIS_FAILED", error.to_string()))??,
           )
         };
-        if kind == "graph"
+        if T::KIND == "graph"
           && self.epoch.load(Ordering::Acquire) == epoch
-          && let Err(error) = self.persist_graph(&index, computed.clone()).await
+          && let Err(error) = self.persist_graph(&index, graph_value(&computed)?).await
         {
           log::warn!("Analysis graph cache write skipped: {}", error.code);
         }
-        Ok(computed)
+        Ok(T::into_cached(computed))
       })
       .await
       .map_err(|error: Arc<BackendError>| (*error).clone())?;
     if self.epoch.load(Ordering::Acquire) != epoch {
       return Err(changed());
     }
-    Ok(result)
+    T::from_cached(&result)
+      .ok_or_else(|| BackendError::new("ANALYSIS_FAILED", "Projection cache type mismatch"))
+  }
+}
+
+fn graph_value<T: Projection>(
+  value: &Arc<T>,
+) -> BackendResult<Arc<super::graph_types::WorkspaceGraph>> {
+  match T::into_cached(value.clone()) {
+    CachedProjection::Graph(graph) => Ok(graph),
+    _ => Err(BackendError::new(
+      "ANALYSIS_FAILED",
+      "Invalid graph cache projection",
+    )),
   }
 }

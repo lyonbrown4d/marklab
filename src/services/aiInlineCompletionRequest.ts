@@ -1,13 +1,15 @@
 import type { AiGenerationEvent } from '@/services/aiApi'
 import { aiCompletionApi } from '@/services/aiCompletionApi'
-import type { AiInlineCompletionRequest } from '@/types/aiCompletion'
+import type { AiInlineCompletionRequest, AiInlineCompletionStartResult } from '@/types/aiCompletion'
 
 type Unlisten = () => void
 
 export type AiInlineCompletionTransport = {
   cancelGeneration: (requestId: string) => Promise<void>
   onGenerationEvent: (handler: (event: AiGenerationEvent) => void) => Promise<Unlisten> | Unlisten
-  startInlineCompletion: (input: AiInlineCompletionRequest) => Promise<{ requestId: string }>
+  startInlineCompletion: (
+    input: AiInlineCompletionRequest,
+  ) => Promise<AiInlineCompletionStartResult>
 }
 
 const abortError = () => {

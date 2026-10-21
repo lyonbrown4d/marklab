@@ -12,6 +12,8 @@ import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development
 import { plateMarkdownWorkerPlugins } from './vite.worker.ts'
 // eslint-disable-next-line no-restricted-imports -- Development-only HTML integration is a root Vite helper.
 import { reactDevToolsPlugin } from './vite.reactDevTools.ts'
+// eslint-disable-next-line no-restricted-imports -- Development-only Rust contract watcher is a root Vite helper.
+import { desktopBindingsPlugin } from './vite.desktopBindings.ts'
 // eslint-disable-next-line no-restricted-imports -- Shared dotenv-backed configuration belongs to Node tooling.
 import { loadDevelopmentConfig } from './scripts/development-config.ts'
 
@@ -95,6 +97,7 @@ export default defineConfig(({ command, mode }) => {
       plugins: plateMarkdownWorkerPlugins,
     },
     plugins: [
+      development && desktopBindingsPlugin(),
       development && reactDevToolsPlugin(development),
       react(),
       shouldUseReactCompiler &&

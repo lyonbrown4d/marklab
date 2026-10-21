@@ -7,27 +7,33 @@ pub const LAST_WORKSPACE: &str = "marklab.last-workspace-session";
 pub const WORKSPACE_WINDOWS: &str = "marklab.workspace-window-sessions";
 pub const REMOVED_WORKSPACES: &str = "marklab.removed-workspace-history";
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct PersistedValue {
   #[serde(default)]
+  #[specta(type = std::collections::BTreeMap<String, crate::ipc_json::JsonValue>)]
   pub state: Map<String, Value>,
-  #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(
+    default,
+    with = "crate::ipc_number",
+    skip_serializing_if = "Option::is_none"
+  )]
+  #[specta(type = Option<i64>)]
   pub version: Option<i64>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WindowState {
   pub width: u32,
   pub height: u32,
   #[serde(default)]
   pub is_maximized: bool,
-  #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub x: Option<i32>,
-  #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub y: Option<i32>,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct PersistResult {
   pub ok: bool,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -47,10 +53,10 @@ impl PersistResult {
     }
   }
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct RecentWorkspace {
   pub path: String,
-  pub status: &'static str,
+  pub status: RecentWorkspaceStatus,
 }
 
 pub fn allowed_keys(key: &str) -> BackendResult<&'static [&'static str]> {
@@ -162,4 +168,12 @@ pub fn root_path(value: &PersistedValue) -> Option<&str> {
     .get("rootPath")
     .and_then(Value::as_str)
     .filter(|path| !path.is_empty())
+}
+
+#[derive(Clone, Copy, Serialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum RecentWorkspaceStatus {
+  Available,
+  Missing,
+  Unavailable,
 }

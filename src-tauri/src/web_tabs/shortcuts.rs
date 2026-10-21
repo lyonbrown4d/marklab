@@ -1,4 +1,4 @@
-use super::{Bindings, failure};
+use super::{Bindings, failure, types::ShortcutAction};
 use crate::error::BackendResult;
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {
@@ -9,39 +9,40 @@ pub struct Modifiers {
 }
 #[derive(Clone)]
 pub struct Shortcut {
-  pub action: String,
+  pub action: ShortcutAction,
   pub key: String,
   pub modifiers: Modifiers,
 }
-const ACTIONS: &[&str] = &[
-  "app.commandPalette",
-  "app.settings",
-  "file.new",
-  "file.openProject",
-  "file.openFile",
-  "tab.next",
-  "tab.previous",
-  "tab.close",
-  "view.wysiwyg",
-  "view.source",
-  "view.toggleSource",
-  "view.toggleSidebar",
-  "view.toggleRightSidebar",
-  "view.toggleTerminal",
-  "view.toggleReadonly",
-  "view.toggleStatusBar",
+const ACTIONS: &[(&str, ShortcutAction)] = &[
+  ("app.commandPalette", ShortcutAction::CommandPalette),
+  ("app.settings", ShortcutAction::Settings),
+  ("file.new", ShortcutAction::NewFile),
+  ("file.openProject", ShortcutAction::OpenProject),
+  ("file.openFile", ShortcutAction::OpenFile),
+  ("tab.next", ShortcutAction::NextTab),
+  ("tab.previous", ShortcutAction::PreviousTab),
+  ("tab.close", ShortcutAction::CloseTab),
+  ("view.wysiwyg", ShortcutAction::Wysiwyg),
+  ("view.source", ShortcutAction::Source),
+  ("view.toggleSource", ShortcutAction::ToggleSource),
+  ("view.toggleSidebar", ShortcutAction::ToggleSidebar),
+  (
+    "view.toggleRightSidebar",
+    ShortcutAction::ToggleRightSidebar,
+  ),
+  ("view.toggleTerminal", ShortcutAction::ToggleTerminal),
+  ("view.toggleReadonly", ShortcutAction::ToggleReadonly),
+  ("view.toggleStatusBar", ShortcutAction::ToggleStatusBar),
 ];
 pub fn compile(request: Bindings) -> BackendResult<Vec<Shortcut>> {
   let mut result = Vec::new();
-  if request
-    .bindings
-    .iter()
-    .any(|(action, values)| !ACTIONS.contains(&action.as_str()) || values.len() > 4)
-  {
+  if request.bindings.iter().any(|(action, values)| {
+    !ACTIONS.iter().any(|(name, _)| *name == action.as_str()) || values.len() > 4
+  }) {
     return Err(failure("Invalid web tab shortcut action"));
   }
-  for action in ACTIONS {
-    let Some(values) = request.bindings.get(*action) else {
+  for (name, action) in ACTIONS {
+    let Some(values) = request.bindings.get(*name) else {
       continue;
     };
     if values.len() > 4 {
@@ -51,14 +52,14 @@ pub fn compile(request: Bindings) -> BackendResult<Vec<Shortcut>> {
       if value.is_empty() || value.len() > 64 {
         return Err(failure("Invalid web tab shortcut"));
       }
-      if let Some(binding) = parse(action, value) {
+      if let Some(binding) = parse(*action, value) {
         result.push(binding);
       }
     }
   }
   Ok(result)
 }
-fn parse(action: &str, value: &str) -> Option<Shortcut> {
+fn parse(action: ShortcutAction, value: &str) -> Option<Shortcut> {
   let mut tokens = value.split('+').map(str::trim).collect::<Vec<_>>();
   let key = normalize_key(tokens.pop()?);
   if key.is_empty() {
@@ -95,7 +96,7 @@ fn parse(action: &str, value: &str) -> Option<Shortcut> {
     return None;
   }
   Some(Shortcut {
-    action: action.into(),
+    action,
     key,
     modifiers,
   })
@@ -125,10 +126,19 @@ pub fn normalize_key(value: &str) -> String {
 #[cfg(test)]
 mod tests {
   #[test]
+  fn shortcut_actions_keep_the_registered_wire_names() {
+    for (name, action) in super::ACTIONS {
+      assert_eq!(
+        serde_json::to_value(action).unwrap(),
+        serde_json::json!(name)
+      );
+    }
+  }
+  #[test]
   fn native_shortcuts_preserve_web_copy_find_and_undo() {
     for key in ["Mod+C", "Mod+F", "Mod+Z"] {
-      assert!(super::parse("tab.close", key).is_none());
+      assert!(super::parse(super::ShortcutAction::CloseTab, key).is_none());
     }
-    assert!(super::parse("tab.close", "Mod+W").is_some());
+    assert!(super::parse(super::ShortcutAction::CloseTab, "Mod+W").is_some());
   }
 }

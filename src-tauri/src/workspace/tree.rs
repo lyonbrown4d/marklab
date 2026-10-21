@@ -1,69 +1,14 @@
 use super::{EmptyRequest, RootInfo, WorkspaceRegistry};
 use crate::error::{BackendError, BackendResult};
 use crate::native_window::TrustedWindow as WebviewWindow;
-use serde::{Deserialize, Serialize};
 use tauri::State;
 
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TreeEntry {
-  kind: String,
-  name: String,
-  path: String,
-  has_children: bool,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ChildrenRequest {
-  cursor: Option<String>,
-  limit: Option<usize>,
-  parent: Option<String>,
-}
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChildrenResult {
-  entries: Vec<TreeEntry>,
-  next_cursor: Option<String>,
-  parent: String,
-  generation: u64,
-  revision: u64,
-  root: RootInfo,
-}
-#[derive(Serialize)]
-pub struct InitialResult {
-  generation: u64,
-  path: Option<String>,
-  revision: u64,
-  root: RootInfo,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ExistenceRequest {
-  kind: Option<String>,
-  paths: Vec<String>,
-}
-#[derive(Serialize)]
-pub struct ExistenceResult {
-  existing: Vec<String>,
-  generation: u64,
-  revision: u64,
-  root: RootInfo,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SearchRequest {
-  query: String,
-  limit: Option<usize>,
-}
-#[derive(Serialize)]
-pub struct SearchResult {
-  entries: Vec<TreeEntry>,
-  generation: u64,
-  revision: u64,
-  root: RootInfo,
-}
+#[path = "tree_types.rs"]
+mod types;
+pub use types::*;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_tree_initial_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -76,7 +21,7 @@ pub async fn workspace_tree_initial_file(
     .entries
     .iter()
     .filter(|e| {
-      e.kind == "file"
+      e.kind == crate::workspace::EntryKind::File
         && matches!(
           std::path::Path::new(&e.path)
             .extension()
@@ -99,6 +44,7 @@ pub async fn workspace_tree_initial_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_tree_list_children(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -120,7 +66,7 @@ pub async fn workspace_tree_list_children(
   } else {
     workspace.resolve_async(&parent).await?
   };
-  let entries = if workspace.root_info().kind == "single" {
+  let entries = if workspace.root_info().kind == crate::workspace::RootKind::Single {
     if !parent.is_empty() {
       return Err(BackendError::new(
         "INVALID_PATH",
@@ -129,7 +75,7 @@ pub async fn workspace_tree_list_children(
     }
     let file = std::path::PathBuf::from(workspace.root_info().path);
     vec![TreeEntry {
-      kind: "file".into(),
+      kind: crate::workspace::EntryKind::File,
       name: file
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
@@ -152,9 +98,9 @@ pub async fn workspace_tree_list_children(
         }
         entries.push(TreeEntry {
           kind: if kind.is_dir() {
-            "folder".into()
+            crate::workspace::EntryKind::Folder
           } else {
-            "file".into()
+            crate::workspace::EntryKind::File
           },
           name,
           path: super::paths::display_relative(&root, &entry.path())?,
@@ -171,8 +117,14 @@ pub async fn workspace_tree_list_children(
         ));
       }
       entries.sort_by(|a, b| {
-        (a.kind != "folder", a.name.to_lowercase())
-          .cmp(&(b.kind != "folder", b.name.to_lowercase()))
+        (
+          a.kind != crate::workspace::EntryKind::Folder,
+          a.name.to_lowercase(),
+        )
+          .cmp(&(
+            b.kind != crate::workspace::EntryKind::Folder,
+            b.name.to_lowercase(),
+          ))
       });
       Ok(entries)
     })
@@ -214,6 +166,7 @@ pub async fn workspace_tree_list_children(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_tree_paths_exist(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -251,6 +204,7 @@ pub async fn workspace_tree_paths_exist(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn workspace_tree_search(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -271,7 +225,7 @@ pub async fn workspace_tree_search(
         .filter(|e| e.path.to_lowercase().contains(&query))
         .take(limit)
         .map(|e| TreeEntry {
-          has_children: e.kind == "folder",
+          has_children: e.kind == crate::workspace::EntryKind::Folder,
           kind: e.kind,
           name: e.name,
           path: e.path,

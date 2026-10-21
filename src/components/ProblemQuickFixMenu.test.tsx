@@ -18,6 +18,7 @@ const problem: MarkdownSourceDiagnostic = {
 }
 const action: MarkdownLanguageCodeAction = {
   kind: 'create-file',
+  isPreferred: false,
   title: 'Create note',
   path: 'note.md',
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke } from '@/runtime/ipc'
-import { terminalApi } from '@/services/terminalApi'
+import { terminalApi, terminalExitEventSchema } from '@/services/terminalApi'
 
 vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
 
@@ -35,5 +35,21 @@ describe('terminalApi', () => {
       rows: 24,
       shellPath: null,
     })
+  })
+
+  it('normalizes legacy exit fields to the Rust event shape', () => {
+    expect(terminalExitEventSchema.parse({ id: 'terminal-1', exit_code: 0 })).toEqual({
+      id: 'terminal-1',
+      exit_code: 0,
+      signal: null,
+    })
+    expect(terminalExitEventSchema.parse({ id: 'terminal-2' })).toEqual({
+      id: 'terminal-2',
+      exit_code: null,
+      signal: null,
+    })
+    expect(
+      terminalExitEventSchema.safeParse({ id: 'terminal-3', exit_code: 'invalid' }).success,
+    ).toBe(false)
   })
 })

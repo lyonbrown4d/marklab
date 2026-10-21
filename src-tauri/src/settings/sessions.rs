@@ -1,23 +1,19 @@
 use super::types::*;
-use super::{PersistedValue, SettingsStore, json_error};
+use super::{PersistedValue, SettingsStore, persisted_decode_error};
 use crate::error::BackendResult;
 use serde_json::Value;
-use sqlx::Row;
+use sqlx::types::Json;
 
 impl SettingsStore {
   pub async fn read_session(&self, session: &str) -> BackendResult<Option<PersistedValue>> {
-    let row = sqlx::query("SELECT value_json,version FROM window_sessions WHERE id=?")
-      .bind(session)
-      .fetch_optional(&self.pool)
-      .await?;
-    row
-      .map(|row| {
-        Ok(PersistedValue {
-          state: serde_json::from_str(row.get("value_json")).map_err(json_error)?,
-          version: row.get("version"),
-        })
-      })
-      .transpose()
+    let row = sqlx::query_as::<_, (Json<serde_json::Map<String, Value>>, Option<i64>)>(
+      "SELECT value_json,version FROM window_sessions WHERE id=?",
+    )
+    .bind(session)
+    .fetch_optional(&self.pool)
+    .await
+    .map_err(persisted_decode_error)?;
+    Ok(row.map(|(Json(state), version)| PersistedValue { state, version }))
   }
   /// Lifecycle callers may select a newly opened workspace; background window saves do not select it.
   pub async fn write_session(
@@ -48,9 +44,8 @@ impl SettingsStore {
     let remember =
       root_path(&value).is_some() && select.unwrap_or(changed || selected.as_str() == session);
     let mut transaction = self.pool.begin().await?;
-    let json = serde_json::to_string(&value.state).map_err(json_error)?;
     sqlx::query("INSERT INTO window_sessions(id,value_json,version) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json,version=excluded.version")
-            .bind(session).bind(&json).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
+            .bind(session).bind(Json(&value.state)).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
     if let Some(path) = root_path(&value)
       && (update_recents || select == Some(true))
     {
@@ -59,7 +54,7 @@ impl SettingsStore {
     }
     if remember {
       sqlx::query("INSERT INTO settings(key,value_json,version) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,version=excluded.version")
-                .bind(LAST_WORKSPACE).bind(json).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
+                .bind(LAST_WORKSPACE).bind(Json(&value.state)).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
     }
     transaction.commit().await?;
     if remember {
@@ -137,11 +132,10 @@ impl SettingsStore {
       let mut value = value;
       normalize_workspace(&mut value);
       let mut transaction = self.pool.begin().await?;
-      let json = serde_json::to_string(&value.state).map_err(json_error)?;
       sqlx::query("INSERT INTO window_sessions(id,value_json,version) VALUES('main',?,?) ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json,version=excluded.version")
-                .bind(&json).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
+                .bind(Json(&value.state)).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
       sqlx::query("INSERT INTO settings(key,value_json,version) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,version=excluded.version")
-                .bind(LAST_WORKSPACE).bind(json).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
+                .bind(LAST_WORKSPACE).bind(Json(&value.state)).bind(value.version.unwrap_or(1)).execute(&mut *transaction).await?;
       sqlx::query("DELETE FROM settings WHERE key=?")
         .bind(WORKSPACE_WINDOWS)
         .execute(&mut *transaction)

@@ -1,7 +1,9 @@
 pub mod commands;
 mod completion;
 mod markdown;
+mod markdown_types;
 mod mermaid;
+mod protocol;
 mod rename;
 mod service;
 pub mod types;

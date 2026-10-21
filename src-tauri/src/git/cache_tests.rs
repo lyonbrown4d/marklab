@@ -1,8 +1,8 @@
 use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
-fn operation(value: &str) -> Value {
+fn operation(value: OperationKind) -> Value {
   Value::Operation(Operation {
-    operation: Some(value.into()),
+    operation: Some(value),
   })
 }
 fn name(value: &Value) -> &str {
@@ -19,14 +19,14 @@ async fn concurrent_queries_share_initialization_and_cached_result() {
   let load = || async {
     calls.fetch_add(1, Ordering::AcqRel);
     tokio::task::yield_now().await;
-    Ok(operation("one"))
+    Ok(operation(OperationKind::Merge))
   };
   let (first, second) = tokio::join!(
     queries.get(root, Query::Operation, load()),
     queries.get(root, Query::Operation, load())
   );
-  assert_eq!(name(first.unwrap().as_ref()), "one");
-  assert_eq!(name(second.unwrap().as_ref()), "one");
+  assert_eq!(name(first.unwrap().as_ref()), "merge");
+  assert_eq!(name(second.unwrap().as_ref()), "merge");
   queries.get(root, Query::Operation, load()).await.unwrap();
   assert_eq!(calls.load(Ordering::Acquire), 1);
 }
@@ -42,19 +42,21 @@ async fn invalidation_during_load_cannot_join_or_repopulate_old_epoch() {
       .get(root, Query::Operation, async {
         started_tx.send(()).unwrap();
         finish_rx.await.unwrap();
-        Ok(operation("old"))
+        Ok(operation(OperationKind::Rebase))
       })
       .await
   });
   started_rx.await.unwrap();
   queries.invalidate(root);
   let fresh = queries
-    .get(root, Query::Operation, async { Ok(operation("new")) })
+    .get(root, Query::Operation, async {
+      Ok(operation(OperationKind::Revert))
+    })
     .await
     .unwrap();
-  assert_eq!(name(&fresh), "new");
+  assert_eq!(name(&fresh), "revert");
   finish_tx.send(()).unwrap();
-  assert_eq!(name(stale.await.unwrap().unwrap().as_ref()), "old");
+  assert_eq!(name(stale.await.unwrap().unwrap().as_ref()), "rebase");
   let cached = queries
     .get(root, Query::Operation, async {
       Err(BackendError::new(
@@ -64,7 +66,7 @@ async fn invalidation_during_load_cannot_join_or_repopulate_old_epoch() {
     })
     .await
     .unwrap();
-  assert_eq!(name(&cached), "new");
+  assert_eq!(name(&cached), "revert");
 }
 #[tokio::test]
 async fn waiting_queries_observe_failed_mutation_invalidation_before_writer_releases() {
@@ -142,7 +144,7 @@ async fn evicted_root_identity_does_not_reuse_an_inflight_value_key() {
       .get(root, Query::Operation, async {
         started_tx.send(()).unwrap();
         finish_rx.await.unwrap();
-        Ok(operation("old"))
+        Ok(operation(OperationKind::Rebase))
       })
       .await
   });
@@ -156,12 +158,14 @@ async fn evicted_root_identity_does_not_reuse_an_inflight_value_key() {
   // in flight, so resetting a missing state to zero would join and hang here.
   *queries.epochs.lock().unwrap() = moka::sync::Cache::builder().max_capacity(256).build();
   let fresh = queries
-    .get(root, Query::Operation, async { Ok(operation("fresh")) })
+    .get(root, Query::Operation, async {
+      Ok(operation(OperationKind::CherryPick))
+    })
     .await
     .unwrap();
-  assert_eq!(name(&fresh), "fresh");
+  assert_eq!(name(&fresh), "cherry-pick");
   finish_tx.send(()).unwrap();
-  assert_eq!(name(stale.await.unwrap().unwrap().as_ref()), "old");
+  assert_eq!(name(stale.await.unwrap().unwrap().as_ref()), "rebase");
   let cached = queries
     .get(root, Query::Operation, async {
       Err(BackendError::new(
@@ -171,7 +175,7 @@ async fn evicted_root_identity_does_not_reuse_an_inflight_value_key() {
     })
     .await
     .unwrap();
-  assert_eq!(name(&cached), "fresh");
+  assert_eq!(name(&cached), "cherry-pick");
 }
 
 #[test]

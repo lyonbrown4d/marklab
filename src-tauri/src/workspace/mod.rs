@@ -17,7 +17,9 @@ pub mod types;
 mod watcher;
 
 pub use registry::WorkspaceRegistry;
-pub use types::{BufferStatus, EmptyRequest, Entry, PathRequest, RootInfo, Snapshot};
+pub use types::{
+  BufferStatus, EmptyRequest, Entry, EntryKind, PathRequest, RootInfo, RootKind, Snapshot,
+};
 
 use crate::error::{BackendError, BackendResult};
 use std::collections::BTreeMap;
@@ -103,7 +105,7 @@ impl Workspace {
   pub fn root_directory(&self) -> PathBuf {
     let root = self.root_info();
     let path = PathBuf::from(&root.path);
-    if root.kind == "single" {
+    if root.kind == crate::workspace::RootKind::Single {
       path.parent().map(PathBuf::from).unwrap_or(path)
     } else {
       path
@@ -122,7 +124,7 @@ impl Workspace {
     self.ensure_active()?;
     let target = paths::resolve(&self.root_directory(), value)?;
     let root = self.root_info();
-    if root.kind == "single" {
+    if root.kind == crate::workspace::RootKind::Single {
       let file = PathBuf::from(&root.path).canonicalize()?;
       if target.canonicalize().ok().as_ref() != Some(&file) {
         return Err(BackendError::new(
@@ -140,13 +142,13 @@ impl Workspace {
     let value = value.to_owned();
     let target = crate::blocking::run(move || {
       let path = PathBuf::from(&root.path);
-      let directory = if root.kind == "single" {
+      let directory = if root.kind == crate::workspace::RootKind::Single {
         path.parent().map(PathBuf::from).unwrap_or(path.clone())
       } else {
         path.clone()
       };
       let target = paths::resolve(&directory, &value)?;
-      if root.kind == "single" && target != path {
+      if root.kind == crate::workspace::RootKind::Single && target != path {
         return Err(BackendError::new(
           "INVALID_PATH",
           "Single-file workspace cannot access another document",

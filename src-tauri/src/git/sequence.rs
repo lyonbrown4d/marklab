@@ -134,7 +134,7 @@ pub fn sequence_now(repo: &mut git2::Repository, abort: bool) -> BackendResult<(
   let operation = status::operation_now(repo)
     .operation
     .ok_or_else(|| error("git_invalid_input", "No Git operation is in progress"))?;
-  if operation == "rebase" {
+  if operation == super::types::OperationKind::Rebase {
     let todo = metadata(repo, "rebase-merge/git-rebase-todo")?.unwrap_or_default();
     if !abort
       && todo.lines().any(|line| {
@@ -160,7 +160,7 @@ pub fn sequence_now(repo: &mut git2::Repository, abort: bool) -> BackendResult<(
     let original = metadata(repo, "sequencer/head")?
       .and_then(|v| git2::Oid::from_str(v.trim()).ok())
       .or_else(|| {
-        if operation == "merge" {
+        if operation == super::types::OperationKind::Merge {
           repo
             .find_reference("ORIG_HEAD")
             .ok()
@@ -193,13 +193,13 @@ pub fn sequence_now(repo: &mut git2::Repository, abort: bool) -> BackendResult<(
   }
   let todo = metadata(repo, "sequencer/todo")?;
   let message = repo.message().unwrap_or_else(|_| {
-    if operation == "merge" {
+    if operation == super::types::OperationKind::Merge {
       "Merge".into()
     } else {
       format!("Continue {operation}")
     }
   });
-  if operation == "merge" {
+  if operation == super::types::OperationKind::Merge {
     super::local::commit_now(repo, &message, true)?;
     return Ok(());
   }

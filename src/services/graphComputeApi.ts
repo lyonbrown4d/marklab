@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import { truncate } from 'lodash-es'
 import { invoke } from '@/runtime/ipc'
@@ -14,32 +15,32 @@ const layoutInput = z
           id,
           width: z.number().min(24).max(20_000),
           height: z.number().min(24).max(20_000),
-          group: z.string().max(1_024).optional(),
+          group: z.string().max(1_024).nullish(),
         })
         .strict(),
     ),
     edges: z.array(edge),
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutComputeInput>
 const communityInput = z
   .object({
     nodes: z.array(z.object({ id, label: z.string() }).strict()),
     edges: z.array(edge),
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphCommunityInput>
 const position = z
   .object({
     id,
     x: z.number().min(-10_000_000).max(10_000_000),
     y: z.number().min(-10_000_000).max(10_000_000),
   })
-  .strict()
+  .strict() satisfies z.ZodType<GraphLayoutPosition>
 const layoutResult = z
   .object({
     positions: z.array(position),
     engineVersion: z.literal('native-workspace-map-v1'),
   })
-  .strict()
+  .strict() satisfies z.ZodType<DesktopCommandResults['fs_compute_workspace_graph_layout']>
 const communityResult = z
   .object({
     communities: z.array(
@@ -48,17 +49,25 @@ const communityResult = z
           id: z.string().min(1).max(128),
           label: z.string().max(4_096),
           nodeIds: z.array(id).max(80),
-          unlinkedPage: z.number().int().positive().nullable().optional(),
+          unlinkedPage: z.number().int().positive().nullable().default(null),
         })
         .strict(),
     ),
   })
-  .strict()
+  .strict() satisfies z.ZodType<DesktopCommandResults['fs_partition_workspace_graph']>
 
-export type GraphLayoutComputeInput = z.infer<typeof layoutInput>
-export type GraphCommunityInput = z.infer<typeof communityInput>
-export type GraphLayoutPosition = z.infer<typeof position>
-export type GraphCommunity = z.infer<typeof communityResult>['communities'][number]
+export type GraphLayoutComputeInput = Omit<
+  DesktopCommandArgs['fs_compute_workspace_graph_layout']['request'],
+  'requestId'
+>
+export type GraphCommunityInput = Omit<
+  DesktopCommandArgs['fs_partition_workspace_graph']['request'],
+  'requestId'
+>
+export type GraphLayoutPosition =
+  DesktopCommandResults['fs_compute_workspace_graph_layout']['positions'][number]
+export type GraphCommunity =
+  DesktopCommandResults['fs_partition_workspace_graph']['communities'][number]
 
 const cancelled = () => new DOMException('Graph computation was cancelled.', 'AbortError')
 const displayLabel = (label: string) => {
@@ -73,9 +82,8 @@ const displayLabel = (label: string) => {
   }
   return result
 }
-const compute = async (
-  command: string,
-  input: GraphLayoutComputeInput | GraphCommunityInput,
+const compute = async <Result>(
+  operation: (requestId: string) => Promise<Result>,
   signal?: AbortSignal,
 ) => {
   if (signal?.aborted) throw cancelled()
@@ -92,7 +100,7 @@ const compute = async (
   }
   signal?.addEventListener('abort', abort, { once: true })
   try {
-    return await Promise.race([invoke<unknown>(command, { ...input, requestId }), aborted])
+    return await Promise.race([operation(requestId), aborted])
   } finally {
     signal?.removeEventListener('abort', abort)
   }
@@ -101,20 +109,27 @@ const compute = async (
 export const graphComputeApi = {
   async layout(input: GraphLayoutComputeInput, signal?: AbortSignal) {
     return layoutResult.parse(
-      await compute('fs_compute_workspace_graph_layout', layoutInput.parse(input), signal),
+      await compute(
+        (requestId) =>
+          invoke('fs_compute_workspace_graph_layout', { ...layoutInput.parse(input), requestId }),
+        signal,
+      ),
     )
   },
   async communities(input: GraphCommunityInput, signal?: AbortSignal) {
     return communityResult.parse(
       await compute(
-        'fs_partition_workspace_graph',
-        communityInput.parse({
-          ...input,
-          nodes: input.nodes.map((node) => ({
-            ...node,
-            label: displayLabel(node.label),
-          })),
-        }),
+        (requestId) =>
+          invoke('fs_partition_workspace_graph', {
+            ...communityInput.parse({
+              ...input,
+              nodes: input.nodes.map((node) => ({
+                ...node,
+                label: displayLabel(node.label),
+              })),
+            }),
+            requestId,
+          }),
         signal,
       ),
     )

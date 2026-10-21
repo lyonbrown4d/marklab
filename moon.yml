@@ -1,7 +1,17 @@
 tasks:
+  bindings-generate:
+    command: pnpm bindings:generate
+    inputs: []
+    options:
+      cache: false
   typecheck:
+    deps:
+      - ~:bindings-generate
     command: node node_modules/typescript/bin/tsc6 -b
     inputs:
+      - src-tauri/src/**/*.rs
+      - src-tauri/Cargo.toml
+      - src-tauri/Cargo.lock
       - tsconfig*.json
       - src/**/*
       - scripts/**/*
@@ -44,6 +54,8 @@ tasks:
     options:
       cache: false
   lint:
+    deps:
+      - ~:bindings-generate
     command: pnpm exec eslint .
     inputs:
       - src/**/*
@@ -54,6 +66,8 @@ tasks:
     options:
       cache: false
   lint-fix:
+    deps:
+      - ~:bindings-generate
     command: pnpm exec eslint . --fix
     options:
       cache: false

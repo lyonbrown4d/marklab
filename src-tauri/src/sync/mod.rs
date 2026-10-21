@@ -1,7 +1,10 @@
 mod commands;
 mod config;
+mod domain;
+pub use domain::*;
 pub mod conflicts;
 pub mod engine;
+mod events;
 pub(crate) mod paths;
 mod profiles;
 pub mod remote;
@@ -16,7 +19,8 @@ use crate::{
 pub use commands::*;
 use sqlx::SqlitePool;
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{Mutex, RwLock, watch};
+use tokio::sync::{Mutex, RwLock};
+use tokio_util::sync::CancellationToken;
 pub use types::*;
 #[derive(Clone)]
 pub struct SyncService {
@@ -31,7 +35,7 @@ pub(crate) struct Inner {
 pub(crate) struct Run {
   pub owner: String,
   pub request_id: String,
-  pub cancel: watch::Sender<bool>,
+  pub cancel: CancellationToken,
 }
 impl SyncService {
   pub async fn new(pool: SqlitePool) -> BackendResult<Self> {
@@ -46,7 +50,7 @@ impl SyncService {
     })
   }
   pub fn workspace_key(root: &RootInfo) -> BackendResult<String> {
-    if root.kind == "single" {
+    if root.kind == crate::workspace::RootKind::Single {
       return Err(BackendError::new(
         "SYNC_SINGLE_FILE",
         "Sync is unavailable in single-file mode",
@@ -100,7 +104,7 @@ impl SyncService {
     let runs = self.inner.runs.lock().await;
     for run in runs.values() {
       if run.owner == owner {
-        let _ = run.cancel.send(true);
+        run.cancel.cancel();
       }
     }
   }

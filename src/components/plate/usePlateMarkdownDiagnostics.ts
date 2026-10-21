@@ -185,7 +185,7 @@ export const usePlateMarkdownDiagnostics = ({
       applyAction: async (problem, action) => {
         if (readOnly) return false
         if (action.kind === 'create-file') {
-          await fsApi.createFile(action.path, action.content)
+          await fsApi.createFile(action.path, action.content ?? undefined)
           schedule()
           return true
         }

@@ -5,7 +5,9 @@ import {
   createMarkdownLinkCompletionSession,
   createMarkdownLinkSessionUri,
 } from '@/components/editor/markdownLinkCompletionSession'
-import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import type { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
+
+type LanguageIntelligenceApi = typeof languageIntelligenceApi
 
 const createClient = () => ({
   openDocument: vi.fn<LanguageIntelligenceApi['openDocument']>().mockResolvedValue({

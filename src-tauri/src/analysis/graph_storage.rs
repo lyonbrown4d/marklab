@@ -1,12 +1,13 @@
+use super::graph_types::{GraphEdge, GraphMode, GraphNode, WorkspaceGraph};
 use super::{AnalysisService, Index};
 use crate::error::{BackendError, BackendResult};
-use serde_json::Value;
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
 use std::sync::Arc;
 const MAX_GRAPH: usize = 16 * 1024 * 1024;
 impl AnalysisService {
-  pub(super) async fn disk_graph(&self, index: &Index) -> Option<Value> {
+  pub(super) async fn disk_graph(&self, index: &Index) -> Option<WorkspaceGraph> {
     let row=sqlx::query("SELECT payload,payload_hash FROM analysis_cache_graphs WHERE scope=? AND fingerprint=? AND length(CAST(payload AS BLOB))<=?").bind(&index.scope).bind(&index.fingerprint).bind(MAX_GRAPH as i64).fetch_optional(&self.pool).await.ok()??;
     let payload: String = row.try_get("payload").ok()?;
     let hash: String = row.try_get("payload_hash").ok()?;
@@ -14,25 +15,32 @@ impl AnalysisService {
       if payload.len() > MAX_GRAPH || hex::encode(Sha256::digest(payload.as_bytes())) != hash {
         return None;
       }
-      let value: Value = serde_json::from_str(&payload).ok()?;
-      (value.is_object() && value.get("nodes")?.is_array() && value.get("edges")?.is_array())
-        .then_some(value)
+      serde_json::from_str::<WorkspaceGraph>(&payload).ok()
     })
     .await
     .ok()
     .flatten()?;
-    value
-      .as_object_mut()?
-      .insert("revision".into(), super::graph::revision(index).into());
+    value.revision = super::graph::revision(index);
     Some(value)
   }
-  pub(super) async fn persist_graph(&self, index: &Index, value: Arc<Value>) -> BackendResult<()> {
+  pub(super) async fn persist_graph(
+    &self,
+    index: &Index,
+    value: Arc<WorkspaceGraph>,
+  ) -> BackendResult<()> {
     let (payload, hash) = tokio::task::spawn_blocking(move || {
-      let mut value = (*value).clone();
-      if let Some(object) = value.as_object_mut() {
-        object.remove("revision");
+      // Persist the original topology wire format without copying the graph.
+      #[derive(Serialize)]
+      struct StoredGraph<'a> {
+        mode: &'a GraphMode,
+        nodes: &'a [GraphNode],
+        edges: &'a [GraphEdge],
       }
-      let payload = serde_json::to_string(&value)?;
+      let payload = serde_json::to_string(&StoredGraph {
+        mode: &value.mode,
+        nodes: &value.nodes,
+        edges: &value.edges,
+      })?;
       let hash = hex::encode(Sha256::digest(payload.as_bytes()));
       Ok::<_, serde_json::Error>((payload, hash))
     })

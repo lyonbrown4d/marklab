@@ -25,7 +25,7 @@ export const userThemeApi = {
     const themes = runtimeThemes()
     if (!themes) return []
     const result = await themes.list()
-    if (!result.ok) throw themeError('Unable to list themes.', result.error)
+    if (!result.ok) throw themeError('Unable to list themes.')
     return result.themes
   },
 
@@ -33,7 +33,7 @@ export const userThemeApi = {
     const themes = runtimeThemes()
     if (!themes) throw themeError('Custom themes are unavailable in this runtime.')
     const result = await themes.importCss(path)
-    if (!result.ok || !result.theme) throw themeError('Unable to import theme.', result.error)
+    if (!result.ok || !result.theme) throw themeError('Unable to import theme.')
     return result.theme
   },
 
@@ -41,7 +41,7 @@ export const userThemeApi = {
     const themes = runtimeThemes()
     if (!themes || !id) return ''
     const result = await themes.readCss(id)
-    if (!result.ok) throw themeError('Unable to load theme CSS.', result.error)
+    if (!result.ok) throw themeError('Unable to load theme CSS.')
     return result.css ?? ''
   },
 
@@ -49,13 +49,13 @@ export const userThemeApi = {
     const themes = runtimeThemes()
     if (!themes) return
     const result = await themes.remove(id)
-    if (!result.ok) throw themeError('Unable to remove theme.', result.error)
+    if (!result.ok) throw themeError('Unable to remove theme.')
   },
 
   async openFolder(): Promise<void> {
     const themes = runtimeThemes()
     if (!themes) return
     const result = await themes.openFolder()
-    if (!result.ok) throw themeError('Unable to open themes folder.', result.error)
+    if (!result.ok) throw themeError('Unable to open themes folder.')
   },
 }

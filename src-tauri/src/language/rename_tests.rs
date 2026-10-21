@@ -14,7 +14,7 @@ async fn fixture_index(files: &[(&str, &str)]) -> (tempfile::TempDir, Arc<Index>
   }
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: directory
         .path()
         .canonicalize()
@@ -57,8 +57,8 @@ async fn heading_rename_rewrites_destinations_without_rewriting_identical_labels
     "😀 [current.md#old](current.md#final-draft \"title\") and [[current#final-draft|current#old]]\r\n\r\n[Go][ref]\r\n\r\n[ref]: current.md#old\r\n"
   );
   assert_eq!(edit.edit_count, 2);
-  assert_eq!(plan.result["edits"][1]["startColumn"], 18);
-  assert_eq!(plan.result["edits"][1]["newText"], "current.md#final-draft");
+  assert_eq!(plan.result.edits[1].start_column, 18);
+  assert_eq!(plan.result.edits[1].new_text, "current.md#final-draft");
 }
 
 #[tokio::test]
@@ -78,14 +78,14 @@ async fn heading_rename_keeps_the_atx_marker_for_empty_headings() {
   let content = "# #\n";
   let (_directory, index) = fixture_index(&[("current.md", content)]).await;
   let plan = prepare(&index, &request(content)).unwrap();
-  assert_eq!(plan.result["edits"][0]["startColumn"], 3);
-  assert_eq!(plan.result["edits"][0]["endColumn"], 4);
-  assert_eq!(plan.result["edits"][0]["newText"], "Final Draft");
+  assert_eq!(plan.result.edits[0].start_column, 3);
+  assert_eq!(plan.result.edits[0].end_column, 4);
+  assert_eq!(plan.result.edits[0].new_text, "Final Draft");
   let (_directory, index) = fixture_index(&[("current.md", "###\n")]).await;
   let plan = prepare(&index, &request("###\n")).unwrap();
-  assert_eq!(plan.result["edits"][0]["startColumn"], 4);
-  assert_eq!(plan.result["edits"][0]["endColumn"], 4);
-  assert_eq!(plan.result["edits"][0]["newText"], " Final Draft");
+  assert_eq!(plan.result.edits[0].start_column, 4);
+  assert_eq!(plan.result.edits[0].end_column, 4);
+  assert_eq!(plan.result.edits[0].new_text, " Final Draft");
 }
 
 #[tokio::test]
@@ -100,7 +100,8 @@ async fn extensionless_markdown_definitions_resolve_existing_markdown_files() {
     column: 10,
     new_name: None,
   };
-  let definition = crate::language::markdown::definition(&index, &request);
+  let definition =
+    serde_json::to_value(crate::language::markdown::definition(&index, &request)).unwrap();
   assert_eq!(definition["path"], "current.md");
   assert_eq!(definition["headingSlug"], "old");
 }
@@ -114,7 +115,7 @@ async fn external_edit_after_rename_validation_is_preserved_by_save_cas() {
     .unwrap();
   let workspace = Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: directory
         .path()
         .canonicalize()

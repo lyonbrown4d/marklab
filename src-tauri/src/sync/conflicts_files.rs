@@ -4,18 +4,18 @@ use super::super::{
 };
 use crate::{error::BackendResult, workspace::Workspace};
 use std::path::Path;
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 const PREVIEW_LIMIT: u64 = 64 * 1024;
 pub async fn version(
   root: &Path,
   path: Option<&str>,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<ConflictVersion> {
   let deleted = || ConflictVersion {
     hash: None,
     size: 0,
     text: None,
-    unavailable: Some("deleted"),
+    unavailable: Some(crate::sync::ConflictUnavailable::Deleted),
   };
   let Some(path) = path else {
     return Ok(deleted());
@@ -24,17 +24,17 @@ pub async fn version(
     return Ok(deleted());
   };
   let (text, unavailable) = if fingerprint.size > PREVIEW_LIMIT {
-    (None, Some("too_large"))
+    (None, Some(crate::sync::ConflictUnavailable::TooLarge))
   } else {
     let target = files::resolve(root, path).await?;
     let bytes = tokio::fs::read(target).await?;
     files::assert_hash(root, path, Some(&fingerprint.hash), cancel).await?;
     if bytes.contains(&0) {
-      (None, Some("binary"))
+      (None, Some(crate::sync::ConflictUnavailable::Binary))
     } else {
       match String::from_utf8(bytes) {
         Ok(value) => (Some(value), None),
-        Err(_) => (None, Some("binary")),
+        Err(_) => (None, Some(crate::sync::ConflictUnavailable::Binary)),
       }
     }
   };
@@ -50,7 +50,7 @@ pub async fn backup(
   path: &str,
   hash: &str,
   size: u64,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<String> {
   let original = Path::new(path);
   let stem = original

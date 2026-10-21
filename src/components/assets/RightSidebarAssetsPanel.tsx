@@ -32,7 +32,7 @@ export const RightSidebarAssetsPanel = ({ report }: RightSidebarAssetsPanelProps
   const runAssetAction = async (
     asset: MarkdownAssetReference,
     action: AssetAction,
-    task: () => Promise<void>,
+    task: () => Promise<unknown>,
   ) => {
     const actionId = `${asset.id}:${action}`
     setPendingAction(actionId)

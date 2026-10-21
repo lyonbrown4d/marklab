@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { invoke } from '@/runtime/ipc'
 import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
 
-const invokeMock = vi.mocked(invoke)
+const invokeMock = nativeIpc.invoke
 
 describe('workspaceAnalysisApi', () => {
   beforeEach(() => invokeMock.mockReset())
@@ -15,7 +18,16 @@ describe('workspaceAnalysisApi', () => {
       revision: 3,
       active_path: 'notes/current.md',
       files: [{ path: 'notes/guide.md', title: 'Guide' }],
-      headings: [{ path: 'notes/guide.md', slug: 'intro', text: 'Introduction', level: 2 }],
+      headings: [
+        {
+          path: 'notes/guide.md',
+          slug: 'intro',
+          text: 'Introduction',
+          level: 2,
+          line: 1,
+          column: 1,
+        },
+      ],
       file_total: 1,
       heading_total: 1,
       current: {

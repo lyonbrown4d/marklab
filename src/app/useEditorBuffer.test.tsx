@@ -209,6 +209,7 @@ describe('useEditorBuffer', () => {
           path: 'notes/current.md',
           revision: 1,
           dirty: false,
+          session_generation: 3,
         },
       })
     })
@@ -253,6 +254,7 @@ describe('useEditorBuffer', () => {
           path: 'notes/current.md',
           revision: 1,
           dirty: true,
+          session_generation: 3,
         },
       })
     })

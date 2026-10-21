@@ -4,6 +4,7 @@ use crate::{
   language::{LanguageService, types::OpenRequest},
   workspace::{RootInfo, Workspace},
 };
+use serde_json::{Value, json};
 use std::sync::Arc;
 
 pub(super) async fn fixture() -> (tempfile::TempDir, Arc<Index>) {
@@ -39,7 +40,7 @@ pub(super) async fn fixture() -> (tempfile::TempDir, Arc<Index>) {
   }
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: directory
         .path()
         .canonicalize()
@@ -102,7 +103,8 @@ pub(super) async fn complete(index: &Index, text: &str, uri: &str) -> Value {
     },
   )
   .expect("unsaved overlay");
-  completion(&index, &document, position).expect("completion")
+  serde_json::to_value(completion(&index, &document, position).expect("completion"))
+    .expect("wire completion")
 }
 
 #[tokio::test]
@@ -213,3 +215,49 @@ async fn link_files_include_previewable_paths_and_keep_wiki_scope_fuzzy_order_an
 
 #[path = "completion_context_tests.rs"]
 mod context;
+
+#[tokio::test]
+async fn embedded_mermaid_completion_translates_both_edit_edges_to_document_lines() {
+  let service = LanguageService::default();
+  let text = "# Document\n\n```mermaid\nsequenceDiagram\n  part\n```\n";
+  service
+    .open(
+      "window".into(),
+      OpenRequest {
+        uri: "file:///note.md".into(),
+        path: Some("note.md".into()),
+        language_id: "markdown".into(),
+        text: text.into(),
+        version: 1,
+      },
+    )
+    .await
+    .unwrap();
+  let document = service
+    .snapshot("window".into(), "file:///note.md".into(), 1)
+    .await
+    .unwrap();
+  let (_directory, index) = fixture().await;
+  let result = completion(
+    &index,
+    &document,
+    Position {
+      line: 4,
+      character: 6,
+    },
+  )
+  .unwrap();
+  let wire = serde_json::to_value(result).unwrap();
+  let participant = wire["items"]
+    .as_array()
+    .unwrap()
+    .iter()
+    .find(|item| item["label"] == "participant")
+    .unwrap();
+  assert_eq!(
+    participant["textEdit"]["range"],
+    json!({
+      "start": { "line": 4, "character": 2 }, "end": { "line": 4, "character": 6 }
+    })
+  );
+}

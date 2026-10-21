@@ -42,11 +42,11 @@ describe('terminalEvents', () => {
 
     terminalOutputSubject.next({ id: 'session-buffered', data: 'after subscribe' })
     terminalOutputSubject.next({ id: 'other-session', data: 'ignored' })
-    terminalExitSubject.next({ id: 'session-buffered', exit_code: 0 })
+    terminalExitSubject.next({ id: 'session-buffered', exit_code: 0, signal: null })
 
     expect(onOutput).toHaveBeenCalledTimes(2)
     expect(onOutput).toHaveBeenLastCalledWith({ id: 'session-buffered', data: 'after subscribe' })
-    expect(onExit).toHaveBeenCalledWith({ id: 'session-buffered', exit_code: 0 })
+    expect(onExit).toHaveBeenCalledWith({ id: 'session-buffered', exit_code: 0, signal: null })
 
     unsubscribe()
   })
@@ -82,7 +82,7 @@ describe('terminalEvents', () => {
     primeTerminalEventListeners()
 
     terminalOutputSubject.next({ id: 'session-exited', data: 'pending' })
-    terminalExitSubject.next({ id: 'session-exited', exit_code: 1 })
+    terminalExitSubject.next({ id: 'session-exited', exit_code: 1, signal: null })
 
     const onOutput = vi.fn()
     const unsubscribe = subscribeTerminalSessionEvents('session-exited', {

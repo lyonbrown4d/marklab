@@ -1,9 +1,9 @@
-import { request } from '@/runtime/tauri/transport'
+import { invoke } from '@/runtime/ipc'
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 
-export type GitCredentials = { url: string; username: string; token: string }
+export type GitCredentials = DesktopCommandArgs['git_credentials_save']['request']
 export const gitCredentialsApi = {
   available: () => typeof window !== 'undefined' && window.marklabTauri !== undefined,
-  save: (credentials: GitCredentials) =>
-    request<{ ok: boolean }>('git_credentials_save', credentials),
-  remove: (url: string) => request<{ ok: boolean }>('git_credentials_remove', { url }),
+  save: (credentials: GitCredentials) => invoke('git_credentials_save', credentials),
+  remove: (url: string) => invoke('git_credentials_remove', { url }),
 }

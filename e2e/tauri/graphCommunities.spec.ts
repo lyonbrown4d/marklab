@@ -5,7 +5,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { browser } from '@wdio/globals'
 import { Key } from 'webdriverio'
-import type { FsGraph } from '@/services/fsApiSchemas'
 import type { GraphCommunity } from '@/services/graphComputeApi'
 /* eslint-disable no-restricted-imports -- Real native acceptance helpers only. */
 import { fixturePaths } from './fixturePaths.js'
@@ -103,8 +102,7 @@ const searchNode = async (file: string, community: GraphCommunity) => {
   )
 }
 
-const buffer = (file: string) =>
-  invokeNative<{ content: string }>('fs_open_buffer_snapshot', { path: file })
+const buffer = (file: string) => invokeNative('fs_open_buffer_snapshot', { path: file })
 
 const expectSinglePlate = async () => {
   assert.equal(
@@ -119,7 +117,7 @@ describe('native graph community tabs and retained editor', () => {
     await switchToWorkspace(fixture.alpha)
     await browser.$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-network)').click()
     await browser.$(canvas).waitForDisplayed({ timeout: 90_000 })
-    const graph = await invokeNative<FsGraph>('fs_get_workspace_graph')
+    const graph = await invokeNative('fs_get_workspace_graph')
     const files = graph.nodes.filter((item) => item.kind === 'file')
     assert.equal(files.length, 111)
     assert.ok(graph.edges.length > 300, 'Fixture lost its real Markdown link topology')
@@ -127,14 +125,11 @@ describe('native graph community tabs and retained editor', () => {
       graph.nodes.every((item) => item.kind === 'file'),
       'Unexpected fixture graph nodes',
     )
-    const { communities } = await invokeNative<{ communities: GraphCommunity[] }>(
-      'fs_partition_workspace_graph',
-      {
-        requestId: randomUUID(),
-        nodes: files.map(({ id, label }) => ({ id, label })),
-        edges: graph.edges.map(({ source, target }) => ({ source, target })),
-      },
-    )
+    const { communities } = await invokeNative('fs_partition_workspace_graph', {
+      requestId: randomUUID(),
+      nodes: files.map(({ id, label }) => ({ id, label })),
+      edges: graph.edges.map(({ source, target }) => ({ source, target })),
+    })
     assert.ok(communities.length >= 3, 'Weakly bridged dense groups were not partitioned')
     assert.ok(communities.every((item) => item.nodeIds.length > 0 && item.nodeIds.length <= 80))
     assert.equal(new Set(communities.flatMap((item) => item.nodeIds)).size, 111)

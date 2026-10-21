@@ -1,74 +1,29 @@
+import type {
+  DesktopCommandArgs,
+  DesktopCommandResults,
+  DesktopEventPayloads,
+} from '@/generated/desktop/bindings'
+
 export const WORKSPACE_TREE_MAX_PAGE_SIZE = 256
 export const WORKSPACE_TREE_MAX_EXISTENCE_PATHS = 256
 export const WORKSPACE_TREE_MAX_SEARCH_RESULTS = 100
 
-export type WorkspaceTreeRoot = {
-  kind: 'internal' | 'external' | 'single'
-  path: string
-}
-
-export type WorkspaceTreeEntry = {
-  kind: 'file' | 'folder'
-  name: string
-  path: string
-  hasChildren: boolean
-}
-
-export type WorkspaceTreeChildrenRequest = {
-  cursor?: string | null
-  limit?: number
-  parent: string | null
-}
-
-export type WorkspaceTreeChildrenResult = {
-  entries: WorkspaceTreeEntry[]
-  nextCursor: string | null
-  parent: string
-  generation: number
-  revision: number
-  root: WorkspaceTreeRoot
-}
-
-export type WorkspaceTreeExistenceRequest = {
-  kind?: 'any' | 'file'
-  paths: string[]
-}
-export type WorkspaceTreeExistenceResult = {
-  existing: string[]
-  generation: number
-  revision: number
-  root: WorkspaceTreeRoot
-}
-export type WorkspaceTreeInitialFileResult = {
-  generation: number
-  path: string | null
-  revision: number
-  root: WorkspaceTreeRoot
-}
-export type WorkspaceTreeSearchRequest = { query: string; limit?: number }
-export type WorkspaceTreeSearchResult = {
-  entries: WorkspaceTreeEntry[]
-  generation: number
-  revision: number
-  root: WorkspaceTreeRoot
-}
-
-export type WorkspaceTreeChange =
-  | { type: 'added'; entry: Omit<WorkspaceTreeEntry, 'hasChildren'> }
-  | { type: 'changed'; path: string }
-  | { type: 'removed'; path: string }
-  | { type: 'renamed'; from: string; entry: Omit<WorkspaceTreeEntry, 'hasChildren'> }
-
-type WorkspaceTreeEventBase = {
-  generation: number
-  previousRevision: number
-  revision: number
-  root: WorkspaceTreeRoot
-}
-
-export type WorkspaceTreeDeltaEvent =
-  | (WorkspaceTreeEventBase & { kind: 'changes'; changes: WorkspaceTreeChange[] })
-  | (WorkspaceTreeEventBase & { kind: 'invalidated' })
+export type WorkspaceTreeChildrenRequest =
+  DesktopCommandArgs['workspace_tree_list_children']['request']
+export type WorkspaceTreeChildrenResult = DesktopCommandResults['workspace_tree_list_children']
+export type WorkspaceTreeEntry = WorkspaceTreeChildrenResult['entries'][number]
+export type WorkspaceTreeRoot = WorkspaceTreeChildrenResult['root']
+export type WorkspaceTreeExistenceRequest =
+  DesktopCommandArgs['workspace_tree_paths_exist']['request']
+export type WorkspaceTreeExistenceResult = DesktopCommandResults['workspace_tree_paths_exist']
+export type WorkspaceTreeInitialFileResult = DesktopCommandResults['workspace_tree_initial_file']
+export type WorkspaceTreeSearchRequest = DesktopCommandArgs['workspace_tree_search']['request']
+export type WorkspaceTreeSearchResult = DesktopCommandResults['workspace_tree_search']
+export type WorkspaceTreeDeltaEvent = DesktopEventPayloads['workspace-tree-changed']
+export type WorkspaceTreeChange = Extract<
+  WorkspaceTreeDeltaEvent,
+  { kind: 'changes' }
+>['changes'][number]
 
 export type WorkspaceTreeApi = {
   initialFile: () => Promise<WorkspaceTreeInitialFileResult>

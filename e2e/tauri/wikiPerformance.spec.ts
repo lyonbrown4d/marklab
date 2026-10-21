@@ -161,17 +161,15 @@ describe('workspace graph performance profile', () => {
       const runtime = window.marklabTauri
       if (!runtime) return null
       const started = performance.now()
-      return runtime.commands
-        .invoke<{ nodes: unknown[]; edges: unknown[] }>('fs_get_workspace_graph')
-        .then(
-          (graph) => ({
-            ms: performance.now() - started,
-            nodes: graph.nodes.length,
-            edges: graph.edges.length,
-            bytes: JSON.stringify(graph).length,
-          }),
-          () => null,
-        )
+      return runtime.commands.invoke('fs_get_workspace_graph').then(
+        (graph) => ({
+          ms: performance.now() - started,
+          nodes: graph.nodes.length,
+          edges: graph.edges.length,
+          bytes: JSON.stringify(graph).length,
+        }),
+        () => null,
+      )
     })
     assert.ok(native)
     const started = Date.now()

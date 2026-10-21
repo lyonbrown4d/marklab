@@ -95,7 +95,7 @@ const renderStatusBar = (props: AppStatusBarProps) =>
 beforeEach(() => {
   vi.mocked(isDesktopRuntime).mockReturnValue(false)
   vi.mocked(gitApi.getStatus).mockResolvedValue({
-    repo: { is_repository: false },
+    repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: false },
     staged: [],
     unstaged: [],
     untracked: [],

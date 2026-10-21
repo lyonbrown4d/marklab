@@ -104,11 +104,11 @@ pub(super) fn create(
           pending.extend_from_slice(&buffer[..count]);
           let data = drain_utf8(&mut pending, false);
           if !data.is_empty()
-            && output_window
+            && crate::desktop::event_contracts::TERMINAL_OUTPUT
               .emit_to(
+                output_window.app_handle(),
                 tauri::EventTarget::webview_window(output_window.label()),
-                "terminal-output",
-                Output {
+                &Output {
                   id: output_id.clone(),
                   data,
                 },
@@ -122,13 +122,13 @@ pub(super) fn create(
     }
     let data = drain_utf8(&mut pending, true);
     if !data.is_empty() {
-      let _ = output_window.emit_to(
+      let _ = crate::desktop::event_contracts::TERMINAL_OUTPUT.emit_to(
+        output_window.app_handle(),
         tauri::EventTarget::webview_window(output_window.label()),
-        "terminal-output",
-        Output {
+        &(Output {
           id: output_id,
           data,
-        },
+        }),
       );
     }
   });
@@ -142,14 +142,14 @@ pub(super) fn create(
       Ok(value) => (Some(value.exit_code()), value.signal().map(str::to_owned)),
       Err(_) => (None, Some("PTY wait failed".into())),
     };
-    let _ = window.emit_to(
+    let _ = crate::desktop::event_contracts::TERMINAL_EXIT.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "terminal-exit",
-      Exit {
+      &(Exit {
         id,
         exit_code,
         signal,
-      },
+      }),
     );
   });
   Ok(info)

@@ -51,7 +51,7 @@ pub struct AnalysisService {
   pub(super) excluded_directory: Option<std::path::PathBuf>,
   pub(super) cached: Cache<IndexKey, Arc<Index>>,
   pub(super) documents: Cache<DocumentKey, Arc<Document>>,
-  pub(super) queries: Cache<QueryKey, Arc<serde_json::Value>>,
+  pub(super) queries: Cache<QueryKey, super::projections::CachedProjection>,
   pub(super) schema: OnceCell<()>,
   pub(super) build: Mutex<()>,
   pub(super) epoch: AtomicU64,
@@ -83,9 +83,11 @@ impl AnalysisService {
       queries: Cache::builder()
         .name("analysis-projections")
         .max_capacity(32 * 1024 * 1024)
-        .weigher(|_: &QueryKey, value: &Arc<serde_json::Value>| {
-          super::cache::value_weight(value).max(1024 * 1024)
-        })
+        .weigher(
+          |_: &QueryKey, value: &super::projections::CachedProjection| {
+            value.weight().max(1024 * 1024)
+          },
+        )
         .time_to_live(Duration::from_secs(5 * 60))
         .build(),
       schema: OnceCell::new(),

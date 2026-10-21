@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { spreadsheetApi } from '@/services/spreadsheetApi'
 import { invoke } from '@/runtime/ipc'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
 const page = {
   sheets: ['Sheet1'],
   sheet: 'Sheet1',
@@ -11,6 +15,8 @@ const page = {
   offset: 0,
   rows: [['=SUM(A1)', '你好']],
   truncated: false,
+  cells: [[{ value: '=SUM(A1)' }, { value: '你好' }]],
+  calculation: { status: 'cached' as const, warnings: [], errorCount: 0 },
 }
 
 describe('spreadsheetApi', () => {
@@ -18,9 +24,13 @@ describe('spreadsheetApi', () => {
     const enriched = {
       ...page,
       cells: [[{ value: 0.25, formula: '1/4', format: '0%' }]],
-      calculation: { status: 'recalculated', warnings: ['Unsupported function in B1'] },
+      calculation: {
+        status: 'recalculated' as const,
+        warnings: ['Unsupported function in B1'],
+        errorCount: 1,
+      },
     }
-    vi.mocked(invoke).mockResolvedValueOnce(enriched)
+    nativeIpc.invoke.mockResolvedValueOnce(enriched)
     expect(
       await spreadsheetApi.readPage(
         { path: '/data.xlsx', recalculate: true },
@@ -31,7 +41,7 @@ describe('spreadsheetApi', () => {
       path: '/data.xlsx',
       recalculate: true,
     })
-    vi.mocked(invoke).mockResolvedValueOnce({
+    nativeIpc.invoke.mockResolvedValueOnce({
       ...enriched,
       cells: [[{ value: { html: 'unsafe' }, formula: '1/4' }]],
     })
@@ -43,7 +53,7 @@ describe('spreadsheetApi', () => {
   beforeEach(() => vi.resetAllMocks())
 
   it('passes source, sheet and page boundaries intact and validates cells as strings', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(page)
+    nativeIpc.invoke.mockResolvedValueOnce(page)
     expect(
       await spreadsheetApi.readPage(
         { path: '/data.csv', source: 'a,b', sheet: 'Sheet1', offset: 0, limit: 200 },
@@ -57,14 +67,14 @@ describe('spreadsheetApi', () => {
       offset: 0,
       limit: 200,
     })
-    vi.mocked(invoke).mockResolvedValueOnce({ ...page, rows: [[42]] })
+    nativeIpc.invoke.mockResolvedValueOnce({ ...page, rows: [[42]] })
     await expect(
       spreadsheetApi.readPage({ path: '/bad.xlsx' }, new AbortController().signal),
     ).rejects.toThrow()
   })
 
   it('normalizes Windows asset capabilities for the native reader', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(page)
+    nativeIpc.invoke.mockResolvedValueOnce(page)
     const token = 'a'.repeat(43)
     await spreadsheetApi.readPage(
       { path: '/data.xlsx', assetUrl: `http://marklab-asset.localhost/local/v1/${token}#ignored` },
@@ -79,7 +89,7 @@ describe('spreadsheetApi', () => {
   it('ignores late cancelled results and does not submit an already cancelled request', async () => {
     const controller = new AbortController()
     let complete: (value: unknown) => void = () => undefined
-    vi.mocked(invoke).mockImplementationOnce(
+    nativeIpc.invoke.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           complete = resolve
@@ -89,7 +99,7 @@ describe('spreadsheetApi', () => {
     controller.abort()
     complete(page)
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
-    vi.mocked(invoke).mockClear()
+    nativeIpc.invoke.mockClear()
     await expect(
       spreadsheetApi.readPage({ path: '/data.csv' }, AbortSignal.abort()),
     ).rejects.toMatchObject({ name: 'AbortError' })
@@ -97,7 +107,7 @@ describe('spreadsheetApi', () => {
   })
 
   it('surfaces native parsing failures', async () => {
-    vi.mocked(invoke).mockRejectedValueOnce(new Error('Workbook is corrupt'))
+    nativeIpc.invoke.mockRejectedValueOnce(new Error('Workbook is corrupt'))
     await expect(
       spreadsheetApi.readPage({ path: '/bad.xlsx' }, new AbortController().signal),
     ).rejects.toThrow('Workbook is corrupt')

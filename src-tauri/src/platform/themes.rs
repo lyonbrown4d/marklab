@@ -9,31 +9,34 @@ use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::AsyncReadExt;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Theme {
   id: String,
   name: String,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
   created_at: u64,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct ThemeList {
   ok: bool,
   themes: Vec<Theme>,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct ThemeImport {
   ok: bool,
   theme: Theme,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct ThemeCss {
   ok: bool,
   css: String,
 }
-#[derive(Deserialize)]
+pub use PlatformIdRequest as IdRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct IdRequest {
+pub struct PlatformIdRequest {
   id: String,
 }
 
@@ -99,6 +102,7 @@ async fn read_css(path: &Path) -> BackendResult<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn themes_list(window: WebviewWindow, request: EmptyRequest) -> BackendResult<ThemeList> {
   let _ = request;
   let mut entries = tokio::fs::read_dir(directory(&window).await?).await?;
@@ -129,6 +133,7 @@ pub async fn themes_list(window: WebviewWindow, request: EmptyRequest) -> Backen
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn themes_import_css(
   window: WebviewWindow,
   request: PathRequest,
@@ -171,6 +176,7 @@ pub async fn themes_import_css(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn themes_read_css(window: WebviewWindow, request: IdRequest) -> BackendResult<ThemeCss> {
   let css = if request.id.is_empty() {
     String::new()
@@ -186,6 +192,7 @@ pub async fn themes_read_css(window: WebviewWindow, request: IdRequest) -> Backe
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn themes_remove(
   window: WebviewWindow,
   request: IdRequest,
@@ -200,6 +207,7 @@ pub async fn themes_remove(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn themes_open_folder(
   window: WebviewWindow,
   request: EmptyRequest,

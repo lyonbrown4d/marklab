@@ -18,23 +18,25 @@ pub struct RichClipboard(std::sync::Mutex<Option<ClipboardContext>>);
 fn failure(error: impl std::fmt::Display) -> BackendError {
   BackendError::new("CLIPBOARD_FAILED", error.to_string())
 }
-#[derive(Serialize)]
-pub struct OkResult {
+pub use PlatformOkResult as OkResult;
+#[derive(Serialize, specta::Type)]
+pub struct PlatformOkResult {
   pub ok: bool,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct TextRequest {
   text: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct ContentRequest {
+  #[serde(default)]
   html: Option<String>,
   markdown: String,
   text: String,
 }
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardImage {
   data_url: String,
@@ -43,6 +45,7 @@ pub struct ClipboardImage {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn clipboard_read_text(
   window: WebviewWindow,
   request: EmptyRequest,
@@ -61,6 +64,7 @@ pub async fn clipboard_read_text(
   Ok(text)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn clipboard_write_text(
   window: WebviewWindow,
   request: TextRequest,
@@ -76,6 +80,7 @@ pub async fn clipboard_write_text(
   .map_err(failure)?
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn clipboard_write(
   window: WebviewWindow,
   request: ContentRequest,
@@ -102,6 +107,7 @@ pub async fn clipboard_write(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn clipboard_read_image(
   window: WebviewWindow,
   request: EmptyRequest,

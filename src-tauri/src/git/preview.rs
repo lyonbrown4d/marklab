@@ -6,19 +6,19 @@ use super::{
 use crate::error::BackendResult;
 use std::{io::Read, path::Path};
 pub const MAX_PREVIEW: usize = 1024 * 1024;
-pub fn decode(bytes: Vec<u8>) -> Result<String, &'static str> {
+pub fn decode(bytes: Vec<u8>) -> Result<String, UnavailableReason> {
   if bytes.len() > MAX_PREVIEW {
-    return Err("too_large");
+    return Err(UnavailableReason::TooLarge);
   }
   if bytes.contains(&0) {
-    return Err("binary");
+    return Err(UnavailableReason::Binary);
   }
-  String::from_utf8(bytes).map_err(|_| "unsupported_encoding")
+  String::from_utf8(bytes).map_err(|_| UnavailableReason::UnsupportedEncoding)
 }
 pub(super) fn read_worktree(
   root: &Path,
   file: &str,
-) -> BackendResult<Result<String, &'static str>> {
+) -> BackendResult<Result<String, UnavailableReason>> {
   let selected = file;
   let path = safety::worktree_file(root, file)?;
   let mut options = std::fs::OpenOptions::new();
@@ -56,7 +56,7 @@ pub(super) fn read_worktree(
     Err(e) => Err(e.into()),
   }
 }
-pub async fn worktree(root: &Path, file: &str) -> BackendResult<Result<String, &'static str>> {
+pub async fn worktree(root: &Path, file: &str) -> BackendResult<Result<String, UnavailableReason>> {
   let root = root.to_owned();
   let file = file.to_owned();
   crate::blocking::run(move || read_worktree(&root, &file)).await
@@ -126,7 +126,7 @@ fn content(
   repo: &git2::Repository,
   revision: Option<&str>,
   file: &str,
-) -> BackendResult<Result<String, &'static str>> {
+) -> BackendResult<Result<String, UnavailableReason>> {
   let bytes = if let Some(oid) = blob_id(repo, revision, file)? {
     object_bytes(repo, oid)?
   } else {
@@ -137,8 +137,8 @@ fn content(
 fn diff(
   file: String,
   old_path: Option<String>,
-  original: Result<String, &str>,
-  modified: Result<String, &str>,
+  original: Result<String, UnavailableReason>,
+  modified: Result<String, UnavailableReason>,
   left: &str,
   right: &str,
 ) -> FileDiff {
@@ -146,7 +146,7 @@ fn diff(
     .as_ref()
     .err()
     .or_else(|| modified.as_ref().err())
-    .map(|v| v.to_string());
+    .copied();
   let (original_content, modified_content) = if unavailable_reason.is_some() {
     (String::new(), String::new())
   } else {

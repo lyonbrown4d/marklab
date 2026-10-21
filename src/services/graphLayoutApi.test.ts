@@ -3,11 +3,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { graphLayoutApi } from '@/services/graphLayoutApi'
 import { invoke } from '@/runtime/ipc'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
 
 describe('graphLayoutApi', () => {
   it('invokes the typed graph layout commands and validates the response', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({ match: 'miss', nodes: [], viewport: null })
+    nativeIpc.invoke.mockResolvedValueOnce({ match: 'miss', nodes: [], viewport: null })
     const request = {
       engineVersion: 'elk-workspace-map-v1',
       graphRevision: 'revision-a',
@@ -24,7 +28,7 @@ describe('graphLayoutApi', () => {
   })
 
   it('rejects malformed main-process responses', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({ match: 'exact', nodes: [{ id: 'unsafe' }] })
+    nativeIpc.invoke.mockResolvedValueOnce({ match: 'exact', nodes: [{ id: 'unsafe' }] })
 
     await expect(
       graphLayoutApi.get({
@@ -37,7 +41,7 @@ describe('graphLayoutApi', () => {
   })
 
   it('validates and sends a bounded layout save', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(undefined)
+    nativeIpc.invoke.mockResolvedValueOnce(undefined)
     const value = {
       engineVersion: 'elk-workspace-map-v1',
       graphRevision: 'revision-a',
@@ -61,10 +65,12 @@ describe('graphLayoutApi', () => {
     await graphLayoutApi.save(value)
 
     expect(invoke).toHaveBeenCalledWith('fs_save_workspace_graph_layout', value)
+    await graphLayoutApi.save({ ...value, viewport: undefined })
+    expect(invoke).toHaveBeenLastCalledWith('fs_save_workspace_graph_layout', value)
   })
 
   it('rejects non-finite saved layout values', async () => {
-    vi.mocked(invoke).mockClear()
+    nativeIpc.invoke.mockClear()
 
     await expect(
       graphLayoutApi.save({

@@ -1,7 +1,9 @@
 mod cache;
 mod capture;
 mod disk_cache;
+mod image_media_type;
 mod metadata;
+use image_media_type::ImageMediaType;
 mod network;
 mod queue;
 mod sanitize;
@@ -10,12 +12,12 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct Request {
   pub url: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct CaptureRequest {
   pub url: String,
@@ -23,7 +25,7 @@ pub struct CaptureRequest {
   #[serde(default)]
   pub priority: queue::Priority,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct CaptureControl {
   pub request_id: String,
@@ -33,7 +35,7 @@ fn validate_id(value: &str) -> BackendResult<()> {
     .map(|_| ())
     .map_err(|_| crate::error::BackendError::new("INVALID_REQUEST", "Invalid preview request ID"))
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum PreviewResult {
   Webpage {
@@ -47,11 +49,11 @@ pub enum PreviewResult {
   },
   Image {
     url: String,
-    media_type: String,
+    media_type: ImageMediaType,
     src: String,
   },
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 pub struct Capture {
   pub height: u32,
   pub width: u32,
@@ -63,6 +65,7 @@ pub struct LinkPreviewService {
   inner: std::sync::Arc<cache::Inner>,
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn link_preview_fetch(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -83,6 +86,7 @@ pub async fn link_preview_fetch(
   Ok(result)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn link_preview_capture(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -111,6 +115,7 @@ pub async fn link_preview_capture(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn link_preview_cancel(
   window: WebviewWindow,
   service: State<'_, LinkPreviewService>,
@@ -122,6 +127,7 @@ pub async fn link_preview_cancel(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn link_preview_promote(
   window: WebviewWindow,
   service: State<'_, LinkPreviewService>,

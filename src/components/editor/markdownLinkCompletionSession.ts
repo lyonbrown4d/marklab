@@ -1,6 +1,6 @@
 import { CompletionItemKind, type CompletionItem } from 'vscode-languageserver-types'
 
-import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import type { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 export type MarkdownLinkSuggestion = {
   label: string
@@ -9,7 +9,7 @@ export type MarkdownLinkSuggestion = {
 }
 
 export type MarkdownLinkCompletionClient = Pick<
-  LanguageIntelligenceApi,
+  typeof languageIntelligenceApi,
   'openDocument' | 'changeDocument' | 'closeDocument' | 'completion'
 >
 

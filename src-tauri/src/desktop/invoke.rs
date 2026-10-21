@@ -1,6 +1,7 @@
-pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
-  let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
-    Box::new(tauri::generate_handler![
+// This is the sole command inventory for runtime dispatch and contract generation.
+macro_rules! desktop_commands {
+  ($consumer:ident) => {
+    $consumer![
       crate::ai::ai_cancel_generation,
       crate::ai::ai_completion_cancel,
       crate::ai::ai_completion_start,
@@ -198,7 +199,32 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
       crate::workspace::tree::workspace_tree_list_children,
       crate::workspace::tree::workspace_tree_paths_exist,
       crate::workspace::tree::workspace_tree_search,
-    ]);
+    ]
+  };
+}
+macro_rules! runtime_handler {
+  ($($command:tt)*) => { tauri::generate_handler![$($command)*] };
+}
+#[cfg(feature = "ipc-codegen")]
+macro_rules! contract_builder {
+  ($($command:tt)*) => {
+    tauri_specta::Builder::<tauri::Wry>::new()
+      .commands(tauri_specta::collect_commands![$($command)*])
+      .error_handling(tauri_specta::ErrorHandlingMode::Throw)
+      // IPC preserves JSON numbers. Rust scalar codecs reject unsafe integers
+      // before serialization or after deserialization instead of rounding them.
+      .dangerously_cast_bigints_to_number()
+      .typ::<super::event_contracts::DesktopEventPayloads>()
+  };
+}
+#[cfg(feature = "ipc-codegen")]
+pub(crate) fn export(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+  desktop_commands!(contract_builder).export(super::codegen::DesktopTypescript, path)?;
+  Ok(())
+}
+pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
+  let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
+    Box::new(desktop_commands!(runtime_handler));
   move |invoke: tauri::ipc::Invoke<tauri::Wry>| {
     if !crate::native_window::is_trusted(&invoke.message.webview()) {
       invoke

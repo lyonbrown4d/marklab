@@ -6,6 +6,7 @@ use crate::{
 use tauri::{Manager, State};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn spreadsheet_read_page(
   window: TrustedWindow,
   registry: State<'_, WorkspaceRegistry>,

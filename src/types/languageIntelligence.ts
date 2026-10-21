@@ -1,5 +1,5 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
-import type { CompletionList, Diagnostic } from 'vscode-languageserver-types'
 
 export const LANGUAGE_DOCUMENT_MAX_TEXT_LENGTH = 16 * 1024 * 1024
 export const LANGUAGE_DOCUMENT_MAX_CHANGE_TEXT_LENGTH = 4 * 1024 * 1024
@@ -33,15 +33,15 @@ export const languageDocumentOpenRequestSchema = z
     version: z.number().int().nonnegative(),
     text: z.string().max(LANGUAGE_DOCUMENT_MAX_TEXT_LENGTH),
   })
-  .strict()
+  .strict() satisfies z.ZodType<LanguageDocumentOpenRequest>
 
 export const languageDocumentIncrementalChangeSchema = z
   .object({
     range: rangeSchema,
-    rangeLength: z.number().int().nonnegative().optional(),
+    rangeLength: z.number().int().nonnegative().nullish(),
     text: z.string().max(LANGUAGE_DOCUMENT_MAX_CHANGE_TEXT_LENGTH),
   })
-  .strict()
+  .strict() satisfies z.ZodType<LanguageDocumentChangeRequest['changes'][number]>
 
 export const languageDocumentChangeRequestSchema = z
   .object({
@@ -61,11 +61,11 @@ export const languageDocumentChangeRequestSchema = z
       message: 'Document change batch text exceeds the maximum length',
       path: ['changes'],
     })
-  })
+  }) satisfies z.ZodType<LanguageDocumentChangeRequest>
 
 export const languageDocumentCloseRequestSchema = z
   .object({ uri: z.string().trim().min(1).max(4096) })
-  .strict()
+  .strict() satisfies z.ZodType<LanguageDocumentCloseRequest>
 
 export const languageCompletionRequestSchema = z
   .object({
@@ -73,28 +73,37 @@ export const languageCompletionRequestSchema = z
     version: z.number().int().nonnegative(),
     position: positionSchema,
   })
-  .strict()
+  .strict() satisfies z.ZodType<LanguageCompletionRequest>
 
 export const languageDiagnosticsRequestSchema = z
   .object({
     uri: z.string().trim().min(1).max(4096),
     version: z.number().int().nonnegative(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<LanguageDiagnosticsRequest>
 
-export type LanguageDocumentOpenRequest = z.infer<typeof languageDocumentOpenRequestSchema>
-export type LanguageDocumentChangeRequest = z.infer<typeof languageDocumentChangeRequestSchema>
-export type LanguageDocumentCloseRequest = z.infer<typeof languageDocumentCloseRequestSchema>
-export type LanguageCompletionRequest = z.infer<typeof languageCompletionRequestSchema>
-export type LanguageDiagnosticsRequest = z.infer<typeof languageDiagnosticsRequestSchema>
+export type LanguageDocumentOpenRequest = DesktopCommandArgs['language_document_open']['request']
 
-export type LanguageDocumentAck = { ok: true; version: number }
-export type LanguageDocumentCloseAck = { ok: true }
+export type LanguageDocumentChangeRequest =
+  DesktopCommandArgs['language_document_change']['request']
+
+export type LanguageDocumentCloseRequest = DesktopCommandArgs['language_document_close']['request']
+
+export type LanguageCompletionRequest = DesktopCommandArgs['language_completion']['request']
+
+export type LanguageDiagnosticsRequest = DesktopCommandArgs['language_diagnostics']['request']
+
+export type LanguageDocumentAck = DesktopCommandResults['language_document_open']
+export type LanguageDocumentCloseAck = DesktopCommandResults['language_document_close']
 
 export type LanguageIntelligenceApi = {
   openDocument: (request: LanguageDocumentOpenRequest) => Promise<LanguageDocumentAck>
   changeDocument: (request: LanguageDocumentChangeRequest) => Promise<LanguageDocumentAck>
   closeDocument: (request: LanguageDocumentCloseRequest) => Promise<LanguageDocumentCloseAck>
-  completion: (request: LanguageCompletionRequest) => Promise<CompletionList>
-  diagnostics: (request: LanguageDiagnosticsRequest) => Promise<Diagnostic[]>
+  completion: (
+    request: LanguageCompletionRequest,
+  ) => Promise<DesktopCommandResults['language_completion']>
+  diagnostics: (
+    request: LanguageDiagnosticsRequest,
+  ) => Promise<DesktopCommandResults['language_diagnostics']>
 }

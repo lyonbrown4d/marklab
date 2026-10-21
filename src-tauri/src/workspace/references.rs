@@ -19,7 +19,8 @@ pub(super) async fn prepare(
   workspace.ensure_active()?;
   let root = workspace.root_info();
   let directory = workspace.root_directory();
-  let single = (root.kind == "single").then(|| std::path::PathBuf::from(root.path));
+  let single =
+    (root.kind == crate::workspace::RootKind::Single).then(|| std::path::PathBuf::from(root.path));
   let from = from.to_owned();
   let to = to.to_owned();
   // A fresh scan/read observes external changes before notify's debounce.
@@ -28,13 +29,13 @@ pub(super) async fn prepare(
     let entries = scanning::scan(&directory, single.as_deref())?;
     let paths = entries
       .iter()
-      .filter(|entry| entry.kind == "file")
+      .filter(|entry| entry.kind == crate::workspace::EntryKind::File)
       .map(|entry| entry.path.clone())
       .collect();
     let mut documents = BTreeMap::new();
     let mut total = 0usize;
     for entry in entries.iter().filter(|entry| {
-      entry.kind == "file"
+      entry.kind == crate::workspace::EntryKind::File
         && std::path::Path::new(&entry.path)
           .extension()
           .and_then(|value| value.to_str())
@@ -91,7 +92,7 @@ fn rewrite(document: &document::Document, from: &str, to: &str) -> BackendResult
       .target
       .find(['?', '#'])
       .map_or("", |offset| &link.target[offset..]);
-    let destination = if link.link_type == "wiki" {
+    let destination = if link.link_type == crate::analysis::document::LinkKind::Wiki {
       let filename = next.rsplit('/').next().unwrap_or(&next);
       let label = match filename.rsplit_once('.') {
         Some((stem, extension))

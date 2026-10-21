@@ -1,11 +1,5 @@
-import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
-export type RuntimeWebviewDropEvent = {
-  paths: string[]
-  position: {
-    x: number
-    y: number
-  }
-}
+import { getDesktopRuntime, isDesktopRuntime, type DesktopFileDropEvent } from '@/runtime/desktop'
+export type RuntimeWebviewDropEvent = DesktopFileDropEvent
 export const onRuntimeWebviewFileDrop = async (
   handler: (event: RuntimeWebviewDropEvent) => void,
 ): Promise<(() => void) | null> => {

@@ -25,7 +25,7 @@ const api = vi.hoisted(() => ({
 vi.mock('@/services/gitApi', () => ({ gitApiForWorkspace: vi.fn(() => api) }))
 vi.mock('@/services/fsApi', () => ({ fsApi: { flushBuffers: vi.fn(async () => undefined) } }))
 const state: GitStatusSnapshot = {
-  repo: { is_repository: true },
+  repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: true },
   staged: [],
   unstaged: [],
   untracked: [],

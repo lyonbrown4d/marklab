@@ -53,7 +53,11 @@ beforeEach(() => {
 describe('editor buffer status confirmation', () => {
   it('acknowledges the current saved revision and content from native events', () => {
     const { identity, options } = createHarness()
-    act(() => mocks.handler?.({ payload: { path: 'note.md', revision: 1, dirty: false } }))
+    act(() =>
+      mocks.handler?.({
+        payload: { path: 'note.md', revision: 1, dirty: false, session_generation: 3 },
+      }),
+    )
     expect(options.markPathClean).toHaveBeenCalledWith(
       'internal:/workspace',
       'note.md',
@@ -65,7 +69,11 @@ describe('editor buffer status confirmation', () => {
   it('does not let an old acknowledgement mark newer local content clean', () => {
     const { identity, options } = createHarness()
     options.changeVersionRef.current[identity] = 2
-    act(() => mocks.handler?.({ payload: { path: 'note.md', revision: 1, dirty: false } }))
+    act(() =>
+      mocks.handler?.({
+        payload: { path: 'note.md', revision: 1, dirty: false, session_generation: 3 },
+      }),
+    )
     expect(options.markPathClean).not.toHaveBeenCalled()
     expect(options.persistence.revisionFor(identity)).toBeUndefined()
   })
@@ -74,7 +82,9 @@ describe('editor buffer status confirmation', () => {
     const { options } = createHarness()
     act(() => {
       mocks.handler?.({ payload: null })
-      mocks.handler?.({ payload: { path: 'note.md', revision: 2, dirty: false } })
+      mocks.handler?.({
+        payload: { path: 'note.md', revision: 2, dirty: false, session_generation: 3 },
+      })
     })
     expect(options.markPathClean).not.toHaveBeenCalled()
     expect(options.markPathDirty).not.toHaveBeenCalled()

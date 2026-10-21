@@ -1,11 +1,34 @@
+use super::protocol::{CompletionResponse, completion_list, position as lsp_position};
 use super::{types::Position, utf16};
 use crate::error::{BackendError, BackendResult};
+use lsp_types::{
+  CompletionItem, CompletionItemKind, CompletionTextEdit, Diagnostic, DiagnosticSeverity,
+  InsertTextFormat, Range, TextEdit,
+};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
-use serde_json::{Value, json};
-use std::sync::LazyLock;
+use serde::Deserialize;
+use std::{collections::BTreeMap, sync::LazyLock};
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Catalog {
+  diagram_declarations: Vec<Template>,
+  class_member_statements: Vec<Template>,
+  er_attribute_statements: Vec<Template>,
+  statement_catalog: BTreeMap<String, Vec<Template>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Template {
+  label: String,
+  detail: String,
+  kind: CompletionItemKind,
+  new_text: String,
+}
 
 // Static templates preserve the existing editor catalog without a Node runtime.
-static CATALOG: LazyLock<Result<Value, serde_json::Error>> =
+static CATALOG: LazyLock<Result<Catalog, serde_json::Error>> =
   LazyLock::new(|| serde_json::from_str(include_str!("mermaid_catalog.json")));
 pub struct Block {
   pub text: String,
@@ -44,10 +67,10 @@ pub fn blocks(text: &str) -> Vec<Block> {
   output
 }
 
-pub fn completion(text: &str, position: Position) -> BackendResult<Value> {
+pub fn completion(text: &str, position: Position) -> BackendResult<CompletionResponse> {
   utf16::offset(text, position)?;
   if text.encode_utf16().count() > 128 * 1024 {
-    return Ok(json!({"isIncomplete":false,"items":[]}));
+    return Ok(completion_list(Vec::new(), false));
   }
   let catalog = CATALOG
     .as_ref()
@@ -103,36 +126,73 @@ pub fn completion(text: &str, position: Position) -> BackendResult<Value> {
       _ => depth,
     });
   let templates = match diagram {
-    Some("class") if depth > 0 => &catalog["classMemberStatements"],
-    Some("er") if depth > 0 => &catalog["erAttributeStatements"],
-    Some(kind) => &catalog["statementCatalog"][kind],
-    None if token.is_empty() || !recognized(&token) => &catalog["diagramDeclarations"],
-    None => return Ok(json!({"isIncomplete":false,"items":[]})),
+    Some("class") if depth > 0 => catalog.class_member_statements.as_slice(),
+    Some("er") if depth > 0 => catalog.er_attribute_statements.as_slice(),
+    Some(kind) => catalog
+      .statement_catalog
+      .get(kind)
+      .map_or(&[][..], Vec::as_slice),
+    None if token.is_empty() || !recognized(&token) => catalog.diagram_declarations.as_slice(),
+    None => return Ok(completion_list(Vec::new(), false)),
   };
-  let items=templates.as_array().into_iter().flatten().enumerate().map(|(index,template)|json!({"label":template["label"],"detail":template["detail"],"filterText":template["label"],"insertTextFormat":2,"kind":template["kind"],"sortText":format!("{index:03}"),"textEdit":{"newText":template["newText"],"range":{"start":{"line":position.line,"character":line[..start].encode_utf16().count()},"end":{"line":position.line,"character":line[..end].encode_utf16().count()}}}})).collect::<Vec<_>>();
-  Ok(json!({"isIncomplete":false,"items":items}))
+  let items = templates
+    .iter()
+    .enumerate()
+    .map(|(index, template)| CompletionItem {
+      label: template.label.clone(),
+      detail: Some(template.detail.clone()),
+      filter_text: Some(template.label.clone()),
+      insert_text_format: Some(InsertTextFormat::SNIPPET),
+      kind: Some(template.kind),
+      sort_text: Some(format!("{index:03}")),
+      text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+        new_text: template.new_text.clone(),
+        range: Range::new(
+          lsp_position(position.line, line[..start].encode_utf16().count()),
+          lsp_position(position.line, line[..end].encode_utf16().count()),
+        ),
+      })),
+      ..CompletionItem::default()
+    })
+    .collect();
+  Ok(completion_list(items, false))
 }
 
-pub fn diagnostics(text: &str, line_offset: usize) -> Value {
+pub fn diagnostics(text: &str, line_offset: usize) -> Vec<Diagnostic> {
   if text.trim().is_empty() {
-    return json!([]);
+    return Vec::new();
   }
   let failure = if text.encode_utf16().count() > 128 * 1024 {
     Some((
       "Mermaid language features are disabled above 131072 characters.".into(),
-      3,
+      DiagnosticSeverity::INFORMATION,
     ))
   } else {
     match merman_core::Engine::new().parse_diagram_sync(text, merman_core::ParseOptions::strict()) {
       Ok(Some(_)) => None,
-      Ok(None) => Some(("Unknown Mermaid diagram declaration".into(), 1)),
-      Err(error) => Some((error.to_string(), 1)),
+      Ok(None) => Some((
+        "Unknown Mermaid diagram declaration".into(),
+        DiagnosticSeverity::ERROR,
+      )),
+      Err(error) => Some((error.to_string(), DiagnosticSeverity::ERROR)),
     }
   };
   match failure {
-    None => json!([]),
+    None => Vec::new(),
     Some((message, severity)) => {
-      json!([{"message":message.chars().take(500).collect::<String>(),"range":{"start":{"line":line_offset,"character":0},"end":{"line":line_offset,"character":usize::from(!text.lines().next().unwrap_or("").is_empty())}},"severity":severity,"source":"mermaid"}])
+      vec![Diagnostic {
+        message: message.chars().take(500).collect(),
+        range: Range::new(
+          lsp_position(line_offset, 0),
+          lsp_position(
+            line_offset,
+            usize::from(!text.lines().next().unwrap_or("").is_empty()),
+          ),
+        ),
+        severity: Some(severity),
+        source: Some("mermaid".into()),
+        ..Diagnostic::default()
+      }]
     }
   }
 }

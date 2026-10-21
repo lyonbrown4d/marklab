@@ -1,19 +1,20 @@
+use super::projections::Projection;
 use super::{AnalysisService, graph, queries, search, status};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{
   error::BackendResult,
   workspace::{EmptyRequest, WorkspaceRegistry},
 };
-use serde_json::{Value, json};
 use tauri::State;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_query_workspace_pages(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: queries::PageRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<queries::PageResult>> {
   project(
     &window,
     &registry,
@@ -25,12 +26,13 @@ pub async fn fs_query_workspace_pages(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_query_workspace_navigation(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: queries::NavigationRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<queries::NavigationResult>> {
   project(
     &window,
     &registry,
@@ -42,12 +44,13 @@ pub async fn fs_query_workspace_navigation(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_document_insights(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: queries::InsightsRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<queries::InsightsResult>> {
   project(
     &window,
     &registry,
@@ -59,12 +62,13 @@ pub async fn fs_get_workspace_document_insights(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_knowledge_summary(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<queries::KnowledgeSummary>> {
   let _ = request;
   project(&window, &registry, &analysis, "summary", (), |index, ()| {
     Ok(queries::summary(index))
@@ -72,12 +76,13 @@ pub async fn fs_get_workspace_knowledge_summary(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_graph(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<graph::WorkspaceGraph>> {
   let _ = request;
   project(&window, &registry, &analysis, "graph", (), |index, ()| {
     Ok(graph::graph(index))
@@ -85,12 +90,13 @@ pub async fn fs_get_workspace_graph(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_graph_node_details(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: graph::DetailsRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<graph::GraphDetails>> {
   project(
     &window,
     &registry,
@@ -102,12 +108,13 @@ pub async fn fs_get_workspace_graph_node_details(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_workspace_publication_plan(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<std::sync::Arc<Value>> {
+) -> BackendResult<std::sync::Arc<graph::PublicationPlan>> {
   let _ = request;
   project(
     &window,
@@ -120,6 +127,7 @@ pub async fn fs_get_workspace_publication_plan(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_search_workspace(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -136,6 +144,7 @@ pub async fn fs_search_workspace(
   Ok(result)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_search_workspace_occurrences(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -154,16 +163,21 @@ pub async fn fs_search_workspace_occurrences(
   Ok(result)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_cancel_workspace_occurrence_search(
   window: WebviewWindow,
   analysis: State<'_, AnalysisService>,
   request: search::CancelRequest,
-) -> BackendResult<Value> {
-  Ok(
-    json!({"cancelled":analysis.cancel_occurrence(window.label(),&request.request_id).await,"requestId":request.request_id}),
-  )
+) -> BackendResult<status::OccurrenceCancellation> {
+  Ok(status::OccurrenceCancellation {
+    cancelled: analysis
+      .cancel_occurrence(window.label(), &request.request_id)
+      .await,
+    request_id: request.request_id,
+  })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_rebuild_search_index(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -177,57 +191,68 @@ pub async fn fs_rebuild_search_index(
   Ok(())
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn knowledge_engine_status(
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<status::EngineStatus> {
   let _ = request;
   Ok(analysis.status().await)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn knowledge_engine_initialize(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<status::EngineInitialization> {
   let _ = request;
   analysis.index(registry.get(window.label())?).await?;
-  Ok(json!({"ok":true,"response":{"mode":"rust-embedded"},"status":analysis.status().await}))
+  Ok(status::EngineInitialization {
+    ok: true,
+    response: status::EmbeddedMode {
+      mode: status::EngineMode::RustEmbedded,
+    },
+    status: analysis.status().await,
+  })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn knowledge_engine_stop(
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<status::EngineStatus> {
   let _ = request;
   analysis.stop().await?;
   Ok(analysis.status().await)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn knowledge_engine_workspace_status(
   analysis: State<'_, AnalysisService>,
   request: status::WorkspaceStatusRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<status::EngineWorkspaceStatus> {
   analysis.workspace_status(&request.workspace_id).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn knowledge_engine_workspaces(
   analysis: State<'_, AnalysisService>,
   request: EmptyRequest,
-) -> BackendResult<Vec<Value>> {
+) -> BackendResult<Vec<status::EngineWorkspace>> {
   let _ = request;
   Ok(analysis.workspaces().await)
 }
 
-async fn project<R: serde::Serialize + Send + 'static>(
+async fn project<R: serde::Serialize + Send + 'static, T: Projection>(
   window: &WebviewWindow,
   registry: &WorkspaceRegistry,
   analysis: &AnalysisService,
   kind: &'static str,
   request: R,
-  task: impl FnOnce(&super::Index, R) -> BackendResult<Value> + Send + 'static,
-) -> BackendResult<std::sync::Arc<Value>> {
+  task: impl FnOnce(&super::Index, R) -> BackendResult<T> + Send + 'static,
+) -> BackendResult<std::sync::Arc<T>> {
   let workspace = registry.get(window.label())?;
   let index = analysis.index(workspace.clone()).await?;
   let revision = index.revision;

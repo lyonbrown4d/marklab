@@ -1,5 +1,6 @@
+use super::super::protocol::position;
+use lsp_types::{Diagnostic, DiagnosticSeverity, Range as LspRange};
 use pulldown_cmark::{BrokenLink, Event, LinkType, Options, Parser, Tag};
-use serde_json::{Value, json};
 use std::{
   cell::RefCell,
   collections::{BTreeMap, HashSet},
@@ -20,7 +21,7 @@ fn options() -> Options {
     | Options::ENABLE_WIKILINKS
 }
 
-pub(super) fn compute(text: &str) -> Vec<Value> {
+pub(super) fn compute(text: &str) -> Vec<Diagnostic> {
   let lines: Vec<_> = std::iter::once(0)
     .chain(text.match_indices('\n').map(|(offset, _)| offset + 1))
     .collect();
@@ -180,12 +181,17 @@ fn label_range(text: &str, span: Range<usize>, kind: LinkType) -> Range<usize> {
   start..end
 }
 
-fn diagnostic(text: &str, lines: &[usize], span: Range<usize>, message: String) -> Value {
+fn diagnostic(text: &str, lines: &[usize], span: Range<usize>, message: String) -> Diagnostic {
   let end = span.start + text[span.clone()].trim_end_matches(['\r', '\n']).len();
   let coordinate = |offset| {
     let line = lines.partition_point(|start| *start <= offset) - 1;
-    json!({"line":line,"character":text[lines[line]..offset].encode_utf16().count()})
+    position(line, text[lines[line]..offset].encode_utf16().count())
   };
-  json!({"message":message,"range":{"start":coordinate(span.start),
-        "end":coordinate(end.max(span.start))},"severity":2,"source":"markdown"})
+  Diagnostic {
+    message,
+    range: LspRange::new(coordinate(span.start), coordinate(end.max(span.start))),
+    severity: Some(DiagnosticSeverity::WARNING),
+    source: Some("markdown".into()),
+    ..Diagnostic::default()
+  }
 }

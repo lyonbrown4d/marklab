@@ -1,7 +1,7 @@
 pub use super::menu_sections::install;
 use crate::error::{BackendError, BackendResult};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, menu::MenuItem};
+use tauri::{AppHandle, Manager, menu::MenuItem};
 #[derive(Default)]
 pub struct MenuState {
   pub(super) items: Mutex<Vec<(MenuItem<tauri::Wry>, String)>>,
@@ -108,7 +108,9 @@ pub fn dispatch(app: &AppHandle, id: &str) -> BackendResult<()> {
             .unwrap_or_default();
           let root = workspace.root_info();
           seed.state.insert("rootPath".into(), root.path.into());
-          seed.state.insert("rootKind".into(), root.kind.into());
+          seed
+            .state
+            .insert("rootKind".into(), root.kind.as_str().into());
           super::windows::restore_window(&app, seed).await
         }
         .await;
@@ -117,10 +119,10 @@ pub fn dispatch(app: &AppHandle, id: &str) -> BackendResult<()> {
         }
       });
     }
-    _ => window.emit_to(
+    _ => crate::desktop::event_contracts::MENU_ACTION.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "menu-action",
-      id,
+      &((id).to_string()),
     )?,
   }
   Ok(())

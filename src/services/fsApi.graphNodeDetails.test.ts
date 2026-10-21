@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke } from '@/runtime/ipc'
 import { fsApi } from '@/services/fsApi'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
 
 describe('fsApi graph node details', () => {
-  beforeEach(() => vi.mocked(invoke).mockReset())
+  beforeEach(() => nativeIpc.invoke.mockReset())
 
   it('uses the bounded node-details command and validates its response', async () => {
     const request = {
@@ -14,7 +18,7 @@ describe('fsApi graph node details', () => {
       max_nodes: 1,
       revision: 'revision-3',
     }
-    vi.mocked(invoke).mockResolvedValue({
+    nativeIpc.invoke.mockResolvedValue({
       items: [
         {
           id: 'file:notes/a.md',
@@ -62,7 +66,7 @@ describe('fsApi graph node details', () => {
         })),
       },
     ]) {
-      vi.mocked(invoke).mockResolvedValue({
+      nativeIpc.invoke.mockResolvedValue({
         items: [{ id: 'file:a.md', content: 'x', preview }],
         revision: 'r1',
         truncated: false,
@@ -72,7 +76,7 @@ describe('fsApi graph node details', () => {
   })
 
   it('accepts older node details without a preview for escaped text fallback', async () => {
-    vi.mocked(invoke).mockResolvedValue({
+    nativeIpc.invoke.mockResolvedValue({
       items: [{ id: 'file:a.md', content: '**Legacy**' }],
       revision: 'r1',
       truncated: false,
@@ -83,6 +87,8 @@ describe('fsApi graph node details', () => {
         node_ids: ['file:a.md'],
         revision: 'r1',
       }),
-    ).resolves.toMatchObject({ items: [{ content: '**Legacy**' }] })
+    ).resolves.toMatchObject({
+      items: [{ content: '**Legacy**', preview: { html: '', math: [] } }],
+    })
   })
 })

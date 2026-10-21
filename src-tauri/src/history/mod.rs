@@ -65,7 +65,7 @@ impl HistoryStore {
     now: i64,
   ) -> BackendResult<CaptureResult> {
     let path = normalize_path(path)?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     if content.len() > self.max_file_bytes {
       return Ok(CaptureResult::Skipped {
         reason: "file-too-large",
@@ -119,7 +119,7 @@ impl HistoryStore {
   }
   pub async fn list(&self, root: &RootInfo, path: &str) -> BackendResult<Vec<HistoryEntry>> {
     let path = normalize_path(path)?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let rows = sqlx::query("SELECT id,path,created_at,size_bytes,content_hash FROM history_entries WHERE workspace_key=? AND path=? ORDER BY created_at_ms DESC,id DESC LIMIT ?")
             .bind(key).bind(path).bind(self.max_entries).fetch_all(&self.pool).await?;
     Ok(rows.into_iter().map(to_entry).collect())
@@ -132,7 +132,7 @@ impl HistoryStore {
   ) -> BackendResult<HistorySnapshot> {
     validate_entry_id(id)?;
     let path = normalize_path(path)?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let row = sqlx::query("SELECT id,path,created_at,size_bytes,content_hash,content FROM history_entries WHERE workspace_key=? AND path=? AND id=?")
             .bind(key).bind(path).bind(id).fetch_optional(&self.pool).await?.ok_or_else(|| not_found(id))?;
     let content: String = row.get("content");
@@ -209,7 +209,7 @@ impl HistoryStore {
   pub async fn delete(&self, root: &RootInfo, path: &str, id: &str) -> BackendResult<DeleteResult> {
     validate_entry_id(id)?;
     let path = normalize_path(path)?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let deleted =
       sqlx::query("DELETE FROM history_entries WHERE workspace_key=? AND path=? AND id=?")
         .bind(key)
@@ -225,7 +225,7 @@ impl HistoryStore {
   }
   pub async fn clear(&self, root: &RootInfo, path: &str) -> BackendResult<ClearResult> {
     let path = normalize_path(path)?;
-    let key = workspace_key(&root.kind, &root.path)?;
+    let key = workspace_key(root.kind.as_str(), &root.path)?;
     let deleted = sqlx::query("DELETE FROM history_entries WHERE workspace_key=? AND path=?")
       .bind(key)
       .bind(path)

@@ -28,7 +28,7 @@ vi.mock('@/services/gitApi', () => {
   return { gitApi, gitApiForWorkspace: () => gitApi }
 })
 const state: GitStatusSnapshot = {
-  repo: { is_repository: true, branch: 'main' },
+  repo: { workdir: null, git_dir: null, head: null, is_repository: true, branch: 'main' },
   staged: [],
   unstaged: [],
   untracked: [],
@@ -70,7 +70,10 @@ describe('source control lifecycle', () => {
   })
   it('initializes only after confirmation and updates the repository display', async () => {
     const user = userEvent.setup()
-    vi.mocked(gitApi.getStatus).mockResolvedValueOnce({ ...state, repo: { is_repository: false } })
+    vi.mocked(gitApi.getStatus).mockResolvedValueOnce({
+      ...state,
+      repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: false },
+    })
     vi.mocked(gitApi.initRepo).mockResolvedValue(state.repo)
     renderPanel()
     await user.click(await screen.findByRole('button', { name: 'Initialize Repository' }))
@@ -84,7 +87,10 @@ describe('source control lifecycle', () => {
   })
   it('cancels initialization and opens history with the current root', async () => {
     const user = userEvent.setup()
-    vi.mocked(gitApi.getStatus).mockResolvedValue({ ...state, repo: { is_repository: false } })
+    vi.mocked(gitApi.getStatus).mockResolvedValue({
+      ...state,
+      repo: { workdir: null, git_dir: null, branch: null, head: null, is_repository: false },
+    })
     const view = renderPanel()
     await user.click(await screen.findByRole('button', { name: 'Initialize Repository' }))
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))

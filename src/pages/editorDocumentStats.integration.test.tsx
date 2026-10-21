@@ -1,37 +1,54 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { KeepAlive } from 'keepalive-for-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppStatusBarProvider, EditorStatusBarSlot } from '@/components/EditorStatusBar'
 import SourceCodePage from '@/pages/SourceCodePage'
 import WysiwygEditorPage from '@/pages/WysiwygEditorPage'
+import type { RpcWorker } from '@/services/workerRpcClient'
 
-const workerState = vi.hoisted(() => {
-  type Request = { content: string; id: number; task: 'stats' }
-  class ControlledWorker {
-    onerror: ((event: ErrorEvent) => void) | null = null
-    onmessage: ((event: MessageEvent) => void) | null = null
-    terminate = vi.fn()
-    postMessage = (request: Request) => requests.push({ request, worker: this })
-    respond = (request: Request, ok = true) => {
-      this.onmessage?.({
-        data: ok
-          ? {
-              id: request.id,
-              task: request.task,
-              ok: true,
-              payload: { characters: 344, lines: 12, words: 38 },
-            }
-          : { id: request.id, task: request.task, ok: false, error: 'Analysis failed' },
-      } as MessageEvent)
-    }
-  }
-  const requests: { request: Request; worker: ControlledWorker }[] = []
-  return { ControlledWorker, requests, richMounts: vi.fn(), sourceMounts: vi.fn() }
-})
-
-vi.mock('@/workers/markdownTextAnalysisWorker?worker', () => ({
-  default: workerState.ControlledWorker,
+type StatsRequest = { content: string; complete: (ok: boolean) => void }
+type ControlledWorker = RpcWorker & {
+  respond: (request: StatsRequest, ok?: boolean) => Promise<void>
+}
+const workerState = vi.hoisted(() => ({
+  requests: [] as { request: StatsRequest; worker: ControlledWorker }[],
+  workers: [] as ControlledWorker[],
+  richMounts: vi.fn(),
+  sourceMounts: vi.fn(),
 }))
+
+vi.mock('@/workers/markdownTextAnalysisWorker?worker', async () => {
+  const { createComlinkTestWorker } = await import('@/test/comlinkTestWorker')
+  return {
+    default: class {
+      constructor() {
+        const { worker } = createComlinkTestWorker({
+          stats: (content: string) =>
+            new Promise((resolve, reject) => {
+              workerState.requests.push({
+                worker: controlled,
+                request: {
+                  content,
+                  complete: (ok) => {
+                    if (ok) resolve({ characters: 344, lines: 12, words: 38 })
+                    else reject(new Error('Analysis failed'))
+                  },
+                },
+              })
+            }),
+        })
+        const controlled = Object.assign(worker, {
+          respond: async (request: StatsRequest, ok = true) => {
+            request.complete(ok)
+            await new Promise<void>((resolve) => setImmediate(resolve))
+          },
+        })
+        workerState.workers.push(controlled)
+        return controlled
+      }
+    },
+  }
+})
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({ t: (key: string) => key.replace('status.', '') }),
 }))
@@ -115,9 +132,15 @@ describe('cached editor document statistics', () => {
     workerState.requests.length = 0
     workerState.richMounts.mockClear()
     workerState.sourceMounts.mockClear()
-    vi.stubGlobal('Worker', workerState.ControlledWorker)
+    vi.stubGlobal('Worker', vi.fn())
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    cleanup()
+    for (const worker of workerState.workers.splice(0)) {
+      worker.onerror?.(new ErrorEvent('error', { message: 'Test cleanup' }))
+    }
+    vi.unstubAllGlobals()
+  })
 
   it('cancels hidden rich work and recomputes unchanged content through source/rich cache round trips', async () => {
     const view = render(<StatsLayout />)

@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use tokio_util::sync::CancellationToken;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -10,7 +10,7 @@ mod graph;
 #[path = "community_partition.rs"]
 mod partition;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphCommunityRequest {
   pub request_id: String,
@@ -18,14 +18,14 @@ pub struct GraphCommunityRequest {
   pub edges: Vec<GraphCommunityEdge>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphCommunityNode {
   pub id: String,
   pub label: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GraphCommunityEdge {
   pub source: String,
@@ -35,7 +35,7 @@ pub struct GraphCommunityEdge {
 impl GraphCommunityRequest {
   pub(super) fn normalize(&mut self) -> BackendResult<()> {
     // Validate endpoints and metadata before normalization and cache lookup.
-    graph::CommunityGraph::new(self, &AtomicBool::new(false))?;
+    graph::CommunityGraph::new(self, &CancellationToken::new())?;
     self.nodes.sort_by(|left, right| left.id.cmp(&right.id));
     for edge in &mut self.edges {
       if edge.source > edge.target {
@@ -53,13 +53,13 @@ impl GraphCommunityRequest {
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphCommunityResult {
   pub communities: Vec<GraphCommunity>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphCommunity {
   pub id: String,
@@ -71,7 +71,7 @@ pub struct GraphCommunity {
 /// Synchronous CPU work; the caller owns spawn_blocking, caching, and request lifetime.
 pub fn detect_communities(
   request: &GraphCommunityRequest,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<GraphCommunityResult> {
   ensure_running(cancelled)?;
   let graph = graph::CommunityGraph::new(request, cancelled)?;
@@ -108,8 +108,8 @@ pub fn detect_communities(
   Ok(GraphCommunityResult { communities })
 }
 
-pub(super) fn ensure_running(cancelled: &AtomicBool) -> BackendResult<()> {
-  if cancelled.load(Ordering::Relaxed) {
+pub(super) fn ensure_running(cancelled: &CancellationToken) -> BackendResult<()> {
+  if cancelled.is_cancelled() {
     return Err(BackendError::new(
       "GRAPH_CANCELLED",
       "Graph community detection was cancelled",

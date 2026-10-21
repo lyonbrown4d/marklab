@@ -17,7 +17,7 @@ export const useAppMenuEventSync = (handleMenuAction: (action: string) => void) 
     let cancelled = false
     let unlisten: (() => void) | undefined
     if (isDesktopRuntime()) {
-      void listen<string>('menu-action', (event) => {
+      void listen('menu-action', (event) => {
         if (!cancelled) handleMenuAction(event.payload)
       })
         .then((fn) => {

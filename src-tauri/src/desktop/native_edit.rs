@@ -3,7 +3,7 @@ use crate::{
   error::{BackendError, BackendResult},
   native_window::TrustedWindow,
 };
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 pub(super) async fn focused_child(window: &TrustedWindow) -> BackendResult<Option<tauri::Webview>> {
   let Some(tabs) = window.try_state::<crate::web_tabs::WebTabs>() else {
     return Ok(None);
@@ -28,10 +28,10 @@ pub(super) async fn dispatch_menu(window: &TrustedWindow, id: &str) -> BackendRe
   if focused_child(window).await?.is_some() {
     execute(window, action).await
   } else {
-    window.emit_to(
+    crate::desktop::event_contracts::MENU_ACTION.emit_to(
+      window.app_handle(),
       tauri::EventTarget::webview_window(window.label()),
-      "menu-action",
-      id,
+      &((id).to_string()),
     )?;
     Ok(())
   }

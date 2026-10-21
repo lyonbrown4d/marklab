@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { invoke } from '@/runtime/ipc'
-import { listen } from '@/runtime/events'
+import type { RuntimeEvent } from '@/runtime/events'
 import { aiApi } from '@/services/aiApi'
 
-vi.mock('@/runtime/ipc', () => ({ invoke: vi.fn() }))
-vi.mock('@/runtime/events', () => ({ listen: vi.fn() }))
+// Native responses stay unknown so malformed-payload cases exercise runtime validation.
+const nativeIpc = vi.hoisted(() => ({
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+vi.mock('@/runtime/ipc', () => nativeIpc)
+const nativeEvents = vi.hoisted(() => ({
+  listen:
+    vi.fn<(name: string, handler: (event: RuntimeEvent<unknown>) => void) => Promise<() => void>>(),
+}))
+vi.mock('@/runtime/events', () => nativeEvents)
 
 const publicProvider = {
   id: 'openai-main',
@@ -24,37 +32,43 @@ const publicProvider = {
 
 describe('aiApi', () => {
   beforeEach(() => {
-    vi.mocked(invoke).mockReset()
-    vi.mocked(listen).mockReset()
+    nativeIpc.invoke.mockReset()
+    nativeEvents.listen.mockReset()
   })
 
   it('validates public provider responses and never models a plaintext key', async () => {
-    vi.mocked(invoke).mockResolvedValue([publicProvider])
+    nativeIpc.invoke.mockResolvedValue([publicProvider])
 
     await expect(aiApi.listProviders()).resolves.toEqual([publicProvider])
     expect(invoke).toHaveBeenCalledWith('ai_list_providers')
   })
 
   it('sends bounded generation requests and validates the result', async () => {
-    vi.mocked(invoke).mockResolvedValue({
+    nativeIpc.invoke.mockResolvedValue({
       text: 'Hello',
       finishReason: 'stop',
       usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       warnings: [],
     })
-    const request = { providerId: 'openai-main', prompt: 'Hi', maxOutputTokens: 16 }
+    const request = {
+      providerId: 'openai-main',
+      prompt: 'Hi',
+      maxOutputTokens: 16,
+      system: null,
+      temperature: null,
+    }
 
     await expect(aiApi.generateText(request)).resolves.toMatchObject({ text: 'Hello' })
     expect(invoke).toHaveBeenCalledWith('ai_generate_text', request)
   })
 
   it('rejects native responses that attempt to expose a plaintext API key', async () => {
-    vi.mocked(invoke).mockResolvedValue([{ ...publicProvider, apiKey: 'leaked-secret' }])
+    nativeIpc.invoke.mockResolvedValue([{ ...publicProvider, apiKey: 'leaked-secret' }])
     await expect(aiApi.listProviders()).rejects.toThrow()
   })
 
   it('starts and cancels a validated streaming generation', async () => {
-    vi.mocked(invoke)
+    nativeIpc.invoke
       .mockResolvedValueOnce({ requestId: 'request-1' })
       .mockResolvedValueOnce({ ok: true })
 
@@ -74,11 +88,11 @@ describe('aiApi', () => {
 
   it('validates every generation event before delivering it', async () => {
     const unlisten = vi.fn()
-    vi.mocked(listen).mockResolvedValue(unlisten)
+    nativeEvents.listen.mockResolvedValue(unlisten)
     const handler = vi.fn()
 
     await expect(aiApi.onGenerationEvent(handler)).resolves.toBe(unlisten)
-    const runtimeHandler = vi.mocked(listen).mock.calls[0]?.[1]
+    const runtimeHandler = nativeEvents.listen.mock.calls[0]?.[1]
     runtimeHandler?.({
       event: 'ai-generation-event',
       id: 1,

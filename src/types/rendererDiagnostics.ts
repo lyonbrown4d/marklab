@@ -1,20 +1,6 @@
-export type RendererDiagnosticLevel = 'debug' | 'error' | 'info' | 'warn'
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 
-export type RendererDiagnosticError = {
-  message: string
-  name?: string
-  stack?: string
-}
-
-export type RendererDiagnosticReport = {
-  error?: RendererDiagnosticError
-  event: string
-  level: RendererDiagnosticLevel
-  message?: string
-  scope: string
-}
-
-export type RendererDiagnosticResult = {
-  ok: boolean
-  reason?: 'rate-limited'
-}
+export type RendererDiagnosticReport = DesktopCommandArgs['diagnostics_renderer_report']['request']
+export type RendererDiagnosticLevel = RendererDiagnosticReport['level']
+export type RendererDiagnosticError = NonNullable<RendererDiagnosticReport['error']>
+export type RendererDiagnosticResult = DesktopCommandResults['diagnostics_renderer_report']

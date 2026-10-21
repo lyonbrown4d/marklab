@@ -75,7 +75,7 @@ export const createWindowApis = (events: TauriEventHub) => {
   }
 
   unlisten.push(
-    events.on<{ requestId: string }>('window-flush-requested', ({ requestId }) => {
+    events.on('window-flush-requested', ({ requestId }) => {
       void flush()
         .then(
           () => request('window_flush_result', { requestId }),

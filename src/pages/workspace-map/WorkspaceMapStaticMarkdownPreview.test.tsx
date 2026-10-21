@@ -67,7 +67,12 @@ describe('WorkspaceMapStaticMarkdownPreview', () => {
       />,
     )
     expect(screen.getByText('Next').closest('p')).not.toBeNull()
-    view.rerender(<WorkspaceMapStaticMarkdownPreview markdown="Fallback again" />)
+    view.rerender(
+      <WorkspaceMapStaticMarkdownPreview
+        markdown="Fallback again"
+        preview={{ html: '', math: [] }}
+      />,
+    )
     expect(screen.getByTestId('workspace-map-document-preview')).toHaveTextContent('Fallback again')
     expect(screen.queryByText('Next')).not.toBeInTheDocument()
   })

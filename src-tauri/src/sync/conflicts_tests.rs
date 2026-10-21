@@ -14,7 +14,7 @@ async fn fixture() -> (tempfile::TempDir, SyncService, Arc<Workspace>) {
     .unwrap();
   let workspace = Arc::new(Workspace::new(
     RootInfo {
-      kind: "external".into(),
+      kind: crate::workspace::RootKind::External,
       path: root.to_string_lossy().into(),
     },
     1,
@@ -23,7 +23,7 @@ async fn fixture() -> (tempfile::TempDir, SyncService, Arc<Workspace>) {
     .set_channel(
       &workspace.root_info(),
       Channel {
-        provider: "webdav".into(),
+        provider: crate::sync::SyncProvider::Webdav,
         profile_id: "test".into(),
         remote_root: "/notes".into(),
         auto_sync: false,
@@ -44,7 +44,7 @@ fn resolution(workspace: &Workspace) -> ResolutionRequest {
     root_path: workspace.root_info().path,
     path: "note.md".into(),
     binding: binding(),
-    choice: "remote".into(),
+    choice: crate::sync::ConflictChoice::Remote,
     expected_local_hash: None,
     expected_remote_hash: None,
     confirm_delete: false,
@@ -53,7 +53,8 @@ fn resolution(workspace: &Workspace) -> ResolutionRequest {
 #[tokio::test]
 async fn cancelled_conflict_requests_stop_before_read_or_mutation() {
   let (_directory, service, workspace) = fixture().await;
-  let (_sender, cancel) = watch::channel(true);
+  let cancel = CancellationToken::new();
+  cancel.cancel();
   let read = read(
     &service,
     &workspace,
@@ -105,7 +106,8 @@ fn cancellation_waits_for_inflight_flush_before_releasing_workspace() {
       let _ = release_rx.recv();
     });
     started_rx.await.unwrap();
-    let (sender, cancel) = watch::channel(false);
+    let sender = CancellationToken::new();
+    let cancel = sender.clone();
     let target = workspace.clone();
     let operation = tokio::spawn(async move {
       let request = resolution(&target);
@@ -121,7 +123,7 @@ fn cancellation_waits_for_inflight_flush_before_releasing_workspace() {
     })
     .await
     .unwrap();
-    sender.send(true).unwrap();
+    sender.cancel();
     tokio::task::yield_now().await;
     assert!(
       !operation.is_finished(),

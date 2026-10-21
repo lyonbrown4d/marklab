@@ -18,49 +18,54 @@ use std::{
     atomic::{AtomicBool, Ordering},
   },
 };
-use tauri::{Emitter, State};
+use tauri::{Manager, State};
 fn failure(message: impl ToString) -> BackendError {
   BackendError::new("terminal_error", message.to_string())
 }
-#[derive(Deserialize)]
+pub use TerminalCreateRequest as CreateRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CreateRequest {
+pub struct TerminalCreateRequest {
   rows: i64,
   cols: i64,
+  #[serde(default)]
   cwd: Option<String>,
+  #[serde(default)]
   shell_path: Option<String>,
 }
-#[derive(Deserialize)]
+pub use TerminalWriteRequest as WriteRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct WriteRequest {
+pub struct TerminalWriteRequest {
   id: String,
   data: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct ResizeRequest {
   id: String,
   rows: i64,
   cols: i64,
 }
-#[derive(Deserialize)]
+pub use TerminalCloseRequest as CloseRequest;
+#[derive(Deserialize, specta::Type)]
 #[serde(deny_unknown_fields)]
-pub struct CloseRequest {
+pub struct TerminalCloseRequest {
   id: String,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 pub struct SessionInfo {
   id: String,
   shell: String,
   cwd: String,
 }
-#[derive(Clone, Serialize)]
-struct Output {
+#[derive(Clone, Serialize, specta::Type)]
+pub(crate) struct Output {
   id: String,
   data: String,
 }
-#[derive(Clone, Serialize)]
-struct Exit {
+#[derive(Clone, Serialize, specta::Type)]
+pub(crate) struct Exit {
   id: String,
   exit_code: Option<u32>,
   signal: Option<String>,
@@ -153,6 +158,7 @@ fn size(rows: i64, cols: i64) -> PtySize {
   }
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_create(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -195,6 +201,7 @@ pub async fn terminal_create(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_write(
   window: WebviewWindow,
   state: State<'_, TerminalState>,
@@ -222,6 +229,7 @@ pub async fn terminal_write(
   .map_err(failure)?
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_resize(
   window: WebviewWindow,
   state: State<'_, TerminalState>,
@@ -239,6 +247,7 @@ pub async fn terminal_resize(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_close(
   window: WebviewWindow,
   state: State<'_, TerminalState>,

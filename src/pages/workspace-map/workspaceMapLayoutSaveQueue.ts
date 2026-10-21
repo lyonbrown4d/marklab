@@ -124,7 +124,9 @@ const areViewportsEqual = (
 ): boolean =>
   left === right ||
   (left !== null &&
+    left !== undefined &&
     right !== null &&
+    right !== undefined &&
     left.x === right.x &&
     left.y === right.y &&
     left.zoom === right.zoom)

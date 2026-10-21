@@ -1,29 +1,39 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 export const gitPreviewUnavailableReasonSchema = z.enum([
   'binary',
   'unsupported_encoding',
   'too_large',
-])
+]) satisfies z.ZodType<GitPreviewUnavailableReason>
+
 export const gitPreviewUnavailableSchema = z.object({
   path: z.string(),
   unavailable_reason: gitPreviewUnavailableReasonSchema,
-})
-export type GitPreviewUnavailableReason = z.infer<typeof gitPreviewUnavailableReasonSchema>
-export type GitPreviewUnavailable = z.infer<typeof gitPreviewUnavailableSchema>
+}) satisfies z.ZodType<GitPreviewUnavailable>
+
+export type GitPreviewUnavailableReason = NonNullable<
+  DesktopCommandResults['git_file_diff']['unavailable_reason']
+>
+
+export type GitPreviewUnavailable = Extract<
+  DesktopCommandResults['git_conflict'],
+  { unavailable_reason: string }
+>
 
 export const gitOpenFileRequestSchema = z
   .object({
     path: z.string().min(1),
-    section: z.enum(['staged', 'unstaged', 'untracked', 'conflicts']).optional(),
+    section: z.enum(['staged', 'unstaged', 'untracked', 'conflicts']).nullish(),
     commit: z
       .string()
       .regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i)
-      .optional(),
-    oldPath: z.string().min(1).optional(),
+      .nullish(),
+    oldPath: z.string().min(1).nullish(),
     action: z.enum(['preview', 'system']),
   })
-  .strict()
+  .strict() satisfies z.ZodType<GitOpenFileRequest>
+
 export const gitOpenFileResultSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('opened') }),
   z.object({
@@ -34,6 +44,8 @@ export const gitOpenFileResultSchema = z.discriminatedUnion('kind', [
     readonly: z.boolean(),
     snapshot: z.boolean(),
   }),
-])
-export type GitOpenFileRequest = z.infer<typeof gitOpenFileRequestSchema>
-export type GitOpenFileResult = z.infer<typeof gitOpenFileResultSchema>
+]) satisfies z.ZodType<GitOpenFileResult>
+
+export type GitOpenFileRequest = DesktopCommandArgs['git_open_file']['request']
+
+export type GitOpenFileResult = DesktopCommandResults['git_open_file']

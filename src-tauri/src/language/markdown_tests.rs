@@ -11,6 +11,7 @@ fn outline_selects_heading_text_after_markers_and_preserves_nested_utf16_ranges(
     new_name: None,
   })
   .unwrap();
+  let symbols = serde_json::to_value(symbols).unwrap();
   assert_eq!(symbols[0]["column"], 3);
   assert_eq!(symbols[0]["endColumn"], 10);
   let detail = &symbols[0]["children"][0];
@@ -28,7 +29,7 @@ fn references_report_missing_unused_and_all_duplicate_declarations() {
   );
   let messages: Vec<_> = diagnostics
     .iter()
-    .map(|value| value["message"].as_str().unwrap())
+    .map(|value| value.message.as_str())
     .collect();
   assert!(messages.contains(&"No link definition found: 'no-such-ref'"));
   assert_eq!(
@@ -46,17 +47,16 @@ fn references_report_missing_unused_and_all_duplicate_declarations() {
     2
   );
   assert_eq!(
-    diagnostics[0]["range"],
+    serde_json::to_value(diagnostics[0].range).unwrap(),
     json!({"start":{"line":0,"character":10},"end":{"line":0,"character":21}})
   );
   let used = reference_diagnostics::compute("[A][x]\n\n[x]: a\n[X]: b");
   assert_eq!(used.len(), 2);
-  assert!(used.iter().all(|value| {
-    value["message"]
-      .as_str()
-      .unwrap()
-      .contains("already exists")
-  }));
+  assert!(
+    used
+      .iter()
+      .all(|value| { value.message.contains("already exists") })
+  );
 }
 
 #[test]
@@ -70,12 +70,12 @@ fn reference_diagnostics_keep_utf16_crlf_ranges_and_isolate_documents() {
   let diagnostics = reference_diagnostics::compute("😀中文 [标签][缺失]\r\n下一行");
   assert_eq!(diagnostics.len(), 1);
   assert_eq!(
-    diagnostics[0]["range"],
+    serde_json::to_value(diagnostics[0].range).unwrap(),
     json!({"start":{"line":0,"character":10},"end":{"line":0,"character":12}})
   );
   assert!(reference_diagnostics::compute("[A][x]\n\n[x]: valid").is_empty());
   assert_eq!(
-    reference_diagnostics::compute("[A][x]")[0]["message"],
+    reference_diagnostics::compute("[A][x]")[0].message,
     "No link definition found: 'x'"
   );
 }

@@ -11,11 +11,11 @@ mod typst_engine;
 
 use crate::error::{BackendError, BackendResult};
 pub use service::ExportService;
-use std::sync::atomic::{AtomicBool, Ordering};
+use tokio_util::sync::CancellationToken;
 pub use types::{ExportFormat, PublicationOptions, SourceDocument};
 
-pub fn check_cancelled(cancelled: &AtomicBool) -> BackendResult<()> {
-  if cancelled.load(Ordering::Acquire) {
+pub fn check_cancelled(cancelled: &CancellationToken) -> BackendResult<()> {
+  if cancelled.is_cancelled() {
     Err(BackendError::new("EXPORT_CANCELLED", "Export cancelled"))
   } else {
     Ok(())
@@ -26,7 +26,7 @@ pub fn render(
   format: ExportFormat,
   documents: &[SourceDocument],
   options: &PublicationOptions,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<u8>> {
   options.validate()?;
   check_cancelled(cancelled)?;

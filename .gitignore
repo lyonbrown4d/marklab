@@ -163,3 +163,6 @@ website/.astro/
 # Rust/Tauri build output and generated permission schemas
 src-tauri/target/
 src-tauri/gen/schemas/
+
+# Rust-owned frontend IPC bindings; regenerated before development and checks.
+/src/generated/desktop/

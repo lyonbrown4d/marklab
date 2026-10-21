@@ -65,12 +65,14 @@ describe('Plate workspace-link completion session', () => {
     clients.codeActions.getCodeActions.mockResolvedValue([
       {
         kind: 'create-file',
+        isPreferred: false,
         path: 'Missing.md',
         content: '# Plan\n',
         title: 'Create missing Markdown file "Missing.md"',
       },
       {
         kind: 'replace-text',
+        isPreferred: false,
         edit: {
           path: 'notes/current.md',
           line: 1,

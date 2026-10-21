@@ -79,7 +79,7 @@ export const FileTreeContextMenu = ({
       : FolderX
     : FileText
 
-  const runMenuTask = (action: string, task: () => Promise<void>, successLabel?: string) => {
+  const runMenuTask = (action: string, task: () => Promise<unknown>, successLabel?: string) => {
     void task()
       .then(() => {
         if (successLabel) toast.success(successLabel)

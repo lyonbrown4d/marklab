@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, VecDeque};
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 use graphrs::{Edge, Graph, GraphSpecs, Node, algorithms::community::louvain::louvain_communities};
 
@@ -15,7 +15,7 @@ const RESOLUTIONS: [f64; 4] = [1.0, 2.0, 4.0, 8.0];
 pub(super) fn partition(
   graph: &CommunityGraph<'_>,
   members: Vec<usize>,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<Vec<usize>>> {
   if members.is_empty() {
     return Ok(Vec::new());
@@ -53,7 +53,7 @@ fn louvain(
   data: &CommunityGraph<'_>,
   members: &[usize],
   resolution: f64,
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<Vec<usize>>> {
   let member_set: BTreeSet<_> = members.iter().copied().collect();
   ensure_running(cancelled)?;
@@ -104,7 +104,7 @@ fn louvain(
 fn relation_pages(
   graph: &CommunityGraph<'_>,
   members: &[usize],
-  cancelled: &AtomicBool,
+  cancelled: &CancellationToken,
 ) -> BackendResult<Vec<Vec<usize>>> {
   let mut remaining: BTreeSet<_> = members.iter().copied().collect();
   let mut pages = Vec::new();

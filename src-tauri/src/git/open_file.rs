@@ -10,7 +10,7 @@ use crate::{assets::AssetService, error::BackendResult, workspace::WorkspaceRegi
 use serde::Serialize;
 use tauri::{Manager, State};
 use tauri_plugin_opener::OpenerExt;
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum OpenFileResult {
   Opened,
@@ -41,6 +41,7 @@ async fn system(window: &WebviewWindow, path: std::path::PathBuf) -> BackendResu
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn git_open_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

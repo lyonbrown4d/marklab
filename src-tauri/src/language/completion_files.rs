@@ -1,6 +1,6 @@
 use super::{Position, item};
 use crate::analysis::Index;
-use serde_json::{Value, json};
+use lsp_types::{CompletionItem, CompletionItemKind, Documentation, MarkupContent, MarkupKind};
 use std::{cmp::Ordering, collections::BTreeSet};
 
 pub(super) const LIMIT: usize = 100;
@@ -49,7 +49,7 @@ pub(super) fn completions(
   wiki: bool,
   position: Position,
   start: usize,
-) -> Vec<Value> {
+) -> Vec<CompletionItem> {
   let query = query.trim().to_lowercase();
   let directory = source.rsplit_once('/').map_or("", |(parent, _)| parent);
   let paths: BTreeSet<_> = index
@@ -128,13 +128,20 @@ fn completion_item(
   wiki: bool,
   position: Position,
   start: usize,
-) -> Value {
+) -> CompletionItem {
   let text = if wiki {
     candidate.label.to_owned()
   } else {
     relative(source, candidate.path)
   };
-  let mut value = item(candidate.label, &text, candidate.path, 17, position, start);
+  let mut value = item(
+    candidate.label,
+    &text,
+    candidate.path,
+    CompletionItemKind::FILE,
+    position,
+    start,
+  );
   let label = candidate.label.to_lowercase();
   let relevance = if query.is_empty() || label == query {
     0
@@ -148,9 +155,11 @@ fn completion_item(
     30
   };
   let score = (if candidate.same_dir { 0 } else { 40 }) + candidate.depth + relevance;
-  value["sortText"] = json!(format!("{score:04}-{}-{}", candidate.label, candidate.path));
-  value["documentation"] =
-    json!({"kind":"markdown","value":format!("**{}**\n\n`{}`", candidate.label, candidate.path)});
+  value.sort_text = Some(format!("{score:04}-{}-{}", candidate.label, candidate.path));
+  value.documentation = Some(Documentation::MarkupContent(MarkupContent {
+    kind: MarkupKind::Markdown,
+    value: format!("**{}**\n\n`{}`", candidate.label, candidate.path),
+  }));
   value
 }
 fn eligible(path: &str, wiki: bool) -> bool {

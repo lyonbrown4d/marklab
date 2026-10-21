@@ -49,7 +49,9 @@ impl Value {
           + optional(&value.old_path)
           + value.original_label.len()
           + value.modified_label.len()
-          + optional(&value.unavailable_reason)
+          + value
+            .unavailable_reason
+            .map_or(0, |reason| reason.as_str().len())
       }
       Self::History(values) => values
         .iter()
@@ -68,7 +70,7 @@ impl Value {
         .iter()
         .map(|value| value.r#ref.len() + value.hash.len() + value.subject.len() + 128)
         .sum(),
-      Self::Operation(value) => optional(&value.operation),
+      Self::Operation(value) => value.operation.map_or(0, |state| state.len()),
       Self::Conflict(conflict::ConflictPreview::Text(value)) => {
         value.path.len()
           + optional(&value.base)
@@ -80,7 +82,7 @@ impl Value {
       Self::Conflict(conflict::ConflictPreview::Unavailable {
         path,
         unavailable_reason,
-      }) => path.len() + unavailable_reason.len(),
+      }) => path.len() + unavailable_reason.as_str().len(),
       Self::CommitFiles(values) => values
         .iter()
         .map(|value| value.path.len() + optional(&value.old_path) + value.status.len() + 96)

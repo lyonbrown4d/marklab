@@ -12,13 +12,13 @@ const MAX_SOURCE_BYTES: usize = 512 * 1024;
 const MAX_DOCUMENT_BYTES: usize = 4 * 1024 * 1024;
 const POLICY: &str = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HtmlPreviewRequest {
   source: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HtmlPreviewResult {
   document: String,
@@ -103,6 +103,7 @@ fn document_attributes(source: &str) -> BackendResult<(String, String)> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn html_preview_render(
   _window: TrustedWindow,
   request: HtmlPreviewRequest,

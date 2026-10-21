@@ -6,7 +6,7 @@ use std::{
   io::Write,
   path::{Path, PathBuf},
 };
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 struct State {
   version: u8,

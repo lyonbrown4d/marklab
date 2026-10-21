@@ -29,7 +29,7 @@ pub struct Publication<'a> {
 pub async fn publish(
   workspace: &Workspace,
   publication: Publication<'_>,
-  cancel: &watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   let Publication {
     path,

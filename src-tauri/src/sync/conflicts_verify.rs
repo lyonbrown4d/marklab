@@ -6,7 +6,7 @@ pub(super) async fn verify(
   comparison: &ConflictComparison,
   remote: &super::super::remote::DavRemote,
   etag: &str,
-  cancel: &mut watch::Receiver<bool>,
+  cancel: &CancellationToken,
 ) -> BackendResult<()> {
   let conflict = &comparison.conflict;
   let local = comparison.local.hash.as_deref();
@@ -34,7 +34,7 @@ pub(super) async fn verify(
 pub(super) fn root(workspace: &Workspace, expected: &str) -> BackendResult<()> {
   workspace.ensure_active()?;
   let root = workspace.root_info();
-  if root.kind == "single" || root.path != expected {
+  if root.kind == crate::workspace::RootKind::Single || root.path != expected {
     return Err(BackendError::new(
       "STALE_SESSION",
       "Workspace changed before resolving sync conflicts",

@@ -98,7 +98,10 @@ async fn explicit_internal_directory_uses_the_same_buffer_and_mutation_gate() {
     .await
     .unwrap();
   assert!(Arc::ptr_eq(&internal, &explicit));
-  assert_eq!(explicit.root_info().kind, "internal");
+  assert_eq!(
+    explicit.root_info().kind,
+    crate::workspace::RootKind::Internal
+  );
 }
 
 #[tokio::test]

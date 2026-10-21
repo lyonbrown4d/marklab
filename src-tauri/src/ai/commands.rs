@@ -3,6 +3,7 @@ use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{error::BackendResult, settings::SettingsStore, workspace::WorkspaceRegistry};
 use tauri::{Manager, State};
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_list_providers(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -14,6 +15,7 @@ pub async fn ai_list_providers(
   service.list_providers().await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_get_provider(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -24,6 +26,7 @@ pub async fn ai_get_provider(
   service.get_provider(&request.id).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_update_provider(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -34,6 +37,7 @@ pub async fn ai_update_provider(
   service.update_provider(request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_delete_provider(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -45,6 +49,7 @@ pub async fn ai_delete_provider(
   Ok(OkResult { ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_test_provider(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -56,6 +61,7 @@ pub async fn ai_test_provider(
   Ok(OkResult { ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_generate_text(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -66,6 +72,7 @@ pub async fn ai_generate_text(
   service.generate(request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_start_generation(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -78,6 +85,7 @@ pub async fn ai_start_generation(
   service.start_generation(window, request, None).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_cancel_generation(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -89,6 +97,7 @@ pub async fn ai_cancel_generation(
   Ok(OkResult { ok: true })
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_completion_start(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -102,6 +111,7 @@ pub async fn ai_completion_start(
   service.start_inline(window, &settings, request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn ai_completion_cancel(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

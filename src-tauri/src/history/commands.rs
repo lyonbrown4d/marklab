@@ -3,6 +3,7 @@ use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{error::BackendResult, workspace::WorkspaceRegistry};
 use tauri::{Manager, State};
 #[tauri::command]
+#[specta::specta]
 pub async fn local_history_list(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -14,6 +15,7 @@ pub async fn local_history_list(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn local_history_read(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -29,6 +31,7 @@ pub async fn local_history_read(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn local_history_restore(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -43,17 +46,31 @@ pub async fn local_history_restore(
     .restore_under_lock(&workspace, &request.path, &request.entry_id)
     .await;
   if let Ok(Some(status)) = workspace.buffer_status(&request.path).await {
-    let _ = workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status);
+    let _ = workspace.emit_to_owners(
+      window.app_handle(),
+      crate::desktop::event_contracts::FS_BUFFER_STATUS,
+      status,
+    );
   }
   let revision = workspace.current_revision();
   if revision != previous_revision && workspace.ensure_active().is_ok() {
-    let payload = serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous_revision,"revision":revision});
-    let _ = workspace.emit_to_owners(window.app_handle(), "fs-changed", &payload);
-    let _ = workspace.emit_to_owners(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous_revision,"revision":revision}));
+    use crate::desktop::event_contracts::{
+      FS_CHANGED, InvalidationKind, WORKSPACE_TREE_CHANGED, WorkspaceInvalidated,
+    };
+    let payload = WorkspaceInvalidated {
+      kind: InvalidationKind::Invalidated,
+      root: workspace.root_info(),
+      generation: workspace.generation,
+      previous_revision,
+      revision,
+    };
+    let _ = workspace.emit_to_owners(window.app_handle(), FS_CHANGED, payload.clone());
+    let _ = workspace.emit_to_owners(window.app_handle(), WORKSPACE_TREE_CHANGED, payload.into());
   }
   result
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn local_history_delete(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -69,6 +86,7 @@ pub async fn local_history_delete(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn local_history_clear(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

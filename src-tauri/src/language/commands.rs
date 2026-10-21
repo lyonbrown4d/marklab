@@ -1,14 +1,18 @@
 use super::{LanguageService, completion, markdown, mermaid, rename, types::*};
+use super::{
+  markdown_types::*,
+  protocol::{CompletionResponse, DiagnosticsResponse},
+};
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{
   analysis::AnalysisService,
   error::{BackendError, BackendResult},
   workspace::WorkspaceRegistry,
 };
-use serde_json::{Value, json};
 use tauri::{Manager, State};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn language_document_open(
   window: WebviewWindow,
   language: State<'_, LanguageService>,
@@ -17,6 +21,7 @@ pub async fn language_document_open(
   language.open(window.label().into(), request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn language_document_change(
   window: WebviewWindow,
   language: State<'_, LanguageService>,
@@ -25,23 +30,25 @@ pub async fn language_document_change(
   language.change(window.label().into(), request).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn language_document_close(
   window: WebviewWindow,
   language: State<'_, LanguageService>,
   request: CloseRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<CloseAck> {
   language.close(window.label().into(), request).await?;
-  Ok(json!({"ok":true}))
+  Ok(CloseAck { ok: true })
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn language_completion(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: CompletionRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<CompletionResponse> {
   let document = language
     .snapshot(window.label().into(), request.uri, request.version)
     .await?;
@@ -61,26 +68,27 @@ pub async fn language_completion(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn language_diagnostics(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: DiagnosticsRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<DiagnosticsResponse> {
   let document = language
     .snapshot(window.label().into(), request.uri, request.version)
     .await?;
   if document.language_id == "mermaid" {
     return language
-      .run(move || Ok(mermaid::diagnostics(&document.text, 0)))
+      .run(move || Ok(DiagnosticsResponse(mermaid::diagnostics(&document.text, 0))))
       .await;
   }
   let index = analysis.index(registry.get(window.label())?).await?;
   language
     .run(move || {
       if document.text.len() > 2 * 1024 * 1024 {
-        return Ok(json!([]));
+        return Ok(DiagnosticsResponse(Vec::new()));
       }
       let request = MarkdownRequest {
         path: document.path.clone(),
@@ -95,34 +103,33 @@ pub async fn language_diagnostics(
         .as_ref()
         .and_then(|path| index.files.get(path))
         .map(|file| markdown::diagnostics(&index, file))
-        .and_then(|value| value.as_array().cloned())
         .unwrap_or_default();
       for block in mermaid::blocks(&document.text) {
-        if let Some(items) = mermaid::diagnostics(&block.text, block.start_line).as_array() {
-          diagnostics.extend(items.iter().cloned());
-        }
+        diagnostics.extend(mermaid::diagnostics(&block.text, block.start_line));
       }
-      Ok(json!(diagnostics))
+      Ok(DiagnosticsResponse(diagnostics))
     })
     .await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_get_document_symbols(
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<Vec<MarkdownSymbol>> {
   validate(&request)?;
   language.run(move || markdown::symbols(&request)).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_get_definition(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<Option<MarkdownDefinition>> {
   query(
     window,
     &registry,
@@ -134,13 +141,14 @@ pub async fn markdown_language_get_definition(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_get_references(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<Vec<MarkdownReference>> {
   query(
     window,
     &registry,
@@ -152,13 +160,14 @@ pub async fn markdown_language_get_references(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_get_code_actions(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<Vec<MarkdownCodeAction>> {
   query(
     window,
     &registry,
@@ -170,13 +179,14 @@ pub async fn markdown_language_get_code_actions(
   .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_get_hover(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<Option<MarkdownHover>> {
   query(
     window,
     &registry,
@@ -189,13 +199,14 @@ pub async fn markdown_language_get_hover(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn markdown_language_rename_references(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
   language: State<'_, LanguageService>,
   request: MarkdownRequest,
-) -> BackendResult<Value> {
+) -> BackendResult<RenameResult> {
   validate(&request)?;
   let workspace = registry.get(window.label())?;
   let index = analysis.index(workspace.clone()).await?;
@@ -210,7 +221,11 @@ pub async fn markdown_language_rename_references(
   rename::validate_external(&workspace, &plan.external).await?;
   let changed = !plan.external.is_empty();
   for status in rename::apply_external(&workspace, plan.external).await? {
-    workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status)?;
+    workspace.emit_to_owners(
+      window.app_handle(),
+      crate::desktop::event_contracts::FS_BUFFER_STATUS,
+      status,
+    )?;
   }
   if changed {
     workspace.clone().schedule_save(window.app_handle().clone());
@@ -219,14 +234,14 @@ pub async fn markdown_language_rename_references(
   Ok(plan.result)
 }
 
-async fn query(
+async fn query<T: Send + 'static>(
   window: WebviewWindow,
   registry: &WorkspaceRegistry,
   analysis: &AnalysisService,
   language: &LanguageService,
   request: MarkdownRequest,
-  operation: fn(&crate::analysis::Index, &MarkdownRequest) -> Value,
-) -> BackendResult<Value> {
+  operation: fn(&crate::analysis::Index, &MarkdownRequest) -> T,
+) -> BackendResult<T> {
   validate(&request)?;
   let index = analysis.index(registry.get(window.label())?).await?;
   language

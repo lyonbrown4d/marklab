@@ -1,58 +1,39 @@
-import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
+import type { EventTarget, Options } from '@tauri-apps/api/event'
+import type { RuntimeEventName, RuntimeEventPayloads } from '@/runtime/tauri/contract'
+import {
+  getDesktopRuntime,
+  isDesktopRuntime,
+  type DesktopRuntimeEventEnvelope,
+} from '@/runtime/desktop'
 export type RuntimeUnlistenFn = () => void
-export type RuntimeEvent<T> = {
-  event: string
-  id: number
-  payload: T
-}
+export type RuntimeEvent<T> = DesktopRuntimeEventEnvelope<T>
 export type RuntimeEventCallback<T> = (event: RuntimeEvent<T>) => void
-export type RuntimeEventTarget =
-  | {
-      kind: 'Any'
-    }
-  | {
-      kind: 'AnyLabel'
-      label: string
-    }
-  | {
-      kind: 'App'
-    }
-  | {
-      kind: 'Window'
-      label: string
-    }
-  | {
-      kind: 'Webview'
-      label: string
-    }
-  | {
-      kind: 'WebviewWindow'
-      label: string
-    }
-export type RuntimeListenOptions = {
-  target?: string | RuntimeEventTarget
-}
-export const listen = <T>(
-  event: string,
-  handler: RuntimeEventCallback<T>,
+export type RuntimeEventTarget = EventTarget
+export type RuntimeListenOptions = Options
+export const listen = <E extends RuntimeEventName>(
+  event: E,
+  handler: RuntimeEventCallback<RuntimeEventPayloads[E]>,
   options?: RuntimeListenOptions,
 ): Promise<RuntimeUnlistenFn> => {
   void options
   const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
   if (desktop) {
-    return Promise.resolve(desktop.events.listen<T>(event, handler))
+    return Promise.resolve(desktop.events.listen(event, handler))
   }
   if (typeof window !== 'undefined') {
     const domEventName = `marklab:${event}`
     const listener = (domEvent: Event) => {
-      handler(toRuntimeEvent(event, (domEvent as CustomEvent<T>).detail))
+      handler(toRuntimeEvent(event, (domEvent as CustomEvent<RuntimeEventPayloads[E]>).detail))
     }
     window.addEventListener(domEventName, listener)
     return Promise.resolve(() => window.removeEventListener(domEventName, listener))
   }
   return Promise.resolve(() => {})
 }
-export const emit = <T>(event: string, payload?: T): Promise<void> => {
+export const emit = <E extends RuntimeEventName>(
+  event: E,
+  payload: RuntimeEventPayloads[E],
+): Promise<void> => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(`marklab:${event}`, { detail: payload }))
   }

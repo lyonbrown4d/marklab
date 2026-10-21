@@ -3,7 +3,7 @@ use std::{
   collections::HashMap,
   time::{Duration, Instant},
 };
-use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
 
 struct Task {
   id: u64,
@@ -11,7 +11,7 @@ struct Task {
   priority: Priority,
   job: Option<Operation>,
   subscribers: HashMap<String, ResultSender>,
-  cancel: watch::Sender<bool>,
+  cancel: CancellationToken,
 }
 #[derive(Default)]
 pub(super) struct Policy {
@@ -113,7 +113,7 @@ impl Policy {
         self.remove(index, Err(cancelled()));
       }
     }
-    let (cancel, _) = watch::channel(false);
+    let cancel = CancellationToken::new();
     self.sequence += 1;
     self.tasks.push(Task {
       id: self.sequence,
@@ -124,7 +124,7 @@ impl Policy {
       cancel,
     });
   }
-  pub fn start(&mut self) -> Option<(u64, Operation, watch::Receiver<bool>)> {
+  pub fn start(&mut self) -> Option<(u64, Operation, CancellationToken)> {
     let running = self.tasks.iter().filter(|task| task.job.is_none()).count();
     if running >= 2 {
       return None;
@@ -143,7 +143,7 @@ impl Policy {
           .flatten()
       })?;
     let task = &mut self.tasks[index];
-    Some((task.id, task.job.take()?, task.cancel.subscribe()))
+    Some((task.id, task.job.take()?, task.cancel.clone()))
   }
   pub fn finish(&mut self, id: u64, result: BackendResult<Bytes>) {
     if let Some(index) = self
@@ -172,14 +172,14 @@ impl Policy {
   }
   fn reject(&mut self, index: usize) {
     let task = &mut self.tasks[index];
-    let _ = task.cancel.send(true);
+    task.cancel.cancel();
     for (_, subscriber) in task.subscribers.drain() {
       let _ = subscriber.send(Err(cancelled()));
     }
   }
   fn remove(&mut self, index: usize, result: BackendResult<Bytes>) {
     let task = self.tasks.remove(index);
-    let _ = task.cancel.send(true);
+    task.cancel.cancel();
     for (_, subscriber) in task.subscribers {
       let _ = subscriber.send(result.clone());
     }

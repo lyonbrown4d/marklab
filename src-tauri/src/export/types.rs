@@ -2,7 +2,7 @@ use crate::error::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum ExportFormat {
   Pdf,
@@ -21,23 +21,24 @@ impl ExportFormat {
     }
   }
 }
+pub use ExportMarkdownRequest as MarkdownRequest;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct MarkdownRequest {
+pub struct ExportMarkdownRequest {
   pub format: ExportFormat,
   pub output_path: String,
   pub source_document_path: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChapterRequest {
   pub path: String,
   pub title: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PublicationRequest {
   pub chapters: Vec<ChapterRequest>,
@@ -45,7 +46,7 @@ pub struct PublicationRequest {
   pub output_path: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PublicationOptions {
   pub cover: bool,
@@ -121,18 +122,38 @@ pub struct SourceDocument {
   pub assets: BTreeMap<String, Vec<u8>>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, specta::Type)]
 pub struct ExportTaskEvent {
   pub id: String,
   pub format: ExportFormat,
   pub output_path: String,
-  pub status: String,
+  pub status: ExportTaskStatus,
   pub progress: Option<f64>,
   pub message: String,
 }
+pub use ExportCancelRequest as CancelRequest;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CancelRequest {
+pub struct ExportCancelRequest {
   pub task_id: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum ExportTaskStatus {
+  Started,
+  Finished,
+  Failed,
+  Cancelled,
+}
+impl ExportTaskStatus {
+  pub fn as_str(self) -> &'static str {
+    match self {
+      Self::Started => "started",
+      Self::Finished => "finished",
+      Self::Failed => "failed",
+      Self::Cancelled => "cancelled",
+    }
+  }
 }

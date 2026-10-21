@@ -1,3 +1,8 @@
+import type {
+  DesktopCommandArgs,
+  DesktopCommandResults,
+  DesktopEventPayloads,
+} from '@/generated/desktop/bindings'
 import { z } from 'zod'
 
 const webTabIdSchema = z
@@ -13,27 +18,31 @@ export const webTabBoundsSchema = z.object({
   width: dimensionSchema,
   x: coordinateSchema,
   y: coordinateSchema,
-})
+}) satisfies z.ZodType<WebTabBounds>
 
 export const webTabActivateRequestSchema = z.object({
   bounds: webTabBoundsSchema,
   tabId: webTabIdSchema,
   url: z.string().min(1).max(4096),
-})
+}) satisfies z.ZodType<WebTabActivateRequest>
 
 export const webTabSetBoundsRequestSchema = z.object({
   bounds: webTabBoundsSchema,
   tabId: webTabIdSchema,
-})
+}) satisfies z.ZodType<WebTabSetBoundsRequest>
 
-export const webTabIdRequestSchema = z.object({ tabId: webTabIdSchema })
+export const webTabIdRequestSchema = z.object({
+  tabId: webTabIdSchema,
+}) satisfies z.ZodType<WebTabIdRequest>
 
 export const webTabNavigateRequestSchema = z.object({
   tabId: webTabIdSchema,
   url: z.string().min(1).max(4096),
-})
+}) satisfies z.ZodType<WebTabNavigateRequest>
 
-export const webTabActionResultSchema = z.object({ ok: z.literal(true) })
+export const webTabActionResultSchema = z.object({
+  ok: z.literal(true),
+}) satisfies z.ZodType<WebTabActionResult>
 
 export const webTabShortcutActionSchema = z.enum([
   'app.commandPalette',
@@ -52,11 +61,11 @@ export const webTabShortcutActionSchema = z.enum([
   'view.toggleTerminal',
   'view.toggleReadonly',
   'view.toggleStatusBar',
-])
+]) satisfies z.ZodType<WebTabShortcutAction>
 
 export const webTabShortcutBindingsRequestSchema = z.object({
   bindings: z.partialRecord(webTabShortcutActionSchema, z.array(z.string().min(1).max(64)).max(4)),
-})
+}) satisfies z.ZodType<WebTabShortcutBindingsRequest>
 
 export const webTabStateSchema = z.object({
   active: z.boolean(),
@@ -72,7 +81,7 @@ export const webTabStateSchema = z.object({
   tabId: webTabIdSchema,
   title: z.string().max(512),
   url: z.string().max(4096),
-})
+}) satisfies z.ZodType<WebTabState>
 
 export const webTabEventSchema = z.discriminatedUnion('type', [
   z.object({ state: webTabStateSchema, type: z.literal('state') }),
@@ -86,18 +95,28 @@ export const webTabEventSchema = z.discriminatedUnion('type', [
     tabId: webTabIdSchema,
     type: z.literal('shortcut'),
   }),
-])
+]) satisfies z.ZodType<WebTabEvent>
 
-export type WebTabActionResult = z.infer<typeof webTabActionResultSchema>
-export type WebTabActivateRequest = z.infer<typeof webTabActivateRequestSchema>
-export type WebTabBounds = z.infer<typeof webTabBoundsSchema>
-export type WebTabEvent = z.infer<typeof webTabEventSchema>
-export type WebTabIdRequest = z.infer<typeof webTabIdRequestSchema>
-export type WebTabNavigateRequest = z.infer<typeof webTabNavigateRequestSchema>
-export type WebTabSetBoundsRequest = z.infer<typeof webTabSetBoundsRequestSchema>
-export type WebTabShortcutAction = z.infer<typeof webTabShortcutActionSchema>
-export type WebTabShortcutBindingsRequest = z.infer<typeof webTabShortcutBindingsRequestSchema>
-export type WebTabState = z.infer<typeof webTabStateSchema>
+export type WebTabActionResult = DesktopCommandResults['web_tabs_activate']
+
+export type WebTabActivateRequest = DesktopCommandArgs['web_tabs_activate']['request']
+
+export type WebTabBounds = DesktopCommandArgs['web_tabs_activate']['request']['bounds']
+
+export type WebTabEvent = DesktopEventPayloads['web-tabs-state']
+
+export type WebTabIdRequest = DesktopCommandArgs['web_tabs_close']['request']
+
+export type WebTabNavigateRequest = DesktopCommandArgs['web_tabs_navigate']['request']
+
+export type WebTabSetBoundsRequest = DesktopCommandArgs['web_tabs_set_bounds']['request']
+
+export type WebTabShortcutAction = Extract<WebTabEvent, { type: 'shortcut' }>['action']
+
+export type WebTabShortcutBindingsRequest =
+  DesktopCommandArgs['web_tabs_set_shortcut_bindings']['request']
+
+export type WebTabState = Extract<WebTabEvent, { type: 'state' }>['state']
 
 export type WebTabsApi = {
   activate: (request: WebTabActivateRequest) => Promise<WebTabActionResult>

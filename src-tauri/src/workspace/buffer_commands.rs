@@ -4,6 +4,7 @@ use crate::{error::BackendResult, native_window::TrustedWindow as WebviewWindow}
 use tauri::{Manager, State};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_open_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -14,6 +15,7 @@ pub async fn fs_open_file(
   workspace.open_file_under_lock(&request.path).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_read_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -22,6 +24,7 @@ pub async fn fs_read_file(
   registry.get(window.label())?.read_file(&request.path).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_write_file(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -36,6 +39,7 @@ pub async fn fs_write_file(
   announce(&window, &workspace).await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_apply_buffer_update(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -53,7 +57,7 @@ pub async fn fs_apply_buffer_update(
   {
     workspace.emit_to_owners(
       window.app_handle(),
-      "fs-buffer-status",
+      crate::desktop::event_contracts::FS_BUFFER_STATUS,
       BufferStatus {
         path: path.clone(),
         revision: *revision,
@@ -67,6 +71,7 @@ pub async fn fs_apply_buffer_update(
   Ok(result)
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_get_buffer_status(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -78,6 +83,7 @@ pub async fn fs_get_buffer_status(
     .await
 }
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_flush_buffers(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
@@ -97,7 +103,11 @@ pub async fn fs_flush_buffers(
   let count = workspace.flush_buffers_under_lock().await?;
   for path in dirty {
     if let Some(status) = workspace.buffer_status(&path).await? {
-      workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status)?;
+      workspace.emit_to_owners(
+        window.app_handle(),
+        crate::desktop::event_contracts::FS_BUFFER_STATUS,
+        status,
+      )?;
     }
   }
   if count > 0 {
@@ -106,7 +116,7 @@ pub async fn fs_flush_buffers(
   Ok(count)
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, specta::Type)]
 pub struct BufferSnapshot {
   content: String,
   #[serde(flatten)]
@@ -114,6 +124,7 @@ pub struct BufferSnapshot {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn fs_open_buffer_snapshot(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,

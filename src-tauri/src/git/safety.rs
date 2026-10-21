@@ -15,7 +15,7 @@ pub fn workspace_root(
   let workspace = registry.get(window.label())?;
   let info = workspace.root_info();
   workspace.ensure_active()?;
-  if info.kind == "single" {
+  if info.kind == crate::workspace::RootKind::Single {
     return Err(error(
       "git_workspace_boundary",
       "Git requires a directory workspace",

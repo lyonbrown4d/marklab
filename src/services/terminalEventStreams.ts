@@ -23,13 +23,13 @@ const parseTerminalExitEvent = (payload: unknown): TerminalExitEvent | null => {
   return parsed.success ? parsed.data : null
 }
 
-export const terminalOutputEvents$ = fromRuntimeEvent<unknown>('terminal-output').pipe(
+export const terminalOutputEvents$ = fromRuntimeEvent('terminal-output').pipe(
   map((event) => parseTerminalOutputEvent(event.payload)),
   filter(isTerminalOutputEvent),
   share(),
 )
 
-export const terminalExitEvents$ = fromRuntimeEvent<unknown>('terminal-exit').pipe(
+export const terminalExitEvents$ = fromRuntimeEvent('terminal-exit').pipe(
   map((event) => parseTerminalExitEvent(event.payload)),
   filter(isTerminalExitEvent),
   share(),

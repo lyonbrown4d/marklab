@@ -73,13 +73,19 @@ describe('SoftwareUpdateSettingsSection actions', () => {
     [
       'download',
       'settings.softwareUpdateDownload',
-      state({ info: { version: '0.3.0' }, status: 'available' }),
+      state({
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
+        status: 'available',
+      }),
       updates.download,
     ],
     [
       'install',
       'settings.softwareUpdateInstall',
-      state({ info: { version: '0.3.0' }, status: 'downloaded' }),
+      state({
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
+        status: 'downloaded',
+      }),
       updates.install,
     ],
   ])('shows a visible %s failure', async (operation, buttonName, initialState, request) => {
@@ -96,7 +102,11 @@ describe('SoftwareUpdateSettingsSection actions', () => {
   it('shows release notes as text without creating release-provided markup', async () => {
     updates.getState.mockResolvedValueOnce(
       state({
-        info: { releaseNotes: 'Fixed <strong>crashes</strong>', version: '0.3.0' },
+        info: {
+          releaseDate: null,
+          releaseNotes: 'Fixed <strong>crashes</strong>',
+          version: '0.3.0',
+        },
         status: 'available',
       }),
     )
@@ -108,7 +118,10 @@ describe('SoftwareUpdateSettingsSection actions', () => {
 
   it('shows the available version only while an update is actionable', async () => {
     updates.getState.mockResolvedValueOnce(
-      state({ info: { version: '0.3.0' }, status: 'not-available' }),
+      state({
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
+        status: 'not-available',
+      }),
     )
     render(<SoftwareUpdateSettingsSection />)
 
@@ -146,7 +159,10 @@ describe('SoftwareUpdateSettingsSection actions', () => {
 
   it('schedules installation on exit and keeps immediate restart available', async () => {
     updates.getState.mockResolvedValueOnce(
-      state({ info: { version: '0.3.0' }, status: 'downloaded' }),
+      state({
+        info: { version: '0.3.0', releaseNotes: null, releaseDate: null },
+        status: 'downloaded',
+      }),
     )
     const user = userEvent.setup()
     render(<SoftwareUpdateSettingsSection />)

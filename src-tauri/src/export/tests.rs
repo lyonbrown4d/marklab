@@ -6,7 +6,7 @@ use super::{
   render,
 };
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicBool;
+use tokio_util::sync::CancellationToken;
 
 fn source(markdown: &str) -> SourceDocument {
   SourceDocument {
@@ -40,7 +40,8 @@ fn export_validates_output_extensions_and_cancellation_before_rendering() {
   assert!(validate_output("/tmp/example.pdf", ExportFormat::Pdf).is_ok());
   assert!(validate_output("/tmp/example.html", ExportFormat::Pdf).is_err());
   assert!(validate_output("relative.pdf", ExportFormat::Pdf).is_err());
-  let cancelled = AtomicBool::new(true);
+  let cancelled = CancellationToken::new();
+  cancelled.cancel();
   assert_eq!(
     check_cancelled(&cancelled).expect_err("cancelled").code,
     "EXPORT_CANCELLED"
@@ -60,7 +61,7 @@ fn html_export_escapes_untrusted_content_and_omits_executable_html() {
     source("# A < B\n\n<script>alert('bad')</script>\n\n[text](javascript:alert)\n\n`<unsafe>`");
   let options = PublicationOptions::document(ExportFormat::Html, "Title <unsafe>".into());
   let html = String::from_utf8(
-    html::render(&[document], &options, &AtomicBool::new(false)).expect("render"),
+    html::render(&[document], &options, &CancellationToken::new()).expect("render"),
   )
   .expect("utf8");
   assert!(html.contains("Title &lt;unsafe&gt;"));
@@ -78,7 +79,7 @@ fn rich_pdf_and_docx_exports_produce_real_documents() {
     "fixtures/chart.png".into(),
     include_bytes!("fixtures/chart.png").to_vec(),
   );
-  let cancelled = AtomicBool::new(false);
+  let cancelled = CancellationToken::new();
   let mut options = PublicationOptions::document(ExportFormat::Pdf, "Export regression".into());
   options.title = "中文导出验收 Export regression".into();
   options.locale = "zh-CN".into();
@@ -157,7 +158,7 @@ fn docx_defines_visible_heading_styles_and_body_spacing() {
     ExportFormat::Docx,
     &[document],
     &options,
-    &AtomicBool::new(false),
+    &CancellationToken::new(),
   )
   .expect("styled DOCX");
   let styles = docx_part(&bytes, "word/styles.xml");
@@ -237,7 +238,7 @@ fn docx_images_and_footnotes_fit_narrow_page_text_area_without_stretching() {
     ExportFormat::Docx,
     &[document],
     &options,
-    &AtomicBool::new(false),
+    &CancellationToken::new(),
   )
   .expect("bounded DOCX images");
   let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("DOCX ZIP");

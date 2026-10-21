@@ -1,3 +1,4 @@
+use super::types::CommitFileStatus;
 use super::{
   process::{self, error},
   safety,
@@ -141,14 +142,13 @@ pub fn commit_files_now(repo: &git2::Repository, revision: &str) -> BackendResul
         None
       };
       let status = match delta.status() {
-        git2::Delta::Added => "A",
-        git2::Delta::Deleted => "D",
-        git2::Delta::Renamed => "R",
-        git2::Delta::Copied => "C",
-        git2::Delta::Typechange => "T",
-        _ => "M",
-      }
-      .into();
+        git2::Delta::Added => CommitFileStatus::A,
+        git2::Delta::Deleted => CommitFileStatus::D,
+        git2::Delta::Renamed => CommitFileStatus::R,
+        git2::Delta::Copied => CommitFileStatus::C,
+        git2::Delta::Typechange => CommitFileStatus::T,
+        _ => CommitFileStatus::M,
+      };
       Ok(CommitFile {
         path,
         old_path,

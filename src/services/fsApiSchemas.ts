@@ -1,3 +1,4 @@
+import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desktop/bindings'
 import { z } from 'zod'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 export * from '@/services/fsBufferSchemas'
@@ -5,18 +6,18 @@ export * from '@/services/fsBufferSchemas'
 export const fsRootInfoSchema = z.object({
   kind: z.enum(['internal', 'external', 'single']),
   path: z.string(),
-})
+}) satisfies z.ZodType<FsRootInfo>
 
 export const fsEntrySchema = z.object({
   path: z.string(),
   kind: z.enum(['file', 'folder']),
-  name: z.string().optional(),
-})
+  name: z.string(),
+}) satisfies z.ZodType<FsEntry>
 
 export const fsSnapshotSchema = z.object({
   root: fsRootInfoSchema,
   entries: z.array(fsEntrySchema),
-})
+}) satisfies z.ZodType<FsSnapshot>
 
 export const fsPathMetadataSchema = z.object({
   path: z.string(),
@@ -24,7 +25,7 @@ export const fsPathMetadataSchema = z.object({
   size_bytes: z.number(),
   modified_ms: z.number().optional(),
   readonly: z.boolean(),
-})
+}) satisfies z.ZodType<FsPathMetadata>
 
 export const fsTextPreviewLimitSchema = z
   .number()
@@ -37,7 +38,7 @@ export const fsTextPreviewSchema = z
     content: z.string(),
     truncated: z.boolean(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<FsTextPreview>
 
 export const opaqueAssetUrlSchema = z
   .string()
@@ -76,14 +77,14 @@ export const fsAssetCapabilitySchema = z
     url: opaqueAssetUrlSchema,
     expires_at_ms: z.number().int().nonnegative(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<FsAssetCapability>
 
 export const backgroundTaskStatusSchema = z.object({
   id: z.string(),
   label: z.string(),
   status: z.enum(['idle', 'running', 'error']),
-  message: z.string().nullable().optional(),
-})
+  message: z.string().nullable(),
+}) satisfies z.ZodType<BackgroundTaskStatus>
 
 export const fsSearchResultSchema = z.object({
   path: z.string(),
@@ -99,7 +100,7 @@ export const fsSearchResultSchema = z.object({
     }),
   ),
   score: z.number(),
-})
+}) satisfies z.ZodType<FsSearchResult>
 
 export const workspaceOccurrenceSearchOptionsSchema = z
   .object({
@@ -107,7 +108,7 @@ export const workspaceOccurrenceSearchOptionsSchema = z
     wholeWord: z.boolean(),
     useRegex: z.boolean(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceOccurrenceSearchOptions>
 
 export const workspaceOccurrenceSearchRequestSchema = z
   .object({
@@ -117,10 +118,10 @@ export const workspaceOccurrenceSearchRequestSchema = z
       .min(1)
       .max(256)
       .refine((value) => value.trim().length > 0, 'Query must not be blank'),
-    limit: z.number().int().min(1).max(500).optional(),
+    limit: z.number().int().min(1).max(500).nullish(),
     options: workspaceOccurrenceSearchOptionsSchema,
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceOccurrenceSearchRequest>
 
 export const workspaceOccurrenceSearchResultSetSchema = z
   .object({
@@ -130,82 +131,70 @@ export const workspaceOccurrenceSearchResultSetSchema = z
     scannedDocuments: z.number().int().nonnegative(),
     truncated: z.boolean(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceOccurrenceSearchResultSet>
 
 export const workspaceOccurrenceSearchCancelResultSchema = z
   .object({ requestId: z.string(), cancelled: z.boolean() })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceOccurrenceSearchCancelResult>
 
-export const fsMarkdownBlockSchema = z.object({
-  id: z.string(),
-  kind: z.enum(['paragraph', 'blockquote', 'code', 'list', 'divider', 'table']),
-  text: z.string().nullable().optional(),
-  level: z.number().nullable().optional(),
-  language: z.string().nullable().optional(),
-  ordered: z.boolean().nullable().optional(),
-  items: z.array(z.string()).nullable().optional(),
-})
+export const fsMarkdownBlockSchema = z.discriminatedUnion('kind', [
+  z.object({ id: z.string(), kind: z.literal('paragraph'), text: z.string() }),
+  z.object({ id: z.string(), kind: z.literal('blockquote'), text: z.string() }),
+  z.object({ id: z.string(), kind: z.literal('code'), text: z.string(), language: z.string() }),
+]) satisfies z.ZodType<FsMarkdownBlock>
 
-export const fsGraphNodeSchema = z.object({
+const graphPreviewNodeFields = {
   id: z.string(),
-  kind: z.enum(['file', 'heading', 'missing', 'external', 'preview']),
   label: z.string(),
-  path: z.string().nullable().optional(),
-  line: z.number().nullable().optional(),
-  level: z.number().nullable().optional(),
-  slug: z.string().nullable().optional(),
-  content: z.string().nullable().optional(),
-  content_blocks: z.array(fsMarkdownBlockSchema).nullable().optional(),
-  content_start_line: z.number().nullable().optional(),
-  content_end_line: z.number().nullable().optional(),
-  preview_kind: z
-    .enum([
-      'audio',
-      'docx',
-      'drawio',
-      'excalidraw',
-      'image',
-      'pdf',
-      'source',
-      'spreadsheet',
-      'video',
-    ])
-    .nullable()
-    .optional(),
-  source_path: z.string().nullable().optional(),
-  target: z.string().nullable().optional(),
-  group: z
-    .object({
-      key: z.string(),
-      label: z.string(),
-      source: z.enum(['frontmatter', 'path', 'semantic', 'workspace']),
-    })
-    .nullable()
-    .optional(),
-})
+  path: z.string(),
+  source_path: z.string(),
+  target: z.string(),
+  preview_kind: z.enum([
+    'audio',
+    'docx',
+    'drawio',
+    'excalidraw',
+    'image',
+    'pdf',
+    'source',
+    'spreadsheet',
+    'video',
+  ]),
+}
+export const fsGraphNodeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    id: z.string(),
+    kind: z.literal('file'),
+    label: z.string(),
+    path: z.string(),
+    group: z.object({ key: z.string(), label: z.string(), source: z.literal('path') }),
+  }),
+  z.object({ ...graphPreviewNodeFields, kind: z.literal('preview') }),
+  z.object({ ...graphPreviewNodeFields, kind: z.literal('missing') }),
+]) satisfies z.ZodType<FsGraphNode>
 
 export const fsGraphEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
-  kind: z.enum(['contains', 'links_to', 'references_heading', 'previews']),
-})
+  kind: z.enum(['links_to', 'references_heading', 'previews']),
+}) satisfies z.ZodType<FsGraphEdge>
 
 export const fsGraphSchema = z.object({
   mode: z.literal('mindmap'),
-  revision: z.string().optional(),
+  revision: z.string(),
   nodes: z.array(fsGraphNodeSchema),
   edges: z.array(fsGraphEdgeSchema),
-})
+}) satisfies z.ZodType<FsGraph>
 
 export const workspaceGraphNodeDetailsRequestSchema = z
   .object({
     node_ids: z.array(z.string().min(1).max(1_024)).min(1).max(256),
     mode: z.enum(['summary', 'full']),
-    max_nodes: z.number().int().min(1).max(64).optional(),
+    max_nodes: z.number().int().min(1).max(64).nullish(),
     revision: z.string().min(1),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceGraphNodeDetailsRequest>
 
 export const workspaceGraphPreviewSchema = z
   .object({
@@ -222,9 +211,10 @@ export const workspaceGraphPreviewSchema = z
       )
       .max(64),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceGraphPreview>
 
-export type WorkspaceGraphPreview = z.infer<typeof workspaceGraphPreviewSchema>
+export type WorkspaceGraphPreview =
+  DesktopCommandResults['fs_get_workspace_graph_node_details']['items'][number]['preview']
 
 export const workspaceGraphNodeDetailsResultSchema = z
   .object({
@@ -233,7 +223,7 @@ export const workspaceGraphNodeDetailsResultSchema = z
         .object({
           id: z.string(),
           content: z.string(),
-          preview: workspaceGraphPreviewSchema.optional(),
+          preview: workspaceGraphPreviewSchema,
           content_blocks: z.array(fsMarkdownBlockSchema).optional(),
         })
         .strict(),
@@ -241,58 +231,57 @@ export const workspaceGraphNodeDetailsResultSchema = z
     revision: z.string().min(1),
     truncated: z.boolean(),
   })
-  .strict()
+  .strict() satisfies z.ZodType<WorkspaceGraphNodeDetailsResult>
 
 export const markdownAssetImportStrategySchema = z.enum([
   'copy-to-document-assets',
   'preserve-path',
-])
+]) satisfies z.ZodType<MarkdownAssetImportStrategy>
 
 export const fsMarkdownAssetImportResultSchema = z.object({
   markdown_target: z.string(),
   relative_path: z.string().nullable(),
-  asset_dir: z.string().nullable().optional(),
+  asset_dir: z.string().nullable(),
   copied: z.boolean(),
-})
+}) satisfies z.ZodType<FsMarkdownAssetImportResult>
 
 export const fsMarkdownAssetResolveResultSchema = z.object({
   source_path: z.string(),
   target: z.string(),
   relative_path: z.string().nullable(),
   is_external: z.boolean(),
-  media_type: z.string().nullable().optional(),
+  media_type: z.string().nullable(),
   exists: z.boolean(),
-})
+}) satisfies z.ZodType<FsMarkdownAssetResolveResult>
 
-export type FsRootKind = z.infer<typeof fsRootInfoSchema>['kind']
-export type FsEntry = z.infer<typeof fsEntrySchema>
-export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
-export type FsSnapshot = z.infer<typeof fsSnapshotSchema>
-export type FsPathMetadata = z.infer<typeof fsPathMetadataSchema>
-export type FsAssetCapability = z.infer<typeof fsAssetCapabilitySchema>
-export type FsTextPreview = z.infer<typeof fsTextPreviewSchema>
-export type WorkspaceGraphNodeDetailsRequest = z.infer<
-  typeof workspaceGraphNodeDetailsRequestSchema
->
-export type WorkspaceGraphNodeDetailsResult = z.infer<typeof workspaceGraphNodeDetailsResultSchema>
-export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
-export type FsSearchResult = z.infer<typeof fsSearchResultSchema>
-export type WorkspaceOccurrenceSearchOptions = z.infer<
-  typeof workspaceOccurrenceSearchOptionsSchema
->
-export type WorkspaceOccurrenceSearchRequest = z.infer<
-  typeof workspaceOccurrenceSearchRequestSchema
->
-export type WorkspaceOccurrenceSearchResultSet = z.infer<
-  typeof workspaceOccurrenceSearchResultSetSchema
->
-export type WorkspaceOccurrenceSearchCancelResult = z.infer<
-  typeof workspaceOccurrenceSearchCancelResultSchema
->
-export type FsMarkdownBlock = z.infer<typeof fsMarkdownBlockSchema>
-export type FsGraphNode = z.infer<typeof fsGraphNodeSchema>
-export type FsGraphEdge = z.infer<typeof fsGraphEdgeSchema>
-export type FsGraph = z.infer<typeof fsGraphSchema>
-export type MarkdownAssetImportStrategy = z.infer<typeof markdownAssetImportStrategySchema>
-export type FsMarkdownAssetImportResult = z.infer<typeof fsMarkdownAssetImportResultSchema>
-export type FsMarkdownAssetResolveResult = z.infer<typeof fsMarkdownAssetResolveResultSchema>
+export type FsRootKind = DesktopCommandResults['fs_get_root_info']['kind']
+export type FsEntry = DesktopCommandResults['fs_list_entries'][number]
+export type FsRootInfo = DesktopCommandResults['fs_get_root_info']
+export type FsSnapshot = DesktopCommandResults['fs_get_snapshot']
+export type FsPathMetadata = DesktopCommandResults['fs_get_path_metadata']
+export type FsAssetCapability = DesktopCommandResults['assets_issue_capability']
+export type FsTextPreview = DesktopCommandResults['workspace_read_text_preview']
+export type WorkspaceGraphNodeDetailsRequest =
+  DesktopCommandArgs['fs_get_workspace_graph_node_details']['request']
+export type WorkspaceGraphNodeDetailsResult =
+  DesktopCommandResults['fs_get_workspace_graph_node_details']
+export type BackgroundTaskStatus = DesktopCommandResults['fs_get_background_tasks'][number]
+export type FsSearchResult = DesktopCommandResults['fs_search_workspace'][number]
+export type WorkspaceOccurrenceSearchOptions =
+  DesktopCommandArgs['fs_search_workspace_occurrences']['request']['options']
+export type WorkspaceOccurrenceSearchRequest =
+  DesktopCommandArgs['fs_search_workspace_occurrences']['request']
+export type WorkspaceOccurrenceSearchResultSet =
+  DesktopCommandResults['fs_search_workspace_occurrences']
+export type WorkspaceOccurrenceSearchCancelResult =
+  DesktopCommandResults['fs_cancel_workspace_occurrence_search']
+export type FsMarkdownBlock = NonNullable<
+  WorkspaceGraphNodeDetailsResult['items'][number]['content_blocks']
+>[number]
+export type FsGraphNode = FsGraph['nodes'][number]
+export type FsGraphEdge = FsGraph['edges'][number]
+export type FsGraph = DesktopCommandResults['fs_get_workspace_graph']
+export type MarkdownAssetImportStrategy =
+  DesktopCommandArgs['fs_import_markdown_asset']['request']['strategy']
+export type FsMarkdownAssetImportResult = DesktopCommandResults['fs_import_markdown_asset']
+export type FsMarkdownAssetResolveResult = DesktopCommandResults['fs_resolve_markdown_asset']

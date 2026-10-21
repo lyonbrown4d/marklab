@@ -1,3 +1,4 @@
+use super::types::CommitFileStatus;
 use super::{test_support::Repository, *};
 fn revision(hash: String) -> types::RevisionRequest {
   types::RevisionRequest {
@@ -48,7 +49,7 @@ async fn cherry_pick_revert_and_commit_preview_use_library_objects() {
   assert!(
     files
       .iter()
-      .any(|file| file.path == "added.txt" && file.status == "A")
+      .any(|file| file.path == "added.txt" && matches!(file.status, CommitFileStatus::A))
   );
   let picked = status::repo(repo.root()).await.unwrap().head.unwrap();
   local::revision_action(repo.root(), "revert", &revision(picked))

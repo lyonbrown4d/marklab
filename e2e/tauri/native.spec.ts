@@ -23,7 +23,7 @@ describe('real Tauri desktop', () => {
   it('loads the external CLI root and saves a Plate edit through Rust buffers', async () => {
     await switchToWorkspace(fixture.alpha)
     assert.equal(await currentRoot(), fixture.alpha)
-    const platform = await invokeNative<{ platform: string }>('app_get_platform')
+    const platform = await invokeNative('app_get_platform')
     assert.equal(
       platform.platform,
       process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux',
@@ -34,13 +34,13 @@ describe('real Tauri desktop', () => {
     await typeAtEditorEnd(' native-persisted-marker')
     // The production flush command drains actual Rust buffers, not a test handler.
     await waitForRustMarker('native-persisted-marker')
-    await invokeNative<number>('fs_flush_buffers')
+    await invokeNative('fs_flush_buffers')
     await browser.waitUntil(async () =>
       (await fs.readFile(path.join(fixture.alpha, 'Editor.md'), 'utf8')).includes(
         'native-persisted-marker',
       ),
     )
-    const snapshot = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
+    const snapshot = await invokeNative('fs_open_buffer_snapshot', {
       path: 'Editor.md',
     })
     assert.match(snapshot.content, /native-persisted-marker/)
@@ -53,7 +53,7 @@ describe('real Tauri desktop', () => {
     await openEditor()
     const alphaBefore = await fs.readFile(path.join(fixture.alpha, 'Editor.md'), 'utf8')
     const alphaHandle = await browser.getWindowHandle()
-    const opened = await invokeNative<{ ok: boolean }>('open_path_in_new_window', {
+    const opened = await invokeNative('open_path_in_new_window', {
       path: fixture.beta,
     })
     assert.equal(opened.ok, true)
