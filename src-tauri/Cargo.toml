@@ -42,7 +42,7 @@ tauri-specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 tokio-util = { version = "0.7", features = ["rt", "io"] }
 lsp-types = "0.97"
 thiserror = "2"
-tokio = { version = "1.53.3", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.54.0", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono", "json"] }
 portable-pty = "0.9"
 sha2 = "0.11.1"
@@ -96,9 +96,9 @@ imagesize = "0.15"
 layout-rs = "0.1.3"
 rectangle-pack = { version = "0.4.2", default-features = false }
 graphrs = { version = "0.12.0", default-features = false }
-rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io"] }
-rig-core = { version = "=0.44.0", default-features = false }
-rig-reqwest = { version = "=0.44.0", default-features = false, features = ["rustls"] }
+rmcp = { version = "3.6.0", default-features = false, features = ["server", "macros", "transport-io"] }
+rig-core = { version = "=0.45.0", default-features = false }
+rig-reqwest = { version = "=0.45.0", default-features = false, features = ["rustls"] }
 tauri-plugin-window-state = "2"
 puml = { version = "=0.2.6", default-features = false }
 
@@ -134,6 +134,6 @@ lto = "thin"
 strip = true
 
 [dev-dependencies]
-rmcp = { version = "3.5.1", default-features = false, features = ["client"] }
+rmcp = { version = "3.6.0", default-features = false, features = ["client"] }
 tauri = { version = "2.12.4", features = ["test"] }
 tempfile = "3.27.0"

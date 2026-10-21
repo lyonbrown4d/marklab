@@ -24,17 +24,17 @@ pub(super) fn temperature(
       let o_reasoning = name
         .strip_prefix('o')
         .is_some_and(|suffix| suffix.starts_with(|c: char| c.is_ascii_digit()));
-      spec.is_some_and(|spec| {
+      spec.is_ok_and(|resolved| {
         matches!(
-          spec.sampling,
+          resolved.spec.sampling,
           Some(Sampling::Never | Sampling::ReasoningOff)
         )
       }) || gpt_reasoning
         || o_reasoning
     }
     ProviderKind::Anthropic => match spec {
-      Some(spec) => spec.sampling == Some(Sampling::Never),
-      None => provider.model.starts_with("claude-") && !legacy_claude(&provider.model),
+      Ok(resolved) => resolved.spec.sampling == Some(Sampling::Never),
+      Err(_) => provider.model.starts_with("claude-") && !legacy_claude(&provider.model),
     },
     ProviderKind::Google
     | ProviderKind::Deepseek
