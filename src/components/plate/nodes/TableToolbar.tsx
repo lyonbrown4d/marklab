@@ -34,7 +34,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
   return (
     <div
       aria-label={t('editor.tableEditing')}
-      className="mb-2 flex flex-wrap items-center gap-1 rounded-md border border-border bg-muted/30 p-1"
+      className="ml-5 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-md border border-border bg-muted/30 p-1"
       contentEditable={false}
       role="toolbar"
     >

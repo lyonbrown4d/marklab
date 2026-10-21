@@ -115,3 +115,120 @@ test('keeps the selection toolbar anchored across scroll, browser zoom, IME and 
   await expect(page.getByRole('toolbar', { name: /^(Text|文本)$/i })).toHaveCount(0)
   await expect(editor).toContainText('Second document')
 })
+
+test.describe('table and animated caret', () => {
+  test.use({
+    documents: {
+      'Tables.md': [
+        '# 表格与光标',
+        '| 角色 | 建议先读 |',
+        '| --- | --- |',
+        '| 新成员 / TL | `01-general`、`02-technology-baseline`、`05-rd-process`、`glossary` |',
+        '| 前端工程师 | `03-frontend-engineering`、`06-security-and-access` |',
+        '',
+        '| A | B | C | D | E | F | G | H |',
+        '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        '| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |',
+      ].join('\n'),
+    },
+    initialFile: 'Tables.md',
+  })
+
+  test('fits default tables to the document and keeps wide tables scrollable and resizable', async ({
+    session: { page },
+  }) => {
+    const editor = page.getByTestId('markdown-editor')
+    const table = editor.locator('table').first()
+    await expect(table).toBeVisible()
+    for (const width of [1440, 760]) {
+      await page.setViewportSize({ width, height: 960 })
+      await expect
+        .poll(() =>
+          table.evaluate((element) => {
+            const wrapper = element.parentElement!
+            const style = getComputedStyle(wrapper)
+            const available =
+              wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+            return Math.abs(element.getBoundingClientRect().width - available)
+          }),
+        )
+        .toBeLessThan(2)
+    }
+    const cells = table.locator('tbody tr').nth(1).locator('td')
+    expect((await cells.last().boundingBox())!.height).toBeLessThan(150)
+    expect(
+      await cells
+        .last()
+        .locator('p')
+        .evaluate((paragraph) => paragraph.scrollWidth - paragraph.clientWidth),
+    ).toBeLessThanOrEqual(1)
+    const wideTable = editor.locator('table').last()
+    expect(
+      await wideTable.evaluate((element) => {
+        const wrapper = element.parentElement!
+        return wrapper.scrollWidth > wrapper.clientWidth
+      }),
+    ).toBe(true)
+    const header = table.locator('th').first()
+    await header.hover()
+    const before = (await header.boundingBox())!
+    const resizeHandle = header.getByRole('separator')
+    const handle = (await resizeHandle.boundingBox())!
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(handle.x + handle.width / 2 + 32, handle.y + handle.height / 2, {
+      steps: 4,
+    })
+    await page.mouse.up()
+    await expect
+      .poll(async () => (await header.boundingBox())!.width - before.width)
+      .toBeCloseTo(32, 0)
+    await expect(table).toContainText('02-technology-baseline')
+    await resizeHandle.focus()
+    for (let step = 0; step < 5; step++) await page.keyboard.press('Shift+ArrowRight')
+    expect((await table.locator('th').last().boundingBox())!.width).toBeGreaterThanOrEqual(95)
+    for (let step = 0; step < 5; step++) await page.keyboard.press('Shift+ArrowLeft')
+    const capture = test.info().outputPath('table-layout.png')
+    await page.screenshot({ path: capture })
+    await test.info().attach('table-layout', { path: capture, contentType: 'image/png' })
+  })
+
+  test('keeps the caret aligned during fast typing, line breaks and scrolling inside a table', async ({
+    session: { page },
+  }) => {
+    const editor = page.getByTestId('markdown-editor')
+    const cell = editor.locator('table').first().locator('th').first()
+    await cell.locator('p').click()
+    await page.keyboard.press('End')
+    const caret = page.locator('body > [data-marklab-plate-overlay="animated-cursor"]')
+    await expect(caret).toBeVisible()
+    const expectAligned = async () => {
+      const difference = await caret.evaluate(async (element) => {
+        await new Promise<void>((done) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => done())),
+        )
+        const range = getSelection()!.getRangeAt(0).getBoundingClientRect()
+        const overlay = element.getBoundingClientRect()
+        return {
+          x: Math.abs(overlay.left + overlay.width / 2 - range.left),
+          y: Math.abs(overlay.top - range.top),
+        }
+      })
+      expect(difference.x).toBeLessThan(2)
+      expect(difference.y).toBeLessThan(2)
+    }
+    await page.keyboard.type('abcdef', { delay: 1 })
+    await expectAligned()
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('输入后保持对齐', { delay: 1 })
+    await expectAligned()
+    await editor.evaluate((element) => {
+      element.scrollTop += 24
+    })
+    await expectAligned()
+    await editor.dispatchEvent('compositionstart')
+    await expect(caret).toBeHidden()
+    await editor.dispatchEvent('compositionend')
+    await expect(caret).toBeVisible()
+  })
+})

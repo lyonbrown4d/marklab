@@ -97,7 +97,7 @@ describe('TableCellResizable', () => {
     )
 
     const handle = screen.getByRole('separator', { name: 'editor.tableResizeColumn:2' })
-    expect(handle).toHaveAttribute('aria-valuemin', '48')
+    expect(handle).toHaveAttribute('aria-valuemin', '96')
     expect(handle).toHaveAttribute('aria-valuemax', '4096')
     expect(handle).toHaveAttribute('aria-valuenow', '160')
 
@@ -116,5 +116,37 @@ describe('TableCellResizable', () => {
       finished: true,
       initialSize: 160,
     })
+  })
+
+  it('resizes an automatic column from its rendered width without collapsing it', () => {
+    mocks.state.width = 0
+    const onResize = vi.fn()
+    mocks.resize.rightProps = { options: { direction: 'right', onResize } }
+    const cellProps = {
+      attributes: {},
+      children: 'Cell',
+      element: { children: [], type: 'td' },
+    } as unknown as ComponentProps<typeof TableCellResizable>
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <TableCellResizable {...cellProps} />
+          </tr>
+        </tbody>
+      </table>,
+    )
+    const cell = screen.getByRole('cell')
+    vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({ width: 320 } as DOMRect)
+    const handle = screen.getByRole('separator')
+    expect(handle).not.toHaveAttribute('aria-valuenow')
+    fireEvent.keyDown(handle, { key: 'ArrowRight' })
+    expect(onResize).toHaveBeenCalledWith({
+      delta: 16,
+      direction: 'right',
+      finished: true,
+      initialSize: 320,
+    })
+    mocks.state.width = 160
   })
 })

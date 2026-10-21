@@ -207,7 +207,6 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
     options: {
       disableMarginLeft: true,
       disableMerge: true,
-      initialTableWidth: 480,
       minColumnWidth: 96,
     },
     render: {

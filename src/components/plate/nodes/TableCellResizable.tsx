@@ -1,7 +1,7 @@
 import { ResizeHandle } from '@platejs/resizable'
 import { useTableCellElement, useTableCellElementResizable } from '@platejs/table/react'
 import { KEYS, type TElement } from 'platejs'
-import type { KeyboardEventHandler } from 'react'
+import { useRef, type KeyboardEventHandler } from 'react'
 import {
   PlateElement,
   type PlateElementProps,
@@ -29,10 +29,11 @@ const cellAlignmentClass = {
 
 const TABLE_COLUMN_KEYBOARD_STEP = 16
 const TABLE_COLUMN_MAX_WIDTH = 4096
-const TABLE_COLUMN_MIN_WIDTH = 48
+const TABLE_COLUMN_MIN_WIDTH = 96
 
 export const TableCellResizable = (props: TableCellResizableProps) => {
   const editor = useEditorRef()
+  const cellRef = useRef<HTMLTableCellElement>(null)
   const readOnly = useReadOnly()
   const { t } = useI18n()
   const { colIndex, colSpan, minHeight, rowIndex, selected, width } = useTableCellElement()
@@ -41,7 +42,7 @@ export const TableCellResizable = (props: TableCellResizableProps) => {
   const header = props.element.type === 'th'
   const operations = createTableOperations(editor, table)
   const parsedWidth = typeof width === 'number' ? width : Number.parseFloat(width)
-  const currentWidth = Number.isFinite(parsedWidth) ? parsedWidth : TABLE_COLUMN_MIN_WIDTH
+  const currentWidth = parsedWidth > 0 ? parsedWidth : TABLE_COLUMN_MIN_WIDTH
   const handleResizeKeyDown: KeyboardEventHandler<HTMLElement> = (event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
@@ -51,7 +52,7 @@ export const TableCellResizable = (props: TableCellResizableProps) => {
       delta: direction * TABLE_COLUMN_KEYBOARD_STEP * multiplier,
       direction: 'right',
       finished: true,
-      initialSize: currentWidth,
+      initialSize: cellRef.current?.getBoundingClientRect().width || currentWidth,
     })
   }
   const attributes = {
@@ -67,10 +68,11 @@ export const TableCellResizable = (props: TableCellResizableProps) => {
       {...props}
       as={header ? 'th' : 'td'}
       attributes={attributes}
-      className={`group/table-cell relative min-w-24 border-r border-border px-3 py-2 align-top last:border-r-0 ${
-        header ? 'bg-muted/60 font-semibold' : ''
+      className={`group/table-cell relative min-w-24 border-b border-r border-border px-3 py-2 align-top last:border-r-0 ${
+        header ? 'bg-muted/60 font-semibold first:rounded-tl-lg last:rounded-tr-lg' : ''
       } ${cellAlignmentClass[props.element.align ?? 'left']}`}
-      style={{ minHeight, width }}
+      ref={cellRef}
+      style={{ minHeight, width: parsedWidth > 0 ? width : undefined }}
     >
       {readOnly ? null : (
         <>
@@ -81,7 +83,7 @@ export const TableCellResizable = (props: TableCellResizableProps) => {
             aria-orientation="vertical"
             aria-valuemax={TABLE_COLUMN_MAX_WIDTH}
             aria-valuemin={TABLE_COLUMN_MIN_WIDTH}
-            aria-valuenow={Math.round(currentWidth)}
+            aria-valuenow={parsedWidth > 0 ? Math.round(currentWidth) : undefined}
             className="absolute inset-y-0 -right-1 z-30 w-2 cursor-col-resize touch-none opacity-0 transition-opacity hover:bg-primary/30 group-hover/table-cell:opacity-100 focus-visible:bg-primary/30 focus-visible:opacity-100"
             contentEditable={false}
             onKeyDown={handleResizeKeyDown}

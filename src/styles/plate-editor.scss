@@ -196,36 +196,9 @@
   box-shadow: 0 12px 30px color-mix(in srgb, hsl(var(--foreground)) 10%, transparent);
 }
 
-.markdown-editor table {
-  width: 100%;
-  margin: 1.35rem 0;
-  border: 1px solid hsl(var(--border));
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: var(--radius);
-  background: color-mix(in srgb, hsl(var(--card)) 88%, transparent);
-}
-
-.markdown-editor th,
-.markdown-editor td {
-  border-inline-end: 1px solid hsl(var(--border));
-  border-bottom: 1px solid hsl(var(--border));
-  padding: 0.6rem 0.75rem;
-  text-align: start;
-  vertical-align: top;
-}
-
-.markdown-editor th {
-  background: color-mix(in srgb, hsl(var(--muted)) 72%, transparent);
-  font-weight: 650;
-}
-
-.markdown-editor tr:last-child > * {
-  border-bottom: 0;
-}
-
-.markdown-editor tr > *:last-child {
-  border-inline-end: 0;
+// Plate cells contain paragraph nodes; document paragraph spacing must not pad each row.
+.markdown-editor :is(td, th) > p {
+  margin-block: 0;
 }
 
 .markdown-editor.is-readonly-editor {
