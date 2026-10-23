@@ -4,7 +4,7 @@ import type { GraphData } from '@/logic/graph'
 import { fsApi } from '@/services/fsApi'
 import {
   collectVisibleWorkspaceMapFileNodeIds,
-  mergeWorkspaceMapNodeDetails,
+  createWorkspaceMapNodeDetailsMerger,
 } from '@/pages/workspace-map/workspaceMapNodeDetails'
 
 const MAX_VISIBLE_NODE_DETAILS = 32
@@ -29,6 +29,12 @@ export const useWorkspaceMapNodeDetails = ({
 }: Options): GraphData => {
   const [visibleNodeIds, setVisibleNodeIds] = useState<string[]>([])
   const contentMode = graph.nodes.find((node) => node.type === 'file')?.data.contentMode ?? 'none'
+  // Discard the visible batch when leaving this route or changing its data scope.
+  const mergeNodeDetails = useMemo(
+    () => createWorkspaceMapNodeDetailsMerger(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Scope changes intentionally release the cached preview batch.
+    [active, contentMode, graphIdentity, graph.revision],
+  )
 
   useEffect(() => {
     if (!active || !container || contentMode === 'none') {
@@ -96,6 +102,7 @@ export const useWorkspaceMapNodeDetails = ({
     placeholderData: (previousData, previousQuery) =>
       active &&
       queryNodeIds.length > 0 &&
+      previousQuery?.queryKey[1] === graphIdentity &&
       previousQuery?.queryKey[2] === graph.revision &&
       previousQuery?.queryKey[3] === contentMode
         ? previousData
@@ -106,8 +113,8 @@ export const useWorkspaceMapNodeDetails = ({
   })
 
   return useMemo(
-    () => (active ? mergeWorkspaceMapNodeDetails(graph, detailsQuery.data?.items ?? []) : graph),
-    [active, detailsQuery.data?.items, graph],
+    () => mergeNodeDetails(graph, active ? (detailsQuery.data?.items ?? []) : []),
+    [active, detailsQuery.data?.items, graph, mergeNodeDetails],
   )
 }
 
