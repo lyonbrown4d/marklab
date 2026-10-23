@@ -8,6 +8,9 @@ pub use types::{Document, Heading, Link, LinkKind};
 #[path = "link_positions.rs"]
 mod link_positions;
 pub use link_positions::position;
+#[path = "document_positions.rs"]
+mod positions;
+use positions::DocumentPositions;
 
 static WIKI: LazyLock<Result<Regex, regex::Error>> =
   LazyLock::new(|| Regex::new(r"!?\[\[([^\]\n]+?)\]\]"));
@@ -21,6 +24,7 @@ struct PendingLink {
 }
 
 pub fn parse(path: String, content: String) -> BackendResult<Document> {
+  let positions = DocumentPositions::new(&content);
   let mut headings = Vec::new();
   let mut links = Vec::new();
   let mut assets = Vec::new();
@@ -56,7 +60,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
             format!("{base}-{count}")
           };
           *count += 1;
-          let (line, column) = position(&content, offset);
+          let (line, column) = positions.position(offset);
           headings.push(Heading {
             path: path.clone(),
             slug,
@@ -95,7 +99,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
         if let Some(pending) = pending_links.pop() {
           let item = link_at(
             &path,
-            &content,
+            &positions,
             pending.target,
             pending.text,
             LinkKind::Markdown,
@@ -151,7 +155,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
       let (target, label) = inner.split_once('|').unwrap_or((inner, inner));
       let item = link_at(
         &path,
-        &content,
+        &positions,
         target.trim().into(),
         label.trim().into(),
         LinkKind::Wiki,
@@ -194,25 +198,21 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
 
 fn link_at(
   path: &str,
-  content: &str,
+  positions: &DocumentPositions<'_>,
   target: String,
   text: String,
   kind: LinkKind,
   range: Range<usize>,
   inline: bool,
 ) -> Link {
+  let content = positions.text;
   let raw = &content[range.clone()];
   // Resolved reference-style destinations are outside this usage span.
   // Never mistake matching label text for a writable destination.
   let found = link_positions::destination(raw, &target, kind.as_str(), inline);
   let destination = found.map_or(range.start, |index| range.start + index);
-  let (line, column) = position(content, destination);
-  let context = content
-    .lines()
-    .nth(line - 1)
-    .unwrap_or("")
-    .trim()
-    .to_owned();
+  let (line, column) = positions.position(destination);
+  let context = positions.context(line).to_owned();
   let end_offset = destination + found.map_or(0, |_| target.len());
   Link {
     source_path: path.into(),

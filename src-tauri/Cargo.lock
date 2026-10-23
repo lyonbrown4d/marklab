@@ -4533,6 +4533,7 @@ dependencies = [
  "libc",
  "log",
  "lsp-types",
+ "memchr",
  "merman-core",
  "mime_guess",
  "mitex",

@@ -27,7 +27,7 @@ import {
 import { ImagePlugin } from '@platejs/media/react'
 import { EquationPlugin, InlineEquationPlugin } from '@platejs/math/react'
 import { BlockSelectionPlugin } from '@platejs/selection/react'
-import { all, createLowlight } from 'lowlight'
+import { codeHighlighter } from '@/lib/codeHighlighter'
 import {
   onKeyDownTable,
   TableCellHeaderPlugin,
@@ -111,8 +111,6 @@ import { plateClassicListCompatibilityPlugin } from '@/components/plate/plateCla
 import { blockDraggableWrapper } from '@/components/plate/nodes/BlockDraggable'
 import { BulletedListElement } from '@/components/ui/list-classic-node'
 
-const codeBlockLowlight = createLowlight({ ...all, shell: all.bash })
-
 const HtmlDetailsPlugin = createPlatePlugin({
   key: PLATE_HTML_DETAILS,
   node: { isElement: true },
@@ -166,7 +164,7 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
   plateClassicListCompatibilityPlugin,
   CodeBlockPlugin.configure({
     inputRules: plateCodeBlockMarkdownInputRules,
-    options: { lowlight: codeBlockLowlight },
+    options: { lowlight: codeHighlighter },
   }).withComponent(CodeBlockElement),
   CodeLinePlugin.withComponent(CodeLineElement),
   CodeSyntaxPlugin.withComponent(CodeSyntaxLeaf),

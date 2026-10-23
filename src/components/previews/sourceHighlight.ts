@@ -1,4 +1,4 @@
-import { all, createLowlight } from 'lowlight'
+import { codeHighlighter } from '@/lib/codeHighlighter'
 
 export const MAX_SOURCE_HIGHLIGHT_CHARACTERS = 40_000
 export const MAX_SOURCE_HIGHLIGHT_LINES = 400
@@ -17,7 +17,6 @@ type HighlightNode = {
   value?: unknown
 }
 
-const sourceLowlight = createLowlight(all)
 const safeTokenClassPattern = /^hljs-[a-z0-9_-]+$/i
 
 const tokenClasses = (node: HighlightNode): readonly string[] => {
@@ -76,12 +75,12 @@ export const highlightSourceLines = (
   languageId: string,
 ): SourceHighlightLine[] => {
   const lineCount = highlightableLineCount(lines)
-  if (languageId === 'plaintext' || !sourceLowlight.registered(languageId) || lineCount === 0) {
+  if (languageId === 'plaintext' || !codeHighlighter.registered(languageId) || lineCount === 0) {
     return lines.map(plainLine)
   }
 
   try {
-    const root = sourceLowlight.highlight(languageId, lines.slice(0, lineCount).join('\n'))
+    const root = codeHighlighter.highlight(languageId, lines.slice(0, lineCount).join('\n'))
     const fragments: SourceHighlightFragment[] = []
     flattenTokens(root as HighlightNode, [], fragments)
     const highlighted = splitFragmentsIntoLines(fragments)
