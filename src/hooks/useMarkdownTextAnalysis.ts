@@ -6,52 +6,64 @@ import {
 import { analyzeMarkdownText } from '@/services/markdownTextAnalysisWorkerClient'
 
 type MarkdownTextAnalysisState = {
-  content: string
+  content: string | null
   error: string | null
   result: MarkdownTextAnalysisResult
   sourceKey: string
+  includeOutline: boolean
 }
 
-export const useMarkdownTextAnalysis = (content: string, enabled: boolean, sourceKey: string) => {
+export const useMarkdownTextAnalysis = (
+  content: string,
+  enabled: boolean,
+  sourceKey: string,
+  includeOutline = true,
+) => {
   const [state, setState] = useState<MarkdownTextAnalysisState>({
-    content,
+    content: null,
     error: null,
     result: EMPTY_MARKDOWN_TEXT_ANALYSIS,
     sourceKey,
+    includeOutline,
   })
 
   useEffect(() => {
     if (!enabled) return
 
-    let cancelled = false
+    const controller = new AbortController()
 
-    void analyzeMarkdownText(content)
-      .then((result) => {
-        if (cancelled) return
-        setState({
-          content,
-          error: null,
-          result,
-          sourceKey,
+    const timer = window.setTimeout(() => {
+      void analyzeMarkdownText(content, { includeOutline, signal: controller.signal })
+        .then((result) => {
+          if (controller.signal.aborted) return
+          setState({
+            content,
+            error: null,
+            result,
+            sourceKey,
+            includeOutline,
+          })
         })
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return
-        setState({
-          content,
-          error: error instanceof Error ? error.message : 'Markdown text analysis failed.',
-          result: EMPTY_MARKDOWN_TEXT_ANALYSIS,
-          sourceKey,
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return
+          setState({
+            content,
+            error: error instanceof Error ? error.message : 'Markdown text analysis failed.',
+            result: EMPTY_MARKDOWN_TEXT_ANALYSIS,
+            sourceKey,
+            includeOutline,
+          })
         })
-      })
+    }, 250)
 
     return () => {
-      cancelled = true
+      window.clearTimeout(timer)
+      controller.abort()
     }
-  }, [content, enabled, sourceKey])
+  }, [content, enabled, includeOutline, sourceKey])
 
   return useMemo(() => {
-    if (!enabled || state.sourceKey !== sourceKey) {
+    if (!enabled || state.sourceKey !== sourceKey || state.includeOutline !== includeOutline) {
       return {
         error: null,
         isLoading: enabled,
@@ -64,5 +76,5 @@ export const useMarkdownTextAnalysis = (content: string, enabled: boolean, sourc
       isLoading: state.content !== content,
       ...state.result,
     }
-  }, [content, enabled, sourceKey, state])
+  }, [content, enabled, includeOutline, sourceKey, state])
 }

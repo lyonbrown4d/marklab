@@ -8,9 +8,12 @@ import type {
   WorkspaceMapOverviewEdge,
 } from '@/pages/workspace-map/workspaceMapOverviewEdgeGeometry'
 
-const geometry = vi.hoisted(() => ({ current: [] as WorkspaceMapOverviewEdge[] }))
+const geometry = vi.hoisted(() => ({
+  current: [] as WorkspaceMapOverviewEdge[],
+  select: vi.fn<() => WorkspaceMapOverviewEdge[]>(),
+}))
 vi.mock('@/pages/workspace-map/workspaceMapOverviewEdgeGeometry', () => ({
-  createWorkspaceMapOverviewEdgeSelector: () => () => geometry.current,
+  createWorkspaceMapOverviewEdgeSelector: () => geometry.select,
 }))
 
 const edge: Edge = { id: 'a-b', source: 'a', target: 'b' }
@@ -48,6 +51,7 @@ describe('workspace map canvas edge painting', () => {
     frames = new Map()
     nextFrame = 0
     geometry.current = [item]
+    geometry.select.mockImplementation(() => geometry.current)
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       frames.set(++nextFrame, callback)
       return nextFrame
@@ -88,10 +92,11 @@ describe('workspace map canvas edge painting', () => {
       nodeLookup: new Map(),
     }
     const onVisible = vi.fn()
+    const semantics = makeSemantics([edge, second])
     const painter = createWorkspaceMapCanvasEdgePainter({
       canvas,
       context,
-      semantics: makeSemantics([edge, second]),
+      semantics,
       edges: [edge, second],
       getState: () => state,
       onVisible,
@@ -117,19 +122,85 @@ describe('workspace map canvas edge painting', () => {
     expect(Path2D).toHaveBeenCalledTimes(2)
     expect(getComputedStyle).toHaveBeenCalledTimes(styleReads)
     expect(onVisible).toHaveBeenCalledTimes(1)
+    // Store notifications for focus/selection must not repaint an unchanged scene.
+    const strokes = vi.mocked(context.stroke).mock.calls.length
+    for (let index = 0; index < 100; index += 1) {
+      painter.schedule()
+      flush()
+    }
+    expect(context.stroke).toHaveBeenCalledTimes(strokes)
+    // Geometry changes still repaint, even when the camera is unchanged.
     geometry.current = [
       { ...item, path: 'M0,0 L80,80' },
       { ...item, edge: { ...edge, id: 'c' } },
     ]
+    semantics.replaceChildren(...makeSemantics(geometry.current.map(({ edge }) => edge)).children)
     painter.schedule()
     flush()
     expect(Path2D).toHaveBeenCalledTimes(4)
+    expect(context.stroke).toHaveBeenCalledTimes(strokes + 2)
+    const reads = vi.mocked(getComputedStyle).mock.calls.length
+    painter.schedule(true)
+    flush()
+    expect(context.stroke).toHaveBeenCalledTimes(strokes + 4)
+    expect(vi.mocked(getComputedStyle).mock.calls.length).toBeGreaterThan(reads)
+    vi.spyOn(window, 'devicePixelRatio', 'get').mockReturnValue(1)
+    painter.schedule()
+    flush()
+    expect([canvas.width, canvas.height]).toEqual([800, 519])
+    expect(context.stroke).toHaveBeenCalledTimes(strokes + 6)
     painter.schedule()
     painter.dispose()
     expect(frames.size).toBe(0)
     expect([canvas.width, canvas.height]).toEqual([0, 0])
     painter.schedule()
     expect(frames.size).toBe(0)
+  })
+
+  it('keeps transitions animated without recalculating unchanged endpoint geometry each frame', () => {
+    const semantics = makeSemantics([edge])
+    let running = true
+    const path = semantics.querySelector('path')!
+    path.getAnimations = () => [{ playState: running ? 'running' : 'finished' }] as Animation[]
+    const context = {
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      setLineDash: vi.fn(),
+      stroke: vi.fn(),
+    } as unknown as CanvasRenderingContext2D
+    const state: GeometryState = {
+      width: 800,
+      height: 519,
+      transform: [0, 0, 1],
+      connectionMode: ConnectionMode.Strict,
+      nodeLookup: new Map(),
+    }
+    const painter = createWorkspaceMapCanvasEdgePainter({
+      canvas: document.createElement('canvas'),
+      context,
+      semantics,
+      edges: [edge],
+      getState: () => state,
+      onVisible: vi.fn(),
+    })
+    geometry.select.mockClear()
+    painter.schedule()
+    flush()
+    flush()
+    flush()
+    expect(context.stroke).toHaveBeenCalledTimes(3)
+    expect(geometry.select).toHaveBeenCalledOnce()
+    expect(frames.size).toBe(1)
+    // Endpoint changes during a transition must still invalidate the cache.
+    geometry.current = [{ ...item, path: 'M0,0 L80,80' }]
+    painter.schedule()
+    flush()
+    expect(geometry.select).toHaveBeenCalledTimes(2)
+    expect(Path2D).toHaveBeenCalledTimes(2)
+    running = false
+    flush()
+    expect(frames.size).toBe(0)
+    painter.dispose()
   })
 
   it('samples matching native transitions together while preserving their computed opacity', () => {

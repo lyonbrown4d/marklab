@@ -15,6 +15,7 @@ const createAbortError = () => new DOMException('Aborted', 'AbortError')
 export class WorkerRpcClient<T> {
   private readonly pending = new Set<PendingCall>()
   private session: WorkerSession<T> | null = null
+  private idleTimer: ReturnType<typeof setTimeout> | undefined
   private readonly createWorker: () => RpcWorker
   private readonly label: string
 
@@ -36,6 +37,7 @@ export class WorkerRpcClient<T> {
         this.pending.delete(pending)
         signal?.removeEventListener('abort', onAbort)
         clearTimeout(timer)
+        this.scheduleIdleRelease()
       }
       const pending: PendingCall = {
         reject: (error) => {
@@ -46,7 +48,7 @@ export class WorkerRpcClient<T> {
       const cancel = (error: Error) => {
         if (!this.pending.has(pending)) return
         pending.reject(error)
-        this.stop(new Error(`${this.label} restarted after cancellation.`))
+        this.stop(new DOMException(`${this.label} restarted after cancellation.`, 'AbortError'))
       }
       const onAbort = () => cancel(createAbortError())
       this.pending.add(pending)
@@ -77,6 +79,7 @@ export class WorkerRpcClient<T> {
   terminate = (): void => this.stop(new Error(`${this.label} terminated.`))
 
   private ensureSession = (): WorkerSession<T> => {
+    clearTimeout(this.idleTimer)
     if (this.session) return this.session
     const worker = this.createWorker()
     let target: RpcWorker | null = worker
@@ -127,9 +130,21 @@ export class WorkerRpcClient<T> {
   }
 
   private stop = (error: Error): void => {
+    clearTimeout(this.idleTimer)
+    this.idleTimer = undefined
     const session = this.session
     this.session = null
     for (const pending of this.pending) pending.reject(error)
     session?.dispose()
+  }
+
+  private scheduleIdleRelease = (): void => {
+    if (this.pending.size > 0 || !this.session) return
+    clearTimeout(this.idleTimer)
+    // These RPC workers are stateless. Release their heaps after a quiet period;
+    // the next request recreates the transport without touching editor state.
+    this.idleTimer = setTimeout(() => {
+      if (this.pending.size === 0) this.stop(new Error(`${this.label} idle.`))
+    }, 30_000)
   }
 }

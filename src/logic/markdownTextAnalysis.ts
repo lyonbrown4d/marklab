@@ -21,12 +21,27 @@ export const EMPTY_MARKDOWN_TEXT_ANALYSIS: MarkdownTextAnalysisResult = {
 }
 
 export const getMarkdownDocumentStats = (value: string): MarkdownDocumentStats => {
-  const trimmed = value.trim()
-  return {
-    characters: value.replace(/\s/g, '').length,
-    lines: value.length === 0 ? 0 : value.split(/\r\n|\r|\n/).length,
-    words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).filter(Boolean).length,
+  let characters = value.length
+  let lines = value.length === 0 ? 0 : 1
+  let words = 0
+  let end = 0
+  // Walk whitespace runs without retaining a second document or an array of
+  // every word/line. Keep JavaScript's existing UTF-16 and whitespace semantics.
+  for (const match of value.matchAll(/\s+/g)) {
+    if (match.index > end) words += 1
+    const whitespace = match[0]
+    characters -= whitespace.length
+    end = match.index + whitespace.length
+    for (let index = 0; index < whitespace.length; index += 1) {
+      const character = whitespace.charCodeAt(index)
+      if (character === 13) {
+        lines += 1
+        if (whitespace.charCodeAt(index + 1) === 10) index += 1
+      } else if (character === 10) lines += 1
+    }
   }
+  if (end < value.length) words += 1
+  return { characters, lines, words }
 }
 
 export const analyzeMarkdownText = (content: string): MarkdownTextAnalysisResult => {

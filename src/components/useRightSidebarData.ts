@@ -167,7 +167,8 @@ export const useRightSidebarData = ({
   const displayMetadata = metadataQuery.data?.path === targetPath ? metadataQuery.data : null
   const statsContent =
     targetPath === activePath ? editorValue : (fileContents[targetPath ?? ''] ?? '')
-  const textAnalysis = useMarkdownTextAnalysis(statsContent, enabled, targetPath ?? 'empty')
+  // The indexed insights already supply the outline; only live stats are needed.
+  const textAnalysis = useMarkdownTextAnalysis(statsContent, enabled, targetPath ?? 'empty', false)
   const outline = data?.found ? data.headings : []
   const backlinks = useMemo(() => (data?.found ? data.backlinks.map(mapBacklink) : []), [data])
   const mentionLabel =

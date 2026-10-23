@@ -32,12 +32,31 @@ export const createWorkspaceMapCanvasEdgePainter = ({
   let forceStyles = true
   let animating = false
   let disposed = false
+  let geometryDirty = true
+  let geometry: WorkspaceMapOverviewEdge[] = []
+  let viewport: number[] = []
 
   const draw = () => {
     frame = undefined
     if (disposed) return
     const state = getState()
-    const geometry = select(state)
+    const previous = geometry
+    if (geometryDirty) {
+      geometry = select(state)
+      geometryDirty = false
+    }
+    const sameGeometry =
+      geometry.length === previous.length &&
+      geometry.every((item, index) => item === previous[index])
+    const ratio = window.devicePixelRatio || 1
+    const nextViewport = [state.width, state.height, ratio, ...state.transform]
+    if (
+      !dirty &&
+      !animating &&
+      sameGeometry &&
+      nextViewport.every((value, index) => value === viewport[index])
+    )
+      return
     const nextVisible = geometry.map(({ edge }) => edge)
     if (
       nextVisible.length !== visible.length ||
@@ -54,7 +73,6 @@ export const createWorkspaceMapCanvasEdgePainter = ({
       animating = true
     }
     if (animating) animating = styles.update()
-    const ratio = window.devicePixelRatio || 1
     const width = Math.max(0, Math.round(state.width * ratio))
     const height = Math.max(0, Math.round(state.height * ratio))
     if (canvas.width !== width) canvas.width = width
@@ -67,18 +85,25 @@ export const createWorkspaceMapCanvasEdgePainter = ({
     canvas.style.height = `${state.height}px`
     canvas.style.transform = `matrix(${1 / zoom},0,0,${1 / zoom},${-x / zoom},${-y / zoom})`
     context.setTransform(ratio * zoom, 0, 0, ratio * zoom, ratio * x, ratio * y)
-    const nextPaths = new Map<string, { path: string; shape: Path2D }>()
-    for (const item of geometry) paintEdge(item, nextPaths)
-    paths = nextPaths
-    if (animating) schedule()
+    // Camera movement reuses world-space paths. Allocate/prune the path map only
+    // when visible relations or endpoint geometry actually change.
+    if (!sameGeometry) {
+      const nextPaths = new Map<string, { path: string; shape: Path2D }>()
+      for (const { edge, path } of geometry) {
+        const cached = paths.get(edge.id)
+        nextPaths.set(edge.id, cached?.path === path ? cached : { path, shape: new Path2D(path) })
+      }
+      paths = nextPaths
+    }
+    for (const item of geometry) paintEdge(item)
+    viewport = nextViewport
+    if (animating) requestFrame()
   }
 
-  const paintEdge = ({ edge, path }: WorkspaceMapOverviewEdge, nextPaths: typeof paths) => {
-    const cached = paths.get(edge.id)
-    const entry = cached?.path === path ? cached : { path, shape: new Path2D(path) }
-    nextPaths.set(edge.id, entry)
+  const paintEdge = ({ edge }: WorkspaceMapOverviewEdge) => {
+    const entry = paths.get(edge.id)
     const paint = styles.get(edge.id)
-    if (!paint) return
+    if (!entry || !paint) return
     context.strokeStyle = paint.stroke
     context.lineWidth = paint.width
     context.lineCap = paint.cap
@@ -89,21 +114,27 @@ export const createWorkspaceMapCanvasEdgePainter = ({
     context.stroke(entry.shape)
   }
 
+  const requestFrame = () => {
+    if (!disposed && frame === undefined) frame = requestAnimationFrame(draw)
+  }
   const schedule = (stylesChanged = false) => {
+    geometryDirty = true
     dirty ||= stylesChanged
     forceStyles ||= stylesChanged
-    if (!disposed && frame === undefined) frame = requestAnimationFrame(draw)
+    requestFrame()
   }
   return {
     schedule,
     synchronize: () => {
       dirty = true
-      schedule()
+      requestFrame()
     },
     dispose: () => {
       disposed = true
       if (frame !== undefined) cancelAnimationFrame(frame)
       paths.clear()
+      geometry = []
+      visible = []
       canvas.width = 0
       canvas.height = 0
     },

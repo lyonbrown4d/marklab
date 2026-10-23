@@ -1,6 +1,7 @@
 import MarkdownTextAnalysisWorker from '@/workers/markdownTextAnalysisWorker?worker'
 import {
   analyzeMarkdownText as analyzeMarkdownTextInMainThread,
+  getMarkdownDocumentStats,
   type MarkdownDocumentStats,
   type MarkdownTextAnalysisResult,
 } from '@/logic/markdownTextAnalysis'
@@ -32,13 +33,27 @@ const statsScheduler = new MarkdownDocumentStatsScheduler((content, signal) =>
 
 const canUseWorker = () => typeof Worker !== 'undefined'
 
-export const analyzeMarkdownText = async (content: string): Promise<MarkdownTextAnalysisResult> => {
-  if (!canUseWorker()) return analyzeMarkdownTextInMainThread(content)
+export const analyzeMarkdownText = async (
+  content: string,
+  { includeOutline = true, signal }: { includeOutline?: boolean; signal?: AbortSignal } = {},
+): Promise<MarkdownTextAnalysisResult> => {
+  const fallback = () =>
+    includeOutline
+      ? analyzeMarkdownTextInMainThread(content)
+      : { outline: [], stats: getMarkdownDocumentStats(content) }
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+  if (!canUseWorker()) return fallback()
   try {
-    return await analysisWorkerClient.analyze(content)
-  } catch {
+    return includeOutline
+      ? await analysisWorkerClient.analyze(content, signal)
+      : { outline: [], stats: await analysisWorkerClient.stats(content, signal) }
+  } catch (error) {
+    // Cancellation must not restart a large analysis on the UI thread.
+    const cancelled =
+      typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+    if (signal?.aborted || cancelled) throw error
     analysisWorkerClient.terminate()
-    return analyzeMarkdownTextInMainThread(content)
+    return fallback()
   }
 }
 
