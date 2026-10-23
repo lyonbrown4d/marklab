@@ -2,6 +2,7 @@ import AppAlert from '@/components/AppAlert'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { GraphPdfPreviewGate } from '@/components/previews/GraphPdfPreviewGate'
+import { Button } from '@/components/ui/button'
 import type { EmbeddedPreviewResolvedTarget } from '@/components/previews/embeddedPreviewSource'
 
 export type EmbeddedPreviewVariant = 'document' | 'graph'
@@ -13,6 +14,7 @@ type EmbeddedPreviewBodyProps = {
   graphPdfLoadLabel: string
   loadingLabel: string
   pendingLabel: string
+  retryLabel: string
   refreshTarget: () => Promise<EmbeddedPreviewResolvedTarget | null>
   resolved: EmbeddedPreviewResolvedTarget | null
   shouldResolve: boolean
@@ -28,6 +30,7 @@ export const EmbeddedPreviewBody = ({
   graphPdfLoadLabel,
   loadingLabel,
   pendingLabel,
+  retryLabel,
   refreshTarget,
   resolved,
   shouldResolve,
@@ -37,10 +40,13 @@ export const EmbeddedPreviewBody = ({
 }: EmbeddedPreviewBodyProps) => {
   if (failed) {
     return (
-      <div className="flex min-h-28 items-center justify-center p-3">
+      <div className="flex min-h-28 flex-col items-center justify-center gap-3 p-3">
         <AppAlert aria-label={failedLabel} className="w-full max-w-md" tone="destructive">
           {failedLabel}
         </AppAlert>
+        <Button size="sm" variant="outline" onClick={() => void refreshTarget()}>
+          {retryLabel}
+        </Button>
       </div>
     )
   }

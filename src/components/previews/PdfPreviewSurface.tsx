@@ -11,7 +11,8 @@ import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFall
 import { PdfThumbnailRail } from '@/components/previews/PdfThumbnailRail'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResizableDialogContent } from '@/components/ui/ResizableDialogContent'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import { usePdfSource } from '@/components/previews/usePdfSource'
@@ -228,7 +229,14 @@ const MarkdownPdfPreview = ({
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="flex h-[92vh] max-w-[96vw] flex-col p-0">
+        <ResizableDialogContent
+          className="flex flex-col p-0"
+          resizeLabels={{
+            width: t('preview.resizeWidth'),
+            height: t('preview.resizeHeight'),
+            size: t('preview.resizeSize'),
+          }}
+        >
           <DialogHeader className="border-b border-border px-4 py-3">
             <DialogTitle className="truncate text-sm">{title}</DialogTitle>
           </DialogHeader>
@@ -244,7 +252,7 @@ const MarkdownPdfPreview = ({
               </div>
             )}
           </div>
-        </DialogContent>
+        </ResizableDialogContent>
       </Dialog>
     </div>
   )

@@ -9,9 +9,16 @@ use moka::future::Cache;
 use sqlx::SqlitePool;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use tauri::Manager;
-use tokio::sync::Semaphore;
+use tokio::sync::{Mutex, Semaphore};
+#[path = "screenshots.rs"]
+mod screenshots;
 
 type CacheKey = (String, u64, String);
+#[derive(Clone)]
+struct Screenshot {
+  bytes: Arc<Vec<u8>>,
+  captured_at: i64,
+}
 #[derive(Clone)]
 enum Fetched {
   Page(PreviewResult),
@@ -23,12 +30,66 @@ enum Fetched {
 }
 pub(super) struct Inner {
   cache: Cache<CacheKey, Fetched>,
-  screenshots: Cache<String, Arc<Vec<u8>>>,
+  screenshots: Cache<String, Screenshot>,
+  screenshot_writes: Mutex<LiveCaptureOrder>,
   disk: Arc<DiskCache>,
   semaphore: Semaphore,
   workers: capture::Workers,
   queue: CaptureQueue,
   maintenance: tokio::task::AbortHandle,
+}
+#[derive(Clone)]
+struct LiveRequest {
+  identity: String,
+  sequence: u64,
+}
+struct LiveCaptureOrder {
+  sequence: u64,
+  latest: moka::sync::Cache<String, LiveRequest>,
+}
+impl Default for LiveCaptureOrder {
+  fn default() -> Self {
+    Self {
+      sequence: 0,
+      latest: moka::sync::Cache::builder()
+        .max_capacity(128)
+        .time_to_live(Duration::from_secs(30 * 60))
+        .build(),
+    }
+  }
+}
+impl LiveCaptureOrder {
+  fn request(&mut self, url: &str, identity: &str) -> BackendResult<u64> {
+    if let Some(latest) = self.latest.get(url)
+      && latest.identity == identity
+    {
+      return Ok(latest.sequence);
+    }
+    self.sequence = self
+      .sequence
+      .checked_add(1)
+      .ok_or_else(|| network::failure("Preview capture sequence exhausted"))?;
+    self.latest.insert(
+      url.into(),
+      LiveRequest {
+        identity: identity.into(),
+        sequence: self.sequence,
+      },
+    );
+    Ok(self.sequence)
+  }
+  fn ensure_current(&self, url: &str, sequence: u64) -> BackendResult<()> {
+    // Eviction also cancels pending old work: an absent marker cannot authorize
+    // a result to overwrite a newer image in the separately bounded byte cache.
+    if !self
+      .latest
+      .get(url)
+      .is_some_and(|latest| latest.sequence == sequence)
+    {
+      return Err(super::queue::cancelled());
+    }
+    Ok(())
+  }
 }
 impl Drop for Inner {
   fn drop(&mut self) {
@@ -80,10 +141,11 @@ impl LinkPreviewService {
           .build(),
         screenshots: Cache::builder()
           .max_capacity(32 * 1024 * 1024)
-          .weigher(|key: &String, bytes: &Arc<Vec<u8>>| weight(key.len() + bytes.len() + 64))
-          .time_to_idle(Duration::from_secs(30 * 60))
+          .weigher(|key: &String, value: &Screenshot| weight(key.len() + value.bytes.len() + 72))
+          .time_to_live(Duration::from_secs(30 * 60))
           .build(),
         disk,
+        screenshot_writes: Mutex::new(LiveCaptureOrder::default()),
         semaphore: Semaphore::new(4),
         workers: capture::Workers::new()?,
         queue: CaptureQueue::new(),
@@ -165,7 +227,7 @@ impl LinkPreviewService {
     priority: Priority,
   ) -> BackendResult<Capture> {
     let url = network::normalize(&url)?.to_string();
-    let bytes = if let Some(bytes) = self.inner.screenshots.get(&url).await {
+    let bytes = if let Some(bytes) = self.memory_screenshot(&url).await {
       bytes
     } else {
       let service = self.clone();
@@ -200,42 +262,6 @@ impl LinkPreviewService {
   }
   pub(super) async fn promote_capture(&self, owner: String, id: String) -> BackendResult<()> {
     self.inner.queue.promote(owner, id).await
-  }
-  async fn capture_bytes(
-    &self,
-    window: &TrustedWindow,
-    url: String,
-    generation: u64,
-  ) -> BackendResult<Arc<Vec<u8>>> {
-    ensure_generation(window.app_handle(), window.label(), generation)?;
-    self
-      .inner
-      .screenshots
-      .try_get_with(url.clone(), async {
-        match self.inner.disk.get(&url).await {
-          Ok(Some(bytes)) => {
-            match crate::blocking::run(move || capture::normalize_image(bytes)).await {
-              Ok(bytes) => return Ok(Arc::new(bytes)),
-              Err(error) => {
-                log::warn!("Invalid preview cache image: {}", error.code);
-                if let Err(error) = self.inner.disk.invalidate(&url).await {
-                  log::warn!("Cannot remove preview cache image: {}", error.code);
-                }
-              }
-            }
-          }
-          Ok(None) => (),
-          Err(error) => log::warn!("Preview cache read failed: {}", error.code),
-        }
-        let bytes =
-          Arc::new(capture::capture(&self.inner.workers, window, url.clone(), generation).await?);
-        if let Err(error) = self.inner.disk.set(&url, bytes.clone()).await {
-          log::warn!("Preview cache write failed: {}", error.code);
-        }
-        Ok::<_, crate::error::BackendError>(bytes)
-      })
-      .await
-      .map_err(|error| (*error).clone())
   }
 }
 async fn issue(

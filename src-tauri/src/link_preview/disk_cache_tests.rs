@@ -31,7 +31,7 @@ async fn persists_independent_bytes_and_recovers_missing_or_corrupt_files() {
   assert!(cache.get(url).await.unwrap().is_none());
 }
 #[tokio::test]
-async fn enforces_idle_expiry_byte_budget_and_reconciles_orphans() {
+async fn enforces_capture_expiry_byte_budget_and_reconciles_orphans() {
   let (_directory, mut cache) = fixture().await;
   Arc::get_mut(&mut cache).unwrap().max_bytes = 5;
   let first = "https://example.com/first";
@@ -51,7 +51,7 @@ async fn enforces_idle_expiry_byte_budget_and_reconciles_orphans() {
   cache.touch(second).await.unwrap();
   cache.maintain().await.unwrap();
   assert!(cache.get(second).await.unwrap().is_some());
-  sqlx::query("UPDATE web_preview_cache SET last_access_ms=0")
+  sqlx::query("UPDATE web_preview_cache SET captured_at_ms=0")
     .execute(&cache.pool)
     .await
     .unwrap();
@@ -70,6 +70,48 @@ async fn enforces_idle_expiry_byte_budget_and_reconciles_orphans() {
       .is_none()
   );
 }
+#[tokio::test]
+async fn reads_and_memory_touches_do_not_extend_capture_freshness() {
+  let (_directory, cache) = fixture().await;
+  let url = "https://example.com/";
+  cache.set(url, Arc::new(vec![1, 2, 3])).await.unwrap();
+  let captured = cache.captured_at(url).await.unwrap();
+  cache.get(url).await.unwrap();
+  cache.touch(url).await.unwrap();
+  assert_eq!(cache.captured_at(url).await.unwrap(), captured);
+  sqlx::query("UPDATE web_preview_cache SET captured_at_ms=1")
+    .execute(&cache.pool)
+    .await
+    .unwrap();
+  cache.touch(url).await.unwrap();
+  assert!(cache.get(url).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn upgrades_legacy_cache_rows_without_reusing_unversioned_images() {
+  let directory = tempfile::tempdir().unwrap();
+  let pool = sqlx::sqlite::SqlitePoolOptions::new()
+    .max_connections(1)
+    .connect("sqlite::memory:")
+    .await
+    .unwrap();
+  sqlx::query("CREATE TABLE web_preview_cache (cache_key TEXT PRIMARY KEY, size_bytes INTEGER NOT NULL, last_access_ms INTEGER NOT NULL)")
+    .execute(&pool).await.unwrap();
+  let url = "https://example.com/";
+  sqlx::query("INSERT INTO web_preview_cache VALUES(?,3,?)")
+    .bind(DiskCache::key(url))
+    .bind(crate::assets::now_ms() as i64)
+    .execute(&pool)
+    .await
+    .unwrap();
+  let cache = DiskCache::new(pool, directory.path().join("previews"))
+    .await
+    .unwrap();
+  assert!(cache.get(url).await.unwrap().is_none());
+  cache.set(url, Arc::new(vec![4, 5, 6])).await.unwrap();
+  assert_eq!(cache.get(url).await.unwrap().unwrap(), [4, 5, 6]);
+}
+
 #[tokio::test]
 async fn concurrent_writes_are_atomic_and_metadata_matches_winner() {
   let (_directory, cache) = fixture().await;

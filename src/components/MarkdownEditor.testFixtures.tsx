@@ -17,6 +17,7 @@ const controllerMock = vi.hoisted(() => ({
     undo: true,
   })),
   aiDefaultProviderId: 'openai-main',
+  markdownContentWidth: 'standard',
   immersiveFocusIntensity: 'standard',
   immersiveFocusMode: false,
   immersiveFocusScope: 'block',
@@ -89,7 +90,7 @@ vi.mock('@/i18n/useI18n', () => ({
   }),
 }))
 
-const slashLabels: MarkdownEditorSlashLabels = {
+export const slashLabels: MarkdownEditorSlashLabels = {
   textGroup: 'Text',
   listGroup: 'List',
   advancedGroup: 'Advanced',

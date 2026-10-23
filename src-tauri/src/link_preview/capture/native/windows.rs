@@ -11,6 +11,8 @@ use windows::Win32::{
 };
 
 pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
+  let size = view.size()?;
+  super::super::image_geometry::validate_size(size.width, size.height)?;
   let (sender, receiver) = tokio::sync::oneshot::channel();
   let sender = std::sync::Arc::new(std::sync::Mutex::new(Some(sender)));
   view.with_webview(move |platform| {

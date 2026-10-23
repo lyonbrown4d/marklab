@@ -274,3 +274,18 @@ it('adapts real Rust buffer status DTOs and rejects late events from another wor
     session_generation: 4,
   })
 })
+
+it('ignores delayed preview frames after the owner switches workspaces', () => {
+  const hub = createEventHub()
+  const receive = vi.fn()
+  hub.on('link-preview-updated', receive)
+  hub.publish('workspace-session-seed', { state: {}, nativeAttempt: 1, nativeGeneration: 8 })
+  const capture = { url: 'https://example.com/', src: 'native-frame', width: 1920, height: 1080 }
+  hub.publish('link-preview-updated', { capture, generation: 8 })
+  expect(receive).toHaveBeenCalledWith({ capture, generation: 8 })
+  hub.publish('workspace-generation-changed', { generation: 9 })
+  hub.publish('link-preview-updated', { capture, generation: 8 })
+  expect(receive).toHaveBeenCalledOnce()
+  hub.publish('link-preview-updated', { capture, generation: 9 })
+  expect(receive).toHaveBeenCalledTimes(2)
+})

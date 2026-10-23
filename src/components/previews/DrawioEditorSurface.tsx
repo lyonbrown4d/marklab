@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLatest } from 'ahooks'
 import { ExternalLink } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   createDrawioLoadMessage,
   createDrawioSaveRequestMessage,
@@ -83,8 +84,12 @@ const DrawioEditorSurface = ({
     [embedUrl],
   )
   const openInSystem = useCallback(() => {
-    void fsApi.openPathInSystem(path)
-  }, [path])
+    void fsApi.openPathInSystem(path).catch((error: unknown) => {
+      toast.error(t('context.actionFailed'), {
+        description: `${t('preview.openInSystem')}: ${error instanceof Error ? error.message : String(error)}`,
+      })
+    })
+  }, [path, t])
 
   const saveXml = useCallback(
     async (xml: string, flush: boolean, sourceSession: string) => {
@@ -186,12 +191,9 @@ const DrawioEditorSurface = ({
   }, [
     documentQuery.data,
     documentQuery.dataUpdatedAt,
-    documentSession,
     embedUrl,
     frameReady,
-    path,
     postToFrame,
-    readonly,
     remoteEnabled,
     title,
     sessionKey,
@@ -248,7 +250,11 @@ const DrawioEditorSurface = ({
       />
 
       {documentQuery.isError ? (
-        <DrawioInlineError message={t('preview.failed')} />
+        <div className="flex h-full items-center justify-center p-4">
+          <AppAlert tone="destructive" className="max-w-md">
+            {t('preview.failed')}
+          </AppAlert>
+        </div>
       ) : (
         <div className="relative min-h-0 flex-1 bg-background">
           {(documentQuery.isLoading || !frameReady) && (
@@ -305,14 +311,6 @@ const DrawioMessageCard = ({
       title={title}
       titleClassName="text-sm"
     />
-  </div>
-)
-
-const DrawioInlineError = ({ message }: { message: string }) => (
-  <div className="flex h-full items-center justify-center p-4">
-    <AppAlert tone="destructive" className="max-w-md">
-      {message}
-    </AppAlert>
   </div>
 )
 

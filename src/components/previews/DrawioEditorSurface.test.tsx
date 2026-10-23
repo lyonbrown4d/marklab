@@ -7,6 +7,9 @@ import { DEFAULT_DRAWIO_EMBED_URL } from '@/logic/drawioEmbed'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { ActiveWorkspaceProvider } from '@/app/AppCachedOutlet'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
 vi.mock('@/services/readPreviewAsset', () => ({ readPreviewTextAsset: vi.fn() }))
 
@@ -30,11 +33,7 @@ const renderSurface = ({
   activeWorkspaceKey = 'external:C:/one',
   readonly = false,
 }: { activeWorkspaceKey?: string; readonly?: boolean } = {}) => {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const view = render(
     <QueryClientProvider client={client}>
       <ActiveWorkspaceProvider value={activeWorkspaceKey}>
@@ -96,6 +95,7 @@ describe('DrawioEditorSurface', () => {
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'
     vi.clearAllMocks()
+    vi.mocked(fsApi.openPathInSystem).mockResolvedValue({ ok: true, path: 'same.drawio' })
     vi.mocked(fsApi.openBufferSnapshot).mockImplementation(async (path: string) => ({
       content: await fsApi.readFile(path),
       path,
@@ -266,7 +266,7 @@ describe('DrawioEditorSurface', () => {
     expect(readOnlyBadge?.querySelector('[data-icon="inline-start"]')).not.toBeNull()
   })
 
-  it('uses a shared empty state when opening drawio files in the system app', () => {
+  it('opens diagrams from the shared empty state and reports system app failures', async () => {
     useDrawioSettingsStore.setState({
       drawioEditorMode: 'system',
       drawioEmbedUrl: DEFAULT_DRAWIO_EMBED_URL,
@@ -281,6 +281,14 @@ describe('DrawioEditorSurface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open in system|使用系统应用打开/ }))
 
     expect(fsApi.openPathInSystem).toHaveBeenCalledWith('diagrams/flow.drawio')
+
+    vi.mocked(fsApi.openPathInSystem).mockRejectedValue(new Error('No associated diagram app'))
+    fireEvent.click(screen.getByRole('button', { name: /Open in system|使用系统应用打开/ }))
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/failed|失败/i), {
+        description: expect.stringContaining('No associated diagram app'),
+      }),
+    )
   })
 
   it('uses an alert when the remote drawio document fails to load', async () => {

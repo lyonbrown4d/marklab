@@ -12,7 +12,11 @@ vi.mock('@/runtime/environment', () => ({
 vi.mock('@/components/terminal/TerminalSessionPane', () => ({
   default: (props: Record<string, unknown>) => {
     paneProps.set(String(props.tabKey), props)
-    return <div data-testid="terminal-session-pane" />
+    return (
+      <div data-testid="terminal-session-pane">
+        <textarea aria-label="Terminal input" />
+      </div>
+    )
   },
 }))
 
@@ -61,6 +65,18 @@ describe('TerminalPanel', () => {
     fireEvent.keyDown(screen.getByRole('tablist', { name: 'Terminal' }), { key: 'Escape' })
 
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('passes Escape through terminal input and IME composition', () => {
+    const onClose = vi.fn()
+    render(<TerminalPanel visible theme="paper" onClose={onClose} />)
+    const input = screen.getByRole('textbox', { name: 'Terminal input' })
+    const tablist = screen.getByRole('tablist', { name: 'Terminal' })
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(true)
+    expect(fireEvent.keyDown(tablist, { key: 'Escape', isComposing: true })).toBe(true)
+    expect(fireEvent.keyDown(tablist, { key: 'Escape', keyCode: 229 })).toBe(true)
+    expect(fireEvent.keyDown(tablist, { key: 'Process' })).toBe(true)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('snapshots the selected shell for new tabs and only applies changes on restart', () => {

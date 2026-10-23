@@ -48,7 +48,7 @@ sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio
 portable-pty = "0.9"
 sha2 = "0.11.1"
 hex = "0.4.3"
-uuid = { version = "1.28.0", features = ["v4", "serde"] }
+uuid = { version = "1.29.0", features = ["v4", "serde"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 notify = "8.2.0"
 ignore = "0.4.33"
@@ -125,7 +125,7 @@ webkit2gtk = { version = "2.0.2", features = ["v2_40"] }
 # Match WebKitGTK/Tauri's binding family; native links cannot mix these releases.
 gtk = "0.18.2"
 cairo-rs = { version = "0.18.5", features = ["png"] }
-zbus = { version = "6.0.0", default-features = false, features = ["tokio", "proxy"] }
+zbus = { version = "6.1.0", default-features = false, features = ["tokio", "proxy"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

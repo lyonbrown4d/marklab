@@ -35,7 +35,10 @@ export default defineConfig({
       testMatch: [
         '**/smoke.spec.ts',
         '**/layout.spec.ts',
+        '**/publication-layout.spec.ts',
         '**/editor-integrations.spec.ts',
+        '**/spreadsheet-links.spec.ts',
+        '**/markdown-navigation.spec.ts',
         '**/workspace-isolation.spec.ts',
         '**/fixture-contract.spec.ts',
       ],

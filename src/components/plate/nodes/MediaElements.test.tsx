@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { H2Plugin } from '@platejs/basic-nodes/react'
 import { LinkPlugin } from '@platejs/link/react'
 import {
   createPlateEditor,
@@ -29,11 +30,13 @@ vi.mock('@/components/previews/ExternalLinkPreview', () => ({
 import { createLinkElement } from '@/components/plate/nodes/MediaElements'
 
 const TestParagraphElement = (props: PlateElementProps) => <PlateElement {...props} as="p" />
+const TestHeadingElement = (props: PlateElementProps) => <PlateElement {...props} as="h2" />
 
 const renderLink = (url: string, documentPath = 'notes/current.md') => {
   const editor = createPlateEditor({
     plugins: [
       ParagraphPlugin.withComponent(TestParagraphElement),
+      H2Plugin.withComponent(TestHeadingElement),
       LinkPlugin.configure({
         options: { allowedSchemes: ['http', 'https'] },
       }).withComponent(createLinkElement({ getDocumentPath: () => documentPath })),
@@ -43,14 +46,18 @@ const renderLink = (url: string, documentPath = 'notes/current.md') => {
         children: [{ children: [{ text: 'Brief' }], type: 'a', url }, { text: ' tail' }],
         type: 'p',
       },
+      { children: [{ text: '中文总结' }], type: 'h2' },
     ],
   })
 
-  return render(
-    <Plate editor={editor}>
-      <PlateContent aria-label="Markdown document" />
-    </Plate>,
-  )
+  return {
+    editor,
+    ...render(
+      <Plate editor={editor}>
+        <PlateContent aria-label="Markdown document" />
+      </Plate>,
+    ),
+  }
 }
 
 describe('Plate media elements', () => {
@@ -94,13 +101,44 @@ describe('Plate media elements', () => {
     })
   })
 
-  it('keeps fragments native and opens workspace links only with Ctrl or Cmd', () => {
-    const fragment = renderLink('#summary')
+  it('focuses an encoded local heading only with Ctrl or Cmd without changing the router hash', () => {
+    const hash = '#/files/edit/notes/current.md'
+    window.history.replaceState(null, '', hash)
+    const { editor } = renderLink(`#${encodeURIComponent('中文总结')}`)
+    act(() => editor.tf.select({ path: [0, 1], offset: 0 }))
+    const previousSelection = editor.selection
     const fragmentLink = screen.getByRole('link', { name: 'Brief' })
-    expect(fragmentLink).toHaveAttribute('href', '#summary')
+    expect(fragmentLink).not.toHaveAttribute('href')
     expect(fragmentLink).not.toHaveAttribute('target')
-    fragment.unmount()
 
+    fireEvent.click(fragmentLink)
+    expect(editor.selection).toEqual(previousSelection)
+    expect(window.location.hash).toBe(hash)
+
+    fireEvent.click(fragmentLink, { ctrlKey: true })
+    expect(editor.selection?.anchor).toEqual({ path: [1, 0], offset: 0 })
+    expect(window.location.hash).toBe(hash)
+
+    act(() => editor.tf.select({ path: [0, 1], offset: 0 }))
+    fireEvent.click(fragmentLink, { metaKey: true })
+    expect(editor.selection?.anchor).toEqual({ path: [1, 0], offset: 0 })
+    expect(window.location.hash).toBe(hash)
+  })
+
+  it('leaves the current document and selection unchanged when a local heading is missing', () => {
+    const hash = '#/files/edit/notes/current.md'
+    window.history.replaceState(null, '', hash)
+    const { editor } = renderLink('#missing')
+    act(() => editor.tf.select({ path: [0, 1], offset: 0 }))
+    const previousSelection = editor.selection
+
+    fireEvent.click(screen.getByRole('link', { name: 'Brief' }), { ctrlKey: true })
+
+    expect(editor.selection).toEqual(previousSelection)
+    expect(window.location.hash).toBe(hash)
+  })
+
+  it('opens workspace links only with Ctrl or Cmd', () => {
     const onWorkspaceLink = vi.fn()
     const editor = createPlateEditor({
       plugins: [

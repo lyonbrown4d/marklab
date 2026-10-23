@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
 import { getPlateSlashTrigger } from '@/components/plate/slash/plateSlashCommands'
 import { capturePlateSlashUrlInsertion } from '@/components/plate/slash/plateSlashUrlInsertion'
+import {
+  deserializePlateMarkdown,
+  serializePlateMarkdown,
+} from '@/components/plate/plateMarkdownSerialization'
 
 const createEditor = (text: string) => {
   const editor = createPlateEditor({
@@ -48,7 +52,17 @@ describe('Plate slash URL insertion', () => {
 
     expect(editor.children).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ alt: '<diagram>', type: 'img', url: './diagram.png' }),
+        expect.objectContaining({
+          caption: [{ text: '<diagram>' }],
+          type: 'img',
+          url: './diagram.png',
+        }),
+      ]),
+    )
+    const restored = deserializePlateMarkdown(editor, serializePlateMarkdown(editor))
+    expect(restored).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ caption: [{ text: '<diagram>' }], type: 'img' }),
       ]),
     )
   })

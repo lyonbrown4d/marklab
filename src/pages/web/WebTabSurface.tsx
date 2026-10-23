@@ -40,7 +40,7 @@ const WebTabSurface = ({ suspended, tab, onClose }: WebTabSurfaceProps) => {
   const navigate = useCallback((url: string) => actions.navigate(url), [actions])
 
   return (
-    <section className="flex h-full min-h-0 flex-col bg-background pt-11">
+    <section className="flex h-full min-h-0 flex-col bg-background">
       <WebTabToolbar
         canGoBack={nativeState.canGoBack}
         canGoForward={nativeState.canGoForward}

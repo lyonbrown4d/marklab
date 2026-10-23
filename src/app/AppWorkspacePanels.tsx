@@ -205,6 +205,11 @@ export const AppWorkspacePanels = ({
         {!immersiveZenMode && state.workspaceView !== 'map' ? (
           <TabsBar
             activeTabId={state.activeTabId}
+            placement={
+              state.tabs.find((tab) => getWorkspaceTabId(tab) === state.activeTabId)?.kind === 'web'
+                ? 'web'
+                : 'document'
+            }
             dirtyPaths={state.dirtyPaths}
             saveStates={state.saveStates}
             silentSave={state.silentSave}

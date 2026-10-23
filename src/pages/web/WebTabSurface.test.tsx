@@ -59,7 +59,9 @@ describe('WebTabSurface', () => {
       />,
     )
 
-    expect(screen.getByRole('toolbar', { name: 'Web navigation' })).toBeVisible()
+    const toolbar = screen.getByRole('toolbar', { name: 'Web navigation' })
+    expect(toolbar).toBeVisible()
+    expect(toolbar.closest('section')).not.toHaveClass('pt-11')
     const nativeHost = screen.getByTestId('web-tab-native-host')
     expect(nativeHost).toHaveClass('ml-5')
     expect(nativeHost).toHaveAttribute('data-native-status', 'loading')

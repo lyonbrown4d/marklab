@@ -43,6 +43,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
+  const markdownContentWidth = usePreferencesStore((state) => state.markdownContentWidth)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const surfaceRef = useRef<PlateEditorSurfaceHandle | null>(null)
   const [contextMenuOpen, setContextMenuOpen] = useState(false)
@@ -67,9 +68,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   usePlateFocusHeading(props.activePath, getEditor, props.workspaceKey)
   const openLinkInput = useCallback(() => surfaceRef.current?.openLinkInput(), [])
   const contextMenu = usePlateEditorContextMenu({
+    activePath: props.activePath,
     getEditor,
+    interactionActive,
     onLinkInsert: openLinkInput,
     readOnly: props.readOnly || status.phase !== 'ready',
+    workspaceKey: props.workspaceKey,
   })
   const aiLabels = useMemo<AiComposerLabels>(
     () => ({
@@ -160,6 +164,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           autoFocus={props.autoFocus}
           className={cn(
             'markdown-editor flex-1',
+            props.variant !== 'embedded' &&
+              markdownContentWidth === 'full' &&
+              '[--markdown-content-width:100%]',
             props.variant === 'embedded' && 'markdown-editor--embedded',
             props.readOnly && 'is-readonly-editor',
             !props.readOnly && immersiveFocusMode && 'is-focus-editor',

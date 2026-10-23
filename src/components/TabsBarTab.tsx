@@ -89,6 +89,7 @@ export const WorkspaceTabButton = memo(
 
     const handleTabKeyDown = useCallback(
       (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.target !== event.currentTarget) return
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
         onOpenTab(id)

@@ -226,7 +226,12 @@ const insertPlateImage = (editor: PlateEditor, target: RangeRef | null, url: str
   const range = target?.current
   if (!destination || !range) return false
   editor.tf.select(range)
-  editor.tf.insertNodes({ type: 'img', url: destination, alt, children: [{ text: '' }] })
+  editor.tf.insertNodes({
+    type: 'img',
+    url: destination,
+    caption: [{ text: alt }],
+    children: [{ text: '' }],
+  })
   editor.tf.focus()
   return true
 }

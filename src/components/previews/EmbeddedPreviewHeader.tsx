@@ -19,6 +19,7 @@ type EmbeddedPreviewHeaderProps = {
   kind: PreviewFileKind
   onExpand: () => void
   onOpenInSystem: () => void
+  openingInSystem?: boolean
   onOpenInTab: () => void
   pathAvailable: boolean
   title: string
@@ -52,6 +53,7 @@ export const EmbeddedPreviewHeader = ({
   labels,
   onExpand,
   onOpenInSystem,
+  openingInSystem = false,
   onOpenInTab,
   pathAvailable,
   title,
@@ -81,6 +83,8 @@ export const EmbeddedPreviewHeader = ({
             size="icon"
             className="size-7"
             aria-label={labels.openInSystem}
+            aria-busy={openingInSystem}
+            disabled={openingInSystem}
             onClick={onOpenInSystem}
           >
             <ExternalLink aria-hidden="true" />

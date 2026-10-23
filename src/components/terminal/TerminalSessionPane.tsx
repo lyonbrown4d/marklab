@@ -10,6 +10,7 @@ import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/environment'
 import {
+  clearTerminalSessionEvents,
   primeTerminalEventListeners,
   subscribeTerminalSessionEvents,
 } from '@/components/terminal/terminalEvents'
@@ -59,6 +60,7 @@ const TerminalSessionPane = ({
   const terminalRef = useRef<Terminal | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const activeRef = useLatest(activeAndVisible)
+  const exitedLabelRef = useLatest(exitedLabel)
   const lastSizeRef = useRef<{ rows: number; cols: number } | null>(null)
   const resizeFrameRef = useRef<number | null>(null)
   const [session, setSession] = useState<TerminalSessionInfo | null>(null)
@@ -70,7 +72,10 @@ const TerminalSessionPane = ({
   const closeSession = useCallback(() => {
     const id = sessionIdRef.current
     sessionIdRef.current = null
-    if (id) void terminalApi.close(id).catch(() => undefined)
+    if (id) {
+      clearTerminalSessionEvents(id)
+      void terminalApi.close(id).catch(() => undefined)
+    }
   }, [])
 
   const fitAndFocusTerminal = useCallback(() => {
@@ -94,9 +99,7 @@ const TerminalSessionPane = ({
   }, [error, onStateChange, session, status, tabKey])
 
   useEffect(() => {
-    if (!isDesktopRuntime()) {
-      return
-    }
+    if (!isDesktopRuntime()) return
 
     const container = containerRef.current
     if (!container) return
@@ -107,6 +110,7 @@ const TerminalSessionPane = ({
     let outputFrame: number | null = null
     let outputQueue: string[] = []
     let unsubscribeTerminalEvents: (() => void) | null = null
+    let createdSessionId: string | null = null
     const terminal = new Terminal({
       allowProposedApi: true,
       convertEol: true,
@@ -201,29 +205,32 @@ const TerminalSessionPane = ({
       .create(terminal.rows, terminal.cols, shellPath)
       .then((nextSession) => {
         if (disposed) {
+          clearTerminalSessionEvents(nextSession.id)
           void terminalApi.close(nextSession.id).catch(() => undefined)
           return
         }
+        createdSessionId = nextSession.id
+        sessionIdRef.current = nextSession.id
+        setSession(nextSession)
+        setStatus('connected')
         unsubscribeTerminalEvents = subscribeTerminalSessionEvents(nextSession.id, {
           onExit: () => {
             if (disposed) return
 
             sessionIdRef.current = null
+            clearTerminalSessionEvents(nextSession.id)
             setStatus('exited')
             if (outputFrame !== null) {
               window.cancelAnimationFrame(outputFrame)
               flushOutput()
             }
             terminal.writeln('')
-            terminal.writeln(exitedLabel)
+            terminal.writeln(exitedLabelRef.current)
           },
           onOutput: (event) => {
             if (!disposed) queueOutput(event.data)
           },
         })
-        sessionIdRef.current = nextSession.id
-        setSession(nextSession)
-        setStatus('connected')
         scheduleResize()
         if (activeRef.current) terminal.focus()
       })
@@ -244,13 +251,14 @@ const TerminalSessionPane = ({
       resizeObserver.disconnect()
       dataDisposable.dispose()
       unsubscribeTerminalEvents?.()
+      if (createdSessionId) clearTerminalSessionEvents(createdSessionId)
       closeSession()
       terminal.dispose()
       fitAddonRef.current = null
       lastSizeRef.current = null
       terminalRef.current = null
     }
-  }, [activeRef, closeSession, exitedLabel, restartKey, shellPath])
+  }, [activeRef, closeSession, exitedLabelRef, restartKey, shellPath])
 
   useEffect(() => {
     const terminal = terminalRef.current

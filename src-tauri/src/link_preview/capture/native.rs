@@ -16,9 +16,15 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
         .ok_or_else(|| failure("Native capture requires the macOS main thread"))?;
       // Tauri owns the WKWebView and executes this callback on its UI thread.
       let webview = unsafe { &*(platform.inner() as *const WKWebView) };
+      let bounds = webview.bounds().size;
+      let scale = webview
+        .window()
+        .ok_or_else(|| failure("Native capture view is detached"))?
+        .backingScaleFactor();
+      let width = super::image_geometry::snapshot_width_points(bounds.width, bounds.height, scale)?;
       let configuration = unsafe { WKSnapshotConfiguration::new(mtm) };
       unsafe {
-        configuration.setSnapshotWidth(Some(&NSNumber::new_f64(1920.)));
+        configuration.setSnapshotWidth(Some(&NSNumber::new_f64(width)));
         configuration.setAfterScreenUpdates(false);
       }
       let completion_sender = sender.clone();

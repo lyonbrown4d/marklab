@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
@@ -11,7 +12,7 @@ import { createFileLabel } from '@/logic/paths'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
-import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
+import { FileRouteNotFound, isFileRouteAvailable } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { EditorFocusHandoffFailure, useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 
@@ -19,6 +20,7 @@ const FilePreviewPage = () => {
   const params = useParams()
   const context = useLayoutContext(
     useShallow((state) => ({
+      activePath: state.activePath,
       files: state.files,
       onOpenFile: state.onOpenFile,
       rootKind: state.rootKind,
@@ -29,7 +31,7 @@ const FilePreviewPage = () => {
   const previewSurfaceRef = useRef<HTMLElement | null>(null)
   const requestedPath = params['*'] || null
   const previewKind = requestedPath ? getPreviewFileKind(requestedPath) : null
-  const previewFileExists = fileExists(context.files, requestedPath)
+  const previewFileExists = isFileRouteAvailable(context.files, requestedPath, context.activePath)
   const canLoadPreview = Boolean(requestedPath && previewKind && previewFileExists)
   const title = requestedPath ? createFileLabel(requestedPath) : ''
 
@@ -65,8 +67,12 @@ const FilePreviewPage = () => {
 
   const openInSystem = useCallback(() => {
     if (!requestedPath) return
-    void fsApi.openPathInSystem(requestedPath)
-  }, [requestedPath])
+    void fsApi.openPathInSystem(requestedPath).catch((error: unknown) => {
+      toast.error(t('context.actionFailed'), {
+        description: `${t('preview.openInSystem')}: ${error instanceof Error ? error.message : String(error)}`,
+      })
+    })
+  }, [requestedPath, t])
 
   if (!requestedPath || !previewFileExists) {
     return (

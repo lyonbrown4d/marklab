@@ -28,7 +28,12 @@ const render = (ui: ReactElement) => {
 beforeEach(() => {
   pathsExist.mockReset().mockResolvedValue(existence([]))
   errorToast.mockReset()
-  useWorkspaceStore.setState({ rootKind: 'internal', rootPath: '/workspace', treeGeneration: 1 })
+  useWorkspaceStore.setState({
+    rootKind: 'internal',
+    rootPath: '/workspace',
+    treeGeneration: 1,
+    treeRevision: 1,
+  })
 })
 
 vi.mock('@/components/MarkdownEditor', () => ({
@@ -198,7 +203,7 @@ describe('WysiwygEditorPage unloaded links', () => {
     expect(onOpenFile).not.toHaveBeenCalled()
   })
 
-  it.each(['workspace', 'document', 'generation', 'unmount'])(
+  it.each(['workspace', 'document', 'generation', 'revision', 'unmount'])(
     'ignores a delayed result after %s changes',
     async (change) => {
       const request = deferred()
@@ -212,6 +217,7 @@ describe('WysiwygEditorPage unloaded links', () => {
         view.rerender(page(onOpenFile, 'Home.md', 'internal:/other'))
       } else if (change === 'document') view.rerender(page(onOpenFile, 'Other.md'))
       else if (change === 'generation') useWorkspaceStore.setState({ treeGeneration: 2 })
+      else if (change === 'revision') useWorkspaceStore.setState({ treeRevision: 2 })
       else view.unmount()
       await act(async () => request.resolve(existence(['User Guide/00-Start-Here.md'])))
       expect(onOpenFile).not.toHaveBeenCalled()
@@ -219,19 +225,23 @@ describe('WysiwygEditorPage unloaded links', () => {
     },
   )
 
-  it.each(['rootPath', 'rootKind', 'generation'])('rejects response %s mismatch', async (field) => {
-    const response = existence(['User Guide/00-Start-Here.md'])
-    if (field === 'rootPath') response.root.path = '/other'
-    else if (field === 'rootKind') response.root.kind = 'external'
-    else response.generation = 2
-    pathsExist.mockResolvedValue(response)
-    const onOpenFile = vi.fn()
-    render(page(onOpenFile))
-    fireEvent.click(await screen.findByRole('button', { name: 'Open guide' }))
-    await waitFor(() => expect(pathsExist).toHaveBeenCalledTimes(1))
-    await act(async () => {})
-    expect(onOpenFile).not.toHaveBeenCalled()
-  })
+  it.each(['rootPath', 'rootKind', 'generation', 'revision'])(
+    'rejects response %s mismatch',
+    async (field) => {
+      const response = existence(['User Guide/00-Start-Here.md'])
+      if (field === 'rootPath') response.root.path = '/other'
+      else if (field === 'rootKind') response.root.kind = 'external'
+      else if (field === 'generation') response.generation = 2
+      else response.revision = 2
+      pathsExist.mockResolvedValue(response)
+      const onOpenFile = vi.fn()
+      render(page(onOpenFile))
+      fireEvent.click(await screen.findByRole('button', { name: 'Open guide' }))
+      await waitFor(() => expect(pathsExist).toHaveBeenCalledTimes(1))
+      await act(async () => {})
+      expect(onOpenFile).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     ['Open source', 'src/example.ts', 'source'],

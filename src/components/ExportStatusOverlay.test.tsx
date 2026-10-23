@@ -26,6 +26,7 @@ vi.mock('@/services/exportApi', () => ({
 
 vi.mock('sonner', () => ({
   toast: {
+    dismiss: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
     loading: vi.fn(),
@@ -132,7 +133,7 @@ describe('ExportStatusOverlay', () => {
     const action = options?.action as (ToastAction & { label?: string }) | undefined
     expect(action?.label).toBe('export.cancel')
     action?.onClick?.()
-    expect(cancelExportMock).toHaveBeenCalledWith('export-1')
+    await waitFor(() => expect(cancelExportMock).toHaveBeenCalledWith('export-1'))
   })
 
   it('replaces the loading toast when an export is cancelled', async () => {
@@ -178,7 +179,7 @@ describe('ExportStatusOverlay', () => {
     expect(action?.label).toBe('export.openFile')
     action?.onClick?.()
 
-    expect(openExportedFileMock).toHaveBeenCalledWith('/tmp/report.pdf')
+    await waitFor(() => expect(openExportedFileMock).toHaveBeenCalledWith('/tmp/report.pdf'))
   })
 
   it('shows a failure toast with the actionable error message', async () => {
@@ -201,6 +202,63 @@ describe('ExportStatusOverlay', () => {
         id: 'export-3',
       }),
     )
+  })
+
+  it.each(['started', 'finished'] as const)(
+    'retries a failed %s action and prevents duplicate requests',
+    async (status) => {
+      const operation = status === 'started' ? cancelExportMock : openExportedFileMock
+      operation.mockRejectedValueOnce(new Error('Permission denied'))
+      if (status === 'started') cancelExportMock.mockResolvedValueOnce(true)
+      else openExportedFileMock.mockResolvedValueOnce(null)
+      const { listener, rerender } = await renderOverlayWithListener()
+      rerender(<ExportStatusOverlay />)
+      expect(listenMock).toHaveBeenCalledTimes(1)
+      listener({
+        payload: { id: 'retry-task', format: 'pdf', output_path: '/tmp/report.pdf', status },
+      })
+      const original = status === 'started' ? toastLoadingMock : toastSuccessMock
+      const action = original.mock.calls[0]?.[1]?.action as ToastAction
+      action.onClick?.()
+      action.onClick?.()
+      await waitFor(() =>
+        expect(toastErrorMock).toHaveBeenCalledWith(
+          'context.actionFailed',
+          expect.objectContaining({ description: 'Permission denied' }),
+        ),
+      )
+      expect(operation).toHaveBeenCalledTimes(1)
+      const retry = toastErrorMock.mock.calls[0]?.[1]?.action as ToastAction
+      retry.onClick?.()
+      await waitFor(() => expect(toast.dismiss).toHaveBeenCalledWith('retry-task-action'))
+      expect(operation).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('does not show an action error after unmount', async () => {
+    let reject: (reason: Error) => void = () => {}
+    openExportedFileMock.mockReturnValue(
+      new Promise((_resolve, rejectPromise) => {
+        reject = rejectPromise
+      }),
+    )
+    const { listener, unmount } = await renderOverlayWithListener()
+    listener({
+      payload: {
+        id: 'closed-task',
+        format: 'pdf',
+        output_path: '/tmp/report.pdf',
+        status: 'finished',
+      },
+    })
+    const action = toastSuccessMock.mock.calls[0]?.[1]?.action as ToastAction
+    action.onClick?.()
+    await waitFor(() => expect(openExportedFileMock).toHaveBeenCalled())
+    unmount()
+    reject(new Error('Unavailable'))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it('does not subscribe outside the desktop runtime', () => {

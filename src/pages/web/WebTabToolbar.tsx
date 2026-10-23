@@ -88,7 +88,11 @@ export const WebTabToolbar = ({
         >
           {loading ? <Square aria-hidden /> : <RotateCw aria-hidden />}
         </ToolbarButton>
-        <form className="mx-1 flex min-w-0 flex-1" onSubmit={submit}>
+        {/* The floating tab handle shares this row; reserve width, never editor height. */}
+        <form
+          className="ml-1 mr-[calc(min(15rem,30vw)+0.25rem)] flex min-w-0 flex-1 [:root[data-immersive-zen=true]_&]:mr-1"
+          onSubmit={submit}
+        >
           <div className="relative min-w-0 flex-1">
             <Globe2
               aria-hidden

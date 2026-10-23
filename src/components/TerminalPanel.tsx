@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useI18n } from '@/i18n/useI18n'
 import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
+import { isImeKeyboardEvent } from '@/logic/ime'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
@@ -146,7 +147,20 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
         value={activeTabKey}
         onValueChange={setActiveTabKey}
         onKeyDownCapture={(event) => {
-          if (event.key !== 'Escape' || event.defaultPrevented) return
+          if (
+            event.key !== 'Escape' ||
+            event.defaultPrevented ||
+            isImeKeyboardEvent(event.nativeEvent) ||
+            // eslint-disable-next-line @typescript-eslint/no-deprecated -- Native IME completion can omit isComposing while retaining keyCode 229.
+            event.nativeEvent.keyCode === 229
+          )
+            return
+          const target = event.target
+          if (
+            target instanceof Element &&
+            target.closest('input, textarea, [contenteditable="true"], .xterm')
+          )
+            return
           event.preventDefault()
           event.stopPropagation()
           onClose()

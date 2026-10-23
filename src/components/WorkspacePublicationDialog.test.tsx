@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspacePublicationDialog from '@/components/WorkspacePublicationDialog'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
@@ -79,6 +80,29 @@ describe('WorkspacePublicationDialog', () => {
     )
     expect(flushEditorChanges).toHaveBeenCalledOnce()
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('keeps chapter selection while switching between the compact preview and export settings', async () => {
+    render(
+      <PlateDndProvider>
+        <WorkspacePublicationDialog onOpenChange={vi.fn()} open rootPath="/workspace" />
+      </PlateDndProvider>,
+    )
+    await screen.findAllByText('Product Guide')
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Details' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'workspaceExport.preview' }))
+    expect(screen.getByRole('tab', { name: 'workspaceExport.preview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('tab', { name: 'workspaceExport.printSettings' }))
+    expect(screen.getByRole('tab', { name: 'workspaceExport.printSettings' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('tab', { name: 'workspaceExport.chapters' }))
+    expect(screen.getByRole('checkbox', { name: 'Details' })).not.toBeChecked()
   })
 
   it('announces document preparation once and allows closing while loading', () => {

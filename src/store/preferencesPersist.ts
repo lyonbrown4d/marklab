@@ -31,6 +31,7 @@ export type PreferencesPersistedState = Pick<
   | 'immersiveZenMode'
   | 'locale'
   | 'markdownAssetImportStrategy'
+  | 'markdownContentWidth'
   | 'motionAnimatedCursor'
   | 'motionAnimatedPanels'
   | 'motionSmoothScrolling'
@@ -89,6 +90,7 @@ export const selectPreferencesPersistedState = (
   graphContentMode: state.graphContentMode,
   hideMarkdownDefaultAppPrompt: state.hideMarkdownDefaultAppPrompt,
   markdownAssetImportStrategy: state.markdownAssetImportStrategy,
+  markdownContentWidth: state.markdownContentWidth,
   motionSmoothScrolling: state.motionSmoothScrolling,
   motionAnimatedCursor: state.motionAnimatedCursor,
   motionAnimatedPanels: state.motionAnimatedPanels,

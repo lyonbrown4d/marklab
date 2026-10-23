@@ -18,13 +18,27 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
             let height = surface.height();
             let stride = surface.stride();
             let format = surface.format();
-            if width <= 0 || height <= 0 || width > 3840 || height > 2160 {
+            if width <= 0 || height <= 0 {
               return Err(failure("Native capture exceeds supported dimensions"));
             }
+            super::super::image_geometry::validate_size(width as u32, height as u32)?;
+            if !matches!(format, cairo::Format::Rgb24 | cairo::Format::ARgb32) {
+              return Err(failure(
+                "WebKit returned an unsupported capture pixel format",
+              ));
+            }
+            let required = usize::try_from(stride)
+              .ok()
+              .and_then(|stride| stride.checked_mul(height as usize))
+              .filter(|bytes| *bytes as u64 <= super::super::image_geometry::MAX_DECODE_BYTES)
+              .ok_or_else(|| failure("Native capture pixels exceed supported storage"))?;
             let data = surface
               .data()
-              .map_err(|_| failure("Native capture pixels are unavailable"))?
-              .to_vec();
+              .map_err(|_| failure("Native capture pixels are unavailable"))?;
+            if data.len() != required {
+              return Err(failure("Native capture pixel storage is incomplete"));
+            }
+            let data = data.to_vec();
             Ok((
               data,
               width as u32,

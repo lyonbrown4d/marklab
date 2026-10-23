@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
+import { useLatest } from 'ahooks'
 import {
   EmbeddedPreviewBody,
   type EmbeddedPreviewVariant,
@@ -16,6 +17,7 @@ import { createFileLabel } from '@/logic/paths'
 import { pathToFileViewRoute } from '@/logic/routing'
 import { cn } from '@/lib/utils'
 import { fsApi } from '@/services/fsApi'
+import AppAlert from '@/components/AppAlert'
 
 type EmbeddedFilePreviewProps = {
   className?: string
@@ -52,8 +54,23 @@ export const EmbeddedFilePreview = ({
   const [expanded, setExpanded] = useState(false)
   const [visible, setVisible] = useState(false)
   const [resolveRequested, setResolveRequested] = useState(false)
+  const systemOpeningRef = useRef(false)
+  const [systemOpening, setSystemOpening] = useState(false)
+  const [systemOpenError, setSystemOpenError] = useState<{ key: string; message: string } | null>(
+    null,
+  )
   const expandedContentReady = useDeferredOpenContent(expanded)
   const key = sourceKey(documentPath, target)
+  const latestKey = useLatest(key)
+  const resolutionRequest = useRef(0)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      resolutionRequest.current += 1
+    }
+  }, [])
   const kind = embeddedPreviewKindForTarget(target)
   const displayTitle = title?.trim() || createFileLabel(target)
   const [resolvedState, setResolvedState] = useState<ResolvedState>({
@@ -89,15 +106,27 @@ export const EmbeddedFilePreview = ({
   const requestResolve = useCallback(() => setResolveRequested(true), [])
 
   const refreshTarget = useCallback(async () => {
+    if (!mounted.current || latestKey.current !== key) return null
+    const request = ++resolutionRequest.current
+    const isCurrent = () =>
+      mounted.current && latestKey.current === key && resolutionRequest.current === request
+    // Keep a valid preview mounted while refreshing its asset URL. Unmounting
+    // the graph PDF gate here would discard the user's pending activation.
+    setResolvedState((current) =>
+      current.key === key && current.target && !current.failed
+        ? current
+        : { failed: false, key, target: null },
+    )
     try {
       const nextTarget = await resolveEmbeddedPreviewTarget(documentPath, target)
+      if (!isCurrent()) return null
       setResolvedState({ failed: !nextTarget, key, target: nextTarget })
       return nextTarget
     } catch {
-      setResolvedState({ failed: true, key, target: null })
+      if (isCurrent()) setResolvedState({ failed: true, key, target: null })
       return null
     }
-  }, [documentPath, key, target])
+  }, [documentPath, key, latestKey, target])
 
   useEffect(() => {
     const card = cardRef.current
@@ -122,27 +151,41 @@ export const EmbeddedFilePreview = ({
   useEffect(() => {
     if (!shouldResolve) return
     let cancelled = false
+    const request = ++resolutionRequest.current
+    const isCurrent = () =>
+      !cancelled && latestKey.current === key && resolutionRequest.current === request
 
     void resolveEmbeddedPreviewTarget(documentPath, target).then(
       (nextTarget) => {
-        if (!cancelled) setResolvedState({ failed: !nextTarget, key, target: nextTarget })
+        if (isCurrent()) setResolvedState({ failed: !nextTarget, key, target: nextTarget })
       },
       () => {
-        if (!cancelled) setResolvedState({ failed: true, key, target: null })
+        if (isCurrent()) setResolvedState({ failed: true, key, target: null })
       },
     )
     return () => {
       cancelled = true
     }
-  }, [documentPath, key, shouldResolve, target])
+  }, [documentPath, key, latestKey, shouldResolve, target])
 
   if (!kind) return null
 
   const openTab = () => {
     if (resolved?.path) navigateToPreviewTab(resolved.path, resolved.kind)
   }
-  const openInSystem = () => {
-    if (resolved?.path) void fsApi.openPathInSystem(resolved.path)
+  const openInSystem = async () => {
+    if (!resolved?.path || systemOpeningRef.current) return
+    systemOpeningRef.current = true
+    setSystemOpening(true)
+    setSystemOpenError(null)
+    try {
+      await fsApi.openPathInSystem(resolved.path)
+    } catch (error) {
+      setSystemOpenError({ key, message: error instanceof Error ? error.message : String(error) })
+    } finally {
+      systemOpeningRef.current = false
+      setSystemOpening(false)
+    }
   }
   const openExpanded = () => {
     requestResolve()
@@ -178,11 +221,21 @@ export const EmbeddedFilePreview = ({
           openInTab: t('preview.openInTab'),
         }}
         onExpand={openExpanded}
-        onOpenInSystem={openInSystem}
+        onOpenInSystem={() => void openInSystem()}
+        openingInSystem={systemOpening}
         onOpenInTab={openTab}
         pathAvailable={Boolean(resolved?.path)}
         title={displayTitle}
       />
+      {systemOpenError?.key === key ? (
+        <AppAlert
+          role="alert"
+          title={`${t('preview.openInSystem')}: ${t('context.actionFailed')}`}
+          tone="destructive"
+        >
+          {systemOpenError.message}
+        </AppAlert>
+      ) : null}
       {!expanded ? (
         <EmbeddedPreviewBody
           displayTitle={displayTitle}
@@ -191,6 +244,7 @@ export const EmbeddedFilePreview = ({
           graphPdfLoadLabel={t('preview.graphPdfLoad')}
           loadingLabel={t('preview.inlineLoading')}
           pendingLabel={t('preview.inlinePending')}
+          retryLabel={t('actions.retry')}
           refreshTarget={refreshTarget}
           resolved={resolved}
           shouldResolve={shouldResolve}
@@ -204,6 +258,7 @@ export const EmbeddedFilePreview = ({
         failedLabel={t('preview.inlineFailed')}
         loadingLabel={t('preview.inlineLoading')}
         onOpenChange={setExpanded}
+        onRetry={() => void refreshTarget()}
         open={expanded}
         ready={expandedContentReady}
         resolved={resolved}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
 import { toast } from 'sonner'
 import { useI18n } from '@/i18n/useI18n'
 import { Spinner } from '@/components/ui/spinner'
@@ -36,13 +36,44 @@ const getToastDescription = (task: ExportTaskPayload) => {
 const ExportStatusOverlay = () => {
   const { t } = useI18n()
 
+  const translate = useRef(t)
+  useEffect(() => {
+    translate.current = t
+  }, [t])
+
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
     let unlisten: (() => void) | undefined
     let disposed = false
+    const pendingActions = new Set<string>()
+    const taskAction = (taskId: string, label: string, operation: () => Promise<unknown>) => {
+      const actionId = `${taskId}-action`
+      const retry = (event?: MouseEvent<HTMLButtonElement>) => {
+        event?.preventDefault()
+        if (disposed || pendingActions.has(taskId)) return
+        pendingActions.add(taskId)
+        void Promise.resolve()
+          .then(operation)
+          .then(() => {
+            if (!disposed) toast.dismiss(actionId)
+          })
+          .catch((error: unknown) => {
+            if (disposed) return
+            toast.error(translate.current('context.actionFailed'), {
+              id: actionId,
+              description: error instanceof Error ? error.message : String(error),
+              action: { label: translate.current('actions.retry'), onClick: retry },
+            })
+          })
+          .finally(() => pendingActions.delete(taskId))
+      }
+      return { label, onClick: retry }
+    }
 
     void listen('export-task', (event) => {
+      if (disposed) return
+      const t = translate.current
       const task = event.payload
       const format = getFormatLabel(task.format)
       const description = getToastDescription(task)
@@ -64,12 +95,7 @@ const ExportStatusOverlay = () => {
               <Spinner className="size-4" />
             </span>
           ),
-          action: {
-            label: t('export.cancel'),
-            onClick: () => {
-              void exportApi.cancelExport(task.id)
-            },
-          },
+          action: taskAction(task.id, t('export.cancel'), () => exportApi.cancelExport(task.id)),
         })
         return
       }
@@ -78,12 +104,9 @@ const ExportStatusOverlay = () => {
         toast.success(t('export.finished', { format }), {
           id: task.id,
           description,
-          action: {
-            label: t('export.openFile'),
-            onClick: () => {
-              void exportApi.openExportedFile(task.output_path)
-            },
-          },
+          action: taskAction(task.id, t('export.openFile'), () =>
+            exportApi.openExportedFile(task.output_path),
+          ),
         })
         return
       }
@@ -112,7 +135,7 @@ const ExportStatusOverlay = () => {
       disposed = true
       unlisten?.()
     }
-  }, [t])
+  }, [])
 
   return null
 }

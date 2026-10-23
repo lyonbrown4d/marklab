@@ -3,15 +3,18 @@ import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { ZoomableVisualViewport } from '@/components/previews/ZoomableVisualViewport'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResizableDialogContent } from '@/components/ui/ResizableDialogContent'
 import type { EmbeddedPreviewResolvedTarget } from '@/components/previews/embeddedPreviewSource'
 import { useI18n } from '@/i18n/useI18n'
+import { Button } from '@/components/ui/button'
 
 type EmbeddedPreviewDialogProps = {
   failed: boolean
   failedLabel: string
   loadingLabel: string
   onOpenChange: (open: boolean) => void
+  onRetry?: () => void
   open: boolean
   ready: boolean
   resolved: EmbeddedPreviewResolvedTarget | null
@@ -24,6 +27,7 @@ export const EmbeddedPreviewDialog = ({
   failedLabel,
   loadingLabel,
   onOpenChange,
+  onRetry,
   open,
   ready,
   resolved,
@@ -36,8 +40,15 @@ export const EmbeddedPreviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[92vh] max-w-[96vw] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-border px-4 py-3">
+      <ResizableDialogContent
+        className="flex flex-col gap-0 p-0"
+        resizeLabels={{
+          width: t('preview.resizeWidth'),
+          height: t('preview.resizeHeight'),
+          size: t('preview.resizeSize'),
+        }}
+      >
+        <DialogHeader className="border-b border-border px-4 py-3 pr-14 text-left">
           <DialogTitle className="truncate text-sm">{title}</DialogTitle>
         </DialogHeader>
         {imageReady ? (
@@ -66,17 +77,22 @@ export const EmbeddedPreviewDialog = ({
                 title={title}
               />
             ) : failed ? (
-              <div className="flex h-full items-center justify-center">
+              <div className="flex h-full flex-col items-center justify-center gap-3">
                 <AppAlert aria-label={failedLabel} className="w-full max-w-md" tone="destructive">
                   {failedLabel}
                 </AppAlert>
+                {onRetry ? (
+                  <Button size="sm" variant="outline" onClick={onRetry}>
+                    {t('actions.retry')}
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <PreviewLoadingFallback label={loadingLabel} />
             )}
           </div>
         )}
-      </DialogContent>
+      </ResizableDialogContent>
     </Dialog>
   )
 }

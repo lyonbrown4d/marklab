@@ -1,4 +1,6 @@
+mod image_geometry;
 mod native;
+pub(super) use native::snapshot;
 mod pool;
 mod worker;
 use super::{network, sanitize};
@@ -36,22 +38,35 @@ pub(super) fn normalize_image(bytes: Vec<u8>) -> BackendResult<Vec<u8>> {
       "Native capture exceeds maximum encoded size",
     ));
   }
+  let dimensions = image::ImageReader::with_format(
+    std::io::Cursor::new(bytes.as_slice()),
+    image::ImageFormat::Png,
+  )
+  .into_dimensions()
+  .map_err(|_| network::failure("Native capture returned an invalid image"))?;
+  image_geometry::validate_size(dimensions.0, dimensions.1)?;
   let mut reader =
     image::ImageReader::with_format(std::io::Cursor::new(bytes), image::ImageFormat::Png);
   let mut limits = image::Limits::default();
-  limits.max_image_width = Some(3840);
-  limits.max_image_height = Some(2160);
-  limits.max_alloc = Some(64 * 1024 * 1024);
+  limits.max_image_width = Some(image_geometry::MAX_DECODE_SIDE);
+  limits.max_image_height = Some(image_geometry::MAX_DECODE_SIDE);
+  limits.max_alloc = Some(image_geometry::MAX_DECODE_BYTES);
   reader.limits(limits);
   let image = reader
     .decode()
     .map_err(|_| network::failure("Native capture returned an invalid or oversized image"))?;
-  if image.width() > 3840 || image.height() > 2160 {
-    return Err(network::failure(
-      "Native capture exceeds the supported dimensions",
-    ));
-  }
-  let image = image.resize_exact(1920, 1080, image::imageops::FilterType::Triangle);
+  let resized = image
+    .resize(
+      image_geometry::OUTPUT_WIDTH,
+      image_geometry::OUTPUT_HEIGHT,
+      image::imageops::FilterType::Triangle,
+    )
+    .to_rgba8();
+  let mut image =
+    image::RgbaImage::new(image_geometry::OUTPUT_WIDTH, image_geometry::OUTPUT_HEIGHT);
+  let x = (image.width() - resized.width()) / 2;
+  let y = (image.height() - resized.height()) / 2;
+  image::imageops::replace(&mut image, &resized, i64::from(x), i64::from(y));
   let mut output = std::io::Cursor::new(Vec::new());
   image
     .write_to(&mut output, image::ImageFormat::Png)
@@ -62,14 +77,15 @@ pub(super) fn normalize_image(bytes: Vec<u8>) -> BackendResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
   #[test]
-  fn normalizes_native_png_dimensions_and_rejects_invalid_images() {
-    let image = image::RgbaImage::new(20, 10);
+  fn normalizes_native_png_dimensions_without_stretching_and_rejects_invalid_images() {
+    let image = image::RgbaImage::from_pixel(20, 10, image::Rgba([200, 10, 20, 255]));
     let mut bytes = std::io::Cursor::new(Vec::new());
     image.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
     let output = super::normalize_image(bytes.into_inner()).unwrap();
-    let reader =
-      image::ImageReader::with_format(std::io::Cursor::new(output), image::ImageFormat::Png);
-    assert_eq!(reader.into_dimensions().unwrap(), (1920, 1080));
+    let output = image::load_from_memory(&output).unwrap().to_rgba8();
+    assert_eq!(output.dimensions(), (1920, 1080));
+    assert_eq!(output.get_pixel(960, 540).0, [200, 10, 20, 255]);
+    assert_eq!(output.get_pixel(960, 0).0, [0, 0, 0, 0]);
     assert!(super::normalize_image(b"not png".to_vec()).is_err());
   }
 }

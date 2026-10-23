@@ -9,7 +9,7 @@
 .markdown-editor.is-zen-editor > [data-slate-node='element'],
 .markdown-editor.is-zen-editor > .plate-block-draggable,
 .markdown-editor.is-zen-editor > [data-slate-chunk='true'] {
-  width: min(100%, 760px);
+  width: min(100%, var(--markdown-content-width, 760px));
 }
 
 .markdown-editor.is-focus-editor {

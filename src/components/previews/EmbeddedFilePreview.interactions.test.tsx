@@ -73,7 +73,9 @@ describe('EmbeddedFilePreview interactions', () => {
       'embedded-preview-drag-handle',
     )
     expect(screen.queryByTestId('file-preview-surface')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'preview.graphPdfLoad' }))
+    const load = screen.getByRole('button', { name: 'preview.graphPdfLoad' })
+    fireEvent.click(load)
+    expect(load).toBeDisabled()
     expect(await screen.findByTestId('file-preview-surface')).toHaveAttribute(
       'data-presentation',
       'graph',

@@ -5,7 +5,7 @@ use std::{io::Write, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{io::AsyncReadExt, sync::Mutex};
 
 pub(super) const MAX_IMAGE_BYTES: usize = 32 * 1024 * 1024;
-const TTL_MS: i64 = 24 * 60 * 60 * 1000;
+pub(super) const TTL_MS: i64 = 24 * 60 * 60 * 1000;
 const MAX_BYTES: i64 = 200 * 1024 * 1024;
 
 pub(super) struct DiskCache {
@@ -18,8 +18,22 @@ pub(super) struct DiskCache {
 impl DiskCache {
   pub async fn new(pool: SqlitePool, root: PathBuf) -> BackendResult<Arc<Self>> {
     tokio::fs::create_dir_all(&root).await?;
-    sqlx::query("CREATE TABLE IF NOT EXISTS web_preview_cache (cache_key TEXT PRIMARY KEY, size_bytes INTEGER NOT NULL, last_access_ms INTEGER NOT NULL)")
+    sqlx::query("CREATE TABLE IF NOT EXISTS web_preview_cache (cache_key TEXT PRIMARY KEY, size_bytes INTEGER NOT NULL, last_access_ms INTEGER NOT NULL, captured_at_ms INTEGER NOT NULL DEFAULT 0)")
             .execute(&pool).await?;
+    let columns = sqlx::query("PRAGMA table_info(web_preview_cache)")
+      .fetch_all(&pool)
+      .await?;
+    if !columns.iter().any(|row| {
+      row
+        .try_get::<String, _>("name")
+        .is_ok_and(|name| name == "captured_at_ms")
+    }) {
+      sqlx::query(
+        "ALTER TABLE web_preview_cache ADD COLUMN captured_at_ms INTEGER NOT NULL DEFAULT 0",
+      )
+      .execute(&pool)
+      .await?;
+    }
     Ok(Arc::new(Self {
       pool,
       root,
@@ -46,11 +60,15 @@ impl DiskCache {
       .await?;
     Ok(())
   }
+  #[cfg(test)]
   pub async fn get(&self, url: &str) -> BackendResult<Option<Vec<u8>>> {
+    Ok(self.get_with_timestamp(url).await?.map(|(bytes, _)| bytes))
+  }
+  pub async fn get_with_timestamp(&self, url: &str) -> BackendResult<Option<(Vec<u8>, i64)>> {
     let _guard = self.gate.lock().await;
     let key = Self::key(url);
     let row =
-      sqlx::query("SELECT size_bytes,last_access_ms FROM web_preview_cache WHERE cache_key=?")
+      sqlx::query("SELECT size_bytes,captured_at_ms FROM web_preview_cache WHERE cache_key=?")
         .bind(&key)
         .fetch_optional(&self.pool)
         .await?;
@@ -58,11 +76,13 @@ impl DiskCache {
       return Ok(None);
     };
     let size: i64 = row.try_get("size_bytes")?;
-    let accessed: i64 = row.try_get("last_access_ms")?;
+    let captured: i64 = row.try_get("captured_at_ms")?;
     let now = crate::assets::now_ms().min(i64::MAX as u64) as i64;
     let file = self.file(&key);
-    let valid =
-      size > 0 && size <= MAX_IMAGE_BYTES as i64 && now.saturating_sub(accessed) <= self.ttl_ms;
+    let valid = size > 0
+      && size <= MAX_IMAGE_BYTES as i64
+      && captured > 0
+      && now.saturating_sub(captured) <= self.ttl_ms;
     let metadata = tokio::fs::symlink_metadata(&file).await;
     if !valid || !metadata.is_ok_and(|value| value.is_file() && value.len() == size as u64) {
       self.remove(&key).await?;
@@ -92,7 +112,7 @@ impl DiskCache {
       .bind(key)
       .execute(&self.pool)
       .await?;
-    Ok(Some(bytes))
+    Ok(Some((bytes, captured)))
   }
   pub async fn set(&self, url: &str, bytes: Arc<Vec<u8>>) -> BackendResult<()> {
     if bytes.is_empty() || bytes.len() > MAX_IMAGE_BYTES {
@@ -116,12 +136,13 @@ impl DiskCache {
       Ok(())
     })
     .await?;
-    sqlx::query("INSERT INTO web_preview_cache(cache_key,size_bytes,last_access_ms) VALUES(?,?,?) ON CONFLICT(cache_key) DO UPDATE SET size_bytes=excluded.size_bytes,last_access_ms=excluded.last_access_ms")
-            .bind(key).bind(size).bind(crate::assets::now_ms().min(i64::MAX as u64) as i64).execute(&self.pool).await?;
+    let now = crate::assets::now_ms().min(i64::MAX as u64) as i64;
+    sqlx::query("INSERT INTO web_preview_cache(cache_key,size_bytes,last_access_ms,captured_at_ms) VALUES(?,?,?,?) ON CONFLICT(cache_key) DO UPDATE SET size_bytes=excluded.size_bytes,last_access_ms=excluded.last_access_ms,captured_at_ms=excluded.captured_at_ms")
+            .bind(key).bind(size).bind(now).bind(now).execute(&self.pool).await?;
     self.prune().await
   }
   async fn prune(&self) -> BackendResult<()> {
-    let rows = sqlx::query("SELECT cache_key,size_bytes,last_access_ms FROM web_preview_cache ORDER BY last_access_ms,cache_key")
+    let rows = sqlx::query("SELECT cache_key,size_bytes,last_access_ms,captured_at_ms FROM web_preview_cache ORDER BY last_access_ms,cache_key")
             .fetch_all(&self.pool).await?;
     let mut total = 0i64;
     for row in &rows {
@@ -138,14 +159,15 @@ impl DiskCache {
         continue;
       }
       let size: i64 = row.try_get("size_bytes")?;
-      let accessed: i64 = row.try_get("last_access_ms")?;
+      let captured: i64 = row.try_get("captured_at_ms")?;
       let valid = tokio::fs::symlink_metadata(self.file(&key))
         .await
         .is_ok_and(|m| m.is_file() && m.len() == size.max(0) as u64);
       if !valid
         || size <= 0
         || size > MAX_IMAGE_BYTES as i64
-        || now.saturating_sub(accessed) > self.ttl_ms
+        || captured <= 0
+        || now.saturating_sub(captured) > self.ttl_ms
         || total > self.max_bytes
       {
         self.remove(&key).await?;
@@ -182,6 +204,14 @@ impl DiskCache {
       .execute(&self.pool)
       .await?;
     Ok(())
+  }
+  pub async fn captured_at(&self, url: &str) -> BackendResult<Option<i64>> {
+    Ok(
+      sqlx::query_scalar("SELECT captured_at_ms FROM web_preview_cache WHERE cache_key=?")
+        .bind(Self::key(url))
+        .fetch_optional(&self.pool)
+        .await?,
+    )
   }
   pub async fn invalidate(&self, url: &str) -> BackendResult<()> {
     let _guard = self.gate.lock().await;

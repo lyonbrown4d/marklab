@@ -3,11 +3,13 @@ import { useMutation } from '@tanstack/react-query'
 import { useLatest } from 'ahooks'
 import { toast } from 'sonner'
 import { linkedFilePathCandidates, resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
-import { isSourcePreviewFilePath } from '@/logic/fileTypes'
+import { isMarkdownFilePath, isSourcePreviewFilePath } from '@/logic/fileTypes'
+import { normalizeHeadingAnchor, splitLinkTarget } from '@/logic/paths'
 import { workspaceTreeApi } from '@/services/workspaceTreeApi'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import { useI18n } from '@/i18n/useI18n'
+import { requestFocusHeading } from '@/utils/editorNavigation'
 
 type WorkspaceLinkNavigationOptions = {
   activePath: string | null
@@ -49,24 +51,15 @@ export const useWorkspaceLinkNavigation = (options: WorkspaceLinkNavigationOptio
       const current = latest.current
       if (!current.interactionActive || !mounted.current) return
       if (documentPath && documentPath !== current.activePath) return
+      const snapshot = useWorkspaceStore.getState()
+      const currentWorkspaceKey = `${snapshot.rootKind}:${snapshot.rootPath}`
+      if (current.workspaceKey && current.workspaceKey !== currentWorkspaceKey) return
       const sequence = ++requestSequence.current
       reset()
       const source = documentPath ?? current.activePath
-      const open = (path: string) => {
-        if (isSourcePreviewFilePath(path) && current.onOpenFileView) {
-          current.onOpenFileView(path, 'source')
-        } else {
-          current.onOpenFile(path)
-        }
-      }
-      const loadedPath = resolveLinkedFilePath(source, target, current.files)
-      if (loadedPath) {
-        open(loadedPath)
-        return
-      }
-      const paths = linkedFilePathCandidates(source, target)
-      if (!paths.length) return
-      const snapshot = useWorkspaceStore.getState()
+      const { path: targetPath, anchor } = splitLinkTarget(target)
+      const navigationTarget = !targetPath && anchor !== null ? '' : target
+      const slug = anchor ? normalizeHeadingAnchor(anchor) : ''
       const isCurrent = () => {
         const next = latest.current
         const state = useWorkspaceStore.getState()
@@ -78,9 +71,29 @@ export const useWorkspaceLinkNavigation = (options: WorkspaceLinkNavigationOptio
           next.workspaceKey === current.workspaceKey &&
           state.rootKind === snapshot.rootKind &&
           state.rootPath === snapshot.rootPath &&
-          state.treeGeneration === snapshot.treeGeneration
+          state.treeGeneration === snapshot.treeGeneration &&
+          state.treeRevision === snapshot.treeRevision
         )
       }
+      const open = (path: string) => {
+        if (!isCurrent()) return
+        if (slug && isMarkdownFilePath(path)) {
+          requestFocusHeading({ path, slug, workspaceKey: currentWorkspaceKey })
+          if (current.onOpenFileView) current.onOpenFileView(path, 'edit')
+          else current.onOpenFile(path)
+        } else if (isSourcePreviewFilePath(path) && current.onOpenFileView) {
+          current.onOpenFileView(path, 'source')
+        } else {
+          current.onOpenFile(path)
+        }
+      }
+      const loadedPath = resolveLinkedFilePath(source, navigationTarget, current.files)
+      if (loadedPath) {
+        open(loadedPath)
+        return
+      }
+      const paths = linkedFilePathCandidates(source, navigationTarget)
+      if (!paths.length) return
       void mutateAsync({
         paths,
         activePath: current.activePath,
@@ -91,7 +104,8 @@ export const useWorkspaceLinkNavigation = (options: WorkspaceLinkNavigationOptio
             !isCurrent() ||
             result.root.kind !== snapshot.rootKind ||
             result.root.path !== snapshot.rootPath ||
-            result.generation !== snapshot.treeGeneration
+            result.generation !== snapshot.treeGeneration ||
+            result.revision !== snapshot.treeRevision
           )
             return
           const path = paths.find((candidate) => result.existing.includes(candidate))

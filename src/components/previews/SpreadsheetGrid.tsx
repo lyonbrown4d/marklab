@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { writeClipboardText } from '@/runtime/clipboard'
-import { DataGrid, type Column } from 'react-data-grid'
+import { DataGrid, type Column, type ColumnWidths } from 'react-data-grid'
 import '@/components/previews/spreadsheet-grid.css'
 import {
   formatSpreadsheetCell,
@@ -24,7 +24,19 @@ const columnName = (index: number): string => {
   return name
 }
 
-export const SpreadsheetGrid = ({ page, label }: { page: SpreadsheetPage; label: string }) => {
+type SpreadsheetGridProps = {
+  page: SpreadsheetPage
+  label: string
+  columnWidths?: ColumnWidths
+  onColumnWidthsChange?: (widths: ColumnWidths) => void
+}
+
+export const SpreadsheetGrid = ({
+  page,
+  label,
+  columnWidths,
+  onColumnWidthsChange,
+}: SpreadsheetGridProps) => {
   const { t } = useI18n()
   const [selection, setSelection] = useState<{ value: string; address: string; formula: string }>()
   const selectedValue = selection?.value
@@ -53,7 +65,8 @@ export const SpreadsheetGrid = ({ page, label }: { page: SpreadsheetPage; label:
       ...Array.from({ length: page.columns }, (_, index): Column<SpreadsheetRow> => ({
         key: String(index),
         name: columnName(index),
-        width: 160,
+        width: 'minmax(200px, 1fr)',
+        minWidth: 96,
         resizable: true,
         renderCell: ({ row }) => (
           <span title={row.cells[index] ?? ''}>{row.cells[index] ?? ''}</span>
@@ -128,6 +141,8 @@ export const SpreadsheetGrid = ({ page, label }: { page: SpreadsheetPage; label:
         }}
         aria-label={label}
         columns={columns}
+        columnWidths={columnWidths}
+        onColumnWidthsChange={onColumnWidthsChange}
         rows={rows}
         rowKeyGetter={(row) => row.number}
         rowHeight={30}

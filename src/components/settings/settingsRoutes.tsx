@@ -87,6 +87,7 @@ export const settingsRoutes: SettingsRoute[] = [
     icon: PenLine,
     searchEntries: [
       { labelKey: 'settings.immersiveEditing', targetId: 'settings-immersive-editing' },
+      { labelKey: 'settings.markdownContentWidth', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.zenMode', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.focusMode', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.focusScope', targetId: 'settings-immersive-editing' },

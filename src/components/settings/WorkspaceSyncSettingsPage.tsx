@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Cloud, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -19,13 +19,16 @@ const WorkspaceSyncSettingsPage = () => {
   const profiles = useWebDavProfiles()
   const [editing, setEditing] = useState<WebDavProfile | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const editSession = useRef(0)
+  const [sessionId, setSessionId] = useState(0)
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean } | null>(null)
 
   const refresh = () => client.invalidateQueries({ queryKey: syncQueryKeys.profiles })
   const save = useMutation({
-    mutationFn: (input: WebDavProfileInput) => workspaceSyncApi.saveWebDavProfile(input),
-    onSuccess: () => {
-      setDialogOpen(false)
+    mutationFn: ({ input }: { input: WebDavProfileInput; session: number }) =>
+      workspaceSyncApi.saveWebDavProfile(input),
+    onSuccess: (_profile, request) => {
+      if (editSession.current === request.session) setDialogOpen(false)
       void refresh()
     },
   })
@@ -40,6 +43,9 @@ const WorkspaceSyncSettingsPage = () => {
   })
 
   const openEditor = (profile: WebDavProfile | null) => {
+    editSession.current += 1
+    setSessionId(editSession.current)
+    save.reset()
     setEditing(profile)
     setDialogOpen(true)
   }
@@ -145,13 +151,22 @@ const WorkspaceSyncSettingsPage = () => {
       </SettingsSection>
       {dialogOpen ? (
         <WebDavProfileDialog
-          key={editing?.id ?? 'new-profile'}
+          key={sessionId}
           open
           profile={editing}
-          pending={save.isPending}
-          error={save.isError ? t('sync.settings.saveFailed') : undefined}
-          onOpenChange={setDialogOpen}
-          onSubmit={(input: WebDavProfileInput) => save.mutate(input)}
+          pending={save.isPending && save.variables?.session === sessionId}
+          error={
+            save.isError && save.variables?.session === sessionId
+              ? t('sync.settings.saveFailed')
+              : undefined
+          }
+          onOpenChange={(open) => {
+            if (!open) editSession.current += 1
+            setDialogOpen(open)
+          }}
+          onSubmit={(input: WebDavProfileInput) =>
+            save.mutate({ input, session: editSession.current })
+          }
         />
       ) : null}
     </SettingsPageStack>

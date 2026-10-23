@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
+import userEvent from '@testing-library/user-event'
 import { SettingsSearch } from '@/components/settings/SettingsSearch'
 import EditingSettingsPage from '@/components/settings/EditingSettingsPage'
 import i18n from '@/i18n/setup'
@@ -12,11 +13,26 @@ beforeEach(async () => {
     locale: 'en-US',
     sourceCodeMiniMapEnabled: true,
     vimModeEnabled: false,
+    markdownContentWidth: 'standard',
   })
   await i18n.changeLanguage('en-US')
 })
 
 describe('EditingSettingsPage', () => {
+  it('lets users choose standard or full-view body width', async () => {
+    const user = userEvent.setup()
+    render(<EditingSettingsPage />)
+    const width = screen.getByRole('combobox', { name: 'Content width' })
+    expect(width).toHaveTextContent('Standard')
+    await user.click(width)
+    await user.click(screen.getByRole('option', { name: 'Fill view' }))
+    expect(usePreferencesStore.getState().markdownContentWidth).toBe('full')
+    expect(width).toHaveTextContent('Fill view')
+    await user.click(width)
+    await user.click(screen.getByRole('option', { name: 'Standard' }))
+    expect(usePreferencesStore.getState().markdownContentWidth).toBe('standard')
+  })
+
   it('toggles the global Vim default', () => {
     render(<EditingSettingsPage />)
     const vimMode = screen.getByRole('switch', { name: 'Vim mode' })

@@ -12,12 +12,12 @@ import { useConfiguredMonaco } from '@/components/source-code/useConfiguredMonac
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ResizableDialogContent } from '@/components/ui/ResizableDialogContent'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { monacoSuggestionOptions } from '@/components/source-code/monacoSuggestionOptions'
 import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
@@ -86,8 +86,13 @@ const CodeBlockMonacoDialog = ({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent
-        className="h-[min(80vh,720px)] max-w-[min(90vw,1080px)] grid-rows-[auto_1fr_auto]"
+      <ResizableDialogContent
+        className="grid-rows-[auto_minmax(0,1fr)_auto]"
+        resizeLabels={{
+          width: t('preview.resizeWidth'),
+          height: t('preview.resizeHeight'),
+          size: t('preview.resizeSize'),
+        }}
         onEscapeKeyDown={(event) => {
           if (isVimKeyboardTarget(event.target)) event.preventDefault()
         }}
@@ -142,7 +147,7 @@ const CodeBlockMonacoDialog = ({
             {applyLabel}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ResizableDialogContent>
     </Dialog>
   )
 }

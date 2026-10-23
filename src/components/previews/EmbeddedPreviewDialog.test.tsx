@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   isCommandPaletteBlockedByActiveSurface,
@@ -93,5 +93,35 @@ describe('EmbeddedPreviewDialog', () => {
       expect.objectContaining({ kind: 'pdf', presentation: 'full' }),
       undefined,
     )
+  })
+
+  it('lets the spreadsheet preview resize by keyboard within viewport bounds', () => {
+    render(
+      <EmbeddedPreviewDialog
+        {...baseProps}
+        resolved={{
+          external: false,
+          kind: 'spreadsheet',
+          path: 'docs/report.xlsx',
+          readonly: true,
+          src: 'asset://docs/report.xlsx',
+        }}
+      />,
+    )
+    const dialog = screen.getByRole('dialog')
+    const resize = screen.getAllByRole('separator', { name: 'preview.resizeWidth' })[0]!
+    fireEvent.keyDown(resize, { key: 'Home' })
+    expect(dialog).toHaveStyle({ width: '480px' })
+    fireEvent.keyDown(resize, { key: 'ArrowLeft' })
+    expect(dialog).toHaveStyle({ width: '480px' })
+    fireEvent.keyDown(resize, { key: 'End' })
+    expect(dialog).toHaveStyle({ width: `${window.innerWidth * 0.96}px` })
+    const heightResize = screen.getAllByRole('separator', { name: 'preview.resizeHeight' })[0]!
+    fireEvent.keyDown(heightResize, { key: 'Home' })
+    expect(dialog).toHaveStyle({ height: '280px' })
+    fireEvent.keyDown(heightResize, { key: 'ArrowDown', shiftKey: true })
+    expect(dialog).toHaveStyle({ height: '344px' })
+    fireEvent.keyDown(heightResize, { key: 'End' })
+    expect(dialog).toHaveStyle({ height: `${window.innerHeight * 0.96}px` })
   })
 })

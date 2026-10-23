@@ -2,6 +2,7 @@ mod activation;
 mod commands;
 mod create;
 mod native;
+mod previews;
 mod shortcuts;
 pub(crate) mod types;
 use crate::{
@@ -23,6 +24,7 @@ struct Entry {
   bounds: Bounds,
   touched: u64,
   generation: u64,
+  workspace_generation: u64,
   monitor: Option<usize>,
   instance: String,
   load: Option<tokio::task::AbortHandle>,

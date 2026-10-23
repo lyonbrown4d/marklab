@@ -93,6 +93,7 @@ pub fn allowed_keys(key: &str) -> BackendResult<&'static [&'static str]> {
       "immersiveZenMode",
       "locale",
       "markdownAssetImportStrategy",
+      "markdownContentWidth",
       "motionAnimatedCursor",
       "motionAnimatedPanels",
       "motionSmoothScrolling",

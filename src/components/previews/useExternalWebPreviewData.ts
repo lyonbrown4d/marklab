@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef } from 'react'
 
 import type { PreviewCapturePriority } from '@/types/linkPreview'
 import { linkPreviewApi } from '@/services/linkPreviewApi'
+import { listen } from '@/runtime/events'
 
 type ExternalWebPreviewDataOptions = {
   capturePriority: PreviewCapturePriority
@@ -42,6 +43,7 @@ export const useExternalWebPreviewData = ({
   metadataRequested,
   url,
 }: ExternalWebPreviewDataOptions) => {
+  const queryClient = useQueryClient()
   const retriedInteractiveError = useRef(false)
   const metadata = useQuery({
     enabled: metadataRequested,
@@ -58,6 +60,37 @@ export const useExternalWebPreviewData = ({
   })
   const refetchMetadata = metadata.refetch
   const refetchCapture = capture.refetch
+  let canonicalUrl = url
+  try {
+    canonicalUrl = new URL(url).href
+  } catch {
+    // Invalid destinations are reported by the existing native request boundary.
+  }
+
+  useEffect(() => {
+    let disposed = false
+    let revision = 0
+    let unlisten: (() => void) | undefined
+    void listen('link-preview-updated', ({ payload }) => {
+      if (payload.capture.url !== canonicalUrl) return
+      const current = ++revision
+      const key = ['link-preview-capture', url]
+      // Abort the previous worker before publishing the already-cached native
+      // frame. An older pending response must not replace a fresh live image.
+      void queryClient.cancelQueries({ queryKey: key, exact: true }).then(() => {
+        if (!disposed && current === revision) queryClient.setQueryData(key, payload.capture)
+      })
+    })
+      .then((stop) => {
+        if (disposed) stop()
+        else unlisten = stop
+      })
+      .catch(() => undefined)
+    return () => {
+      disposed = true
+      unlisten?.()
+    }
+  }, [canonicalUrl, queryClient, url])
 
   useEffect(() => {
     if (!captureRequested) return

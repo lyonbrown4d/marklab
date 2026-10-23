@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { isEqual } from 'lodash-es'
 import type { PlateEditor } from 'platejs/react'
 import type {
   EditorContextMenuAction,
@@ -16,9 +17,18 @@ import { queueFocusedEditCommand } from '@/runtime/editCommands'
 import { isDesktopRuntime } from '@/runtime/desktop'
 
 type UsePlateEditorContextMenuOptions = {
+  activePath?: string | null
   getEditor: () => PlateEditor | null
+  interactionActive?: boolean
   onLinkInsert?: () => void
   readOnly?: boolean
+  workspaceKey?: string
+}
+
+type SelectionRef = ReturnType<PlateEditor['api']['rangeRef']>
+type ClipboardTarget = {
+  take: () => SelectionRef['current']
+  release: () => void
 }
 
 const disabledCapabilities: EditorContextMenuCapabilities = {
@@ -102,6 +112,7 @@ const runAction = (
   action: EditorContextMenuAction,
   readOnly: boolean,
   onLinkInsert?: () => void,
+  captureTarget?: (editor: PlateEditor) => ClipboardTarget | null,
 ) => {
   if (
     !editor ||
@@ -130,11 +141,20 @@ const runAction = (
     return
   }
   if (action === 'pasteAsPlainText') {
+    const target = captureTarget?.(editor)
+    if (!target) return
     void readClipboardText()
       .then((text) => {
-        if (text) editor.tf.withNewBatch(() => editor.tf.insertText(text))
+        const range = target.take()
+        if (text && range) {
+          editor.tf.withNewBatch(() => {
+            editor.tf.select(range)
+            editor.tf.insertText(text)
+          })
+        }
       })
       .catch(() => undefined)
+      .finally(target.release)
     return
   }
   if (action === 'copyAsMarkdown') {
@@ -150,11 +170,20 @@ const runAction = (
   }
   if (action === 'cut') {
     const content = serializePlateSelectionClipboard(editor)
-    const selection = editor.selection
-    if (!content || !selection) return
+    if (!content) return
+    const target = captureTarget?.(editor)
+    if (!target) return
     void writeClipboardContent(content)
-      .then(() => editor.tf.withNewBatch(() => editor.tf.delete({ at: selection })))
-      .catch(() => queueFocusedEditCommand('cut'))
+      .then(() => {
+        const range = target.take()
+        if (!range) return
+        editor.tf.withNewBatch(() => {
+          editor.tf.select(range)
+          editor.tf.deleteFragment()
+        })
+      })
+      .catch(() => undefined)
+      .finally(target.release)
   }
 }
 
@@ -167,10 +196,23 @@ const isPlateClipboardTarget = (editor: PlateEditor, target: EventTarget | null)
 }
 
 export const usePlateEditorContextMenu = ({
+  activePath,
   getEditor,
+  interactionActive = true,
   onLinkInsert,
   readOnly = false,
+  workspaceKey,
 }: UsePlateEditorContextMenuOptions): EditorContextMenuAdapter => {
+  const generation = useRef(0)
+  const pendingTargets = useRef(new Set<SelectionRef>())
+  useLayoutEffect(() => {
+    const targets = pendingTargets.current
+    return () => {
+      generation.current += 1
+      targets.forEach((target) => target.unref())
+      targets.clear()
+    }
+  }, [activePath, interactionActive, readOnly, workspaceKey])
   useEffect(() => {
     const handleEvent = (event: ClipboardEvent) => {
       const editor = getEditor()
@@ -190,11 +232,42 @@ export const usePlateEditorContextMenu = ({
     }
   }, [getEditor, readOnly])
 
-  return useMemo(
-    () => ({
-      getCapabilities: () => getCapabilities(getEditor(), readOnly),
-      onAction: (action) => runAction(getEditor(), action, readOnly, onLinkInsert),
-    }),
-    [getEditor, onLinkInsert, readOnly],
-  )
+  return useMemo(() => {
+    const captureTarget = (editor: PlateEditor): ClipboardTarget | null => {
+      if (!editor.selection) return null
+      const target = editor.api.rangeRef(editor.selection, { affinity: 'inward' })
+      const sourceFragment = editor.api.fragment(editor.selection)
+      const requestGeneration = generation.current
+      pendingTargets.current.add(target)
+      const release = () => {
+        pendingTargets.current.delete(target)
+        target.unref()
+      }
+      return {
+        release,
+        take: () => {
+          const range = target.current
+          if (
+            generation.current !== requestGeneration ||
+            getEditor() !== editor ||
+            !range ||
+            !isEqual(editor.api.fragment(range), sourceFragment)
+          )
+            return null
+          return range
+        },
+      }
+    }
+    return {
+      getCapabilities: () => getCapabilities(interactionActive ? getEditor() : null, readOnly),
+      onAction: (action) =>
+        runAction(
+          interactionActive ? getEditor() : null,
+          action,
+          readOnly,
+          onLinkInsert,
+          captureTarget,
+        ),
+    }
+  }, [getEditor, interactionActive, onLinkInsert, readOnly])
 }

@@ -22,6 +22,7 @@ pub async fn web_tabs_activate(
   let bounds = create::bounds(&window, &request.bounds)?;
   for entry in manager.entries(window.label()) {
     if entry.state.tab_id != request.tab_id {
+      previews::capture_hidden(&manager, &window, &entry);
       if let Some(view) = entry.view {
         view.hide()?;
       }
@@ -66,6 +67,7 @@ pub async fn web_tabs_activate(
             .clock
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed),
           generation: 0,
+          workspace_generation: generation,
           monitor: None,
           instance: instance.clone(),
           load: None,

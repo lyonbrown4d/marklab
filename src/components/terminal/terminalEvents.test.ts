@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { TerminalExitEvent, TerminalOutputEvent } from '@/services/terminalApi'
 import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalEventStreams'
 import {
+  clearTerminalSessionEvents,
   primeTerminalEventListeners,
   subscribeTerminalSessionEvents,
 } from '@/components/terminal/terminalEvents'
@@ -78,20 +79,51 @@ describe('terminalEvents', () => {
     unsubscribeResubscribe()
   })
 
-  it('drops pending output when the session exits before subscription', () => {
+  it('replays early output and exit in order, once, after create acknowledgement', () => {
     primeTerminalEventListeners()
-
     terminalOutputSubject.next({ id: 'session-exited', data: 'pending' })
     terminalExitSubject.next({ id: 'session-exited', exit_code: 1, signal: null })
+    terminalOutputSubject.next({ id: 'session-exited', data: 'late output' })
+    const received: string[] = []
+    const handlers = {
+      onExit: () => received.push('exit'),
+      onOutput: (event: TerminalOutputEvent) => received.push(event.data),
+    }
+    const unsubscribe = subscribeTerminalSessionEvents('session-exited', handlers)
+    expect(received).toEqual(['pending', 'exit'])
+    unsubscribe()
+    const unsubscribeAgain = subscribeTerminalSessionEvents('session-exited', handlers)
+    expect(received).toEqual(['pending', 'exit'])
+    unsubscribeAgain()
+  })
 
+  it('bounds early output while preserving its exit', () => {
+    primeTerminalEventListeners()
+    for (let index = 0; index < 140; index += 1) {
+      terminalOutputSubject.next({ id: 'session-bounded', data: String(index) })
+    }
+    terminalExitSubject.next({ id: 'session-bounded', exit_code: 0, signal: null })
     const onOutput = vi.fn()
-    const unsubscribe = subscribeTerminalSessionEvents('session-exited', {
-      onExit: vi.fn(),
-      onOutput,
-    })
+    const onExit = vi.fn()
+    const unsubscribe = subscribeTerminalSessionEvents('session-bounded', { onOutput, onExit })
+    expect(onOutput).toHaveBeenCalledTimes(127)
+    expect(onOutput).toHaveBeenLastCalledWith({ id: 'session-bounded', data: '139' })
+    expect(onExit).toHaveBeenCalledOnce()
+    unsubscribe()
+  })
 
+  it('clears closed sessions and ignores their late events', () => {
+    primeTerminalEventListeners()
+    terminalOutputSubject.next({ id: 'session-closed', data: 'pending' })
+    clearTerminalSessionEvents('session-closed')
+    terminalExitSubject.next({ id: 'session-closed', exit_code: 0, signal: null })
+    const onOutput = vi.fn()
+    const onExit = vi.fn()
+    const unsubscribe = subscribeTerminalSessionEvents('session-closed', { onOutput, onExit })
+    terminalOutputSubject.next({ id: 'session-closed', data: 'late subscribed output' })
+    terminalExitSubject.next({ id: 'session-closed', exit_code: 0, signal: null })
     expect(onOutput).not.toHaveBeenCalled()
-
+    expect(onExit).not.toHaveBeenCalled()
     unsubscribe()
   })
 })

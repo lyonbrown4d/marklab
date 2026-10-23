@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, ReactNode } from 'react'
+import type { ColumnWidths } from 'react-data-grid'
 import SpreadsheetPreviewSurface from '@/components/previews/SpreadsheetPreviewSurface'
 import { spreadsheetApi } from '@/services/spreadsheetApi'
 
@@ -15,8 +16,22 @@ vi.mock('ahooks', async (importOriginal) => ({
 vi.mock('@/services/spreadsheetApi', () => ({ spreadsheetApi: { readPage: vi.fn() } }))
 // The grid's virtual layout requires browser dimensions; keep the integration boundary explicit.
 vi.mock('@/components/previews/SpreadsheetGrid', () => ({
-  SpreadsheetGrid: ({ page }: { page: { rows: string[][]; offset: number } }) => (
+  SpreadsheetGrid: ({
+    page,
+    columnWidths,
+    onColumnWidthsChange,
+  }: {
+    page: { rows: string[][]; offset: number }
+    columnWidths: ColumnWidths
+    onColumnWidthsChange: (widths: ColumnWidths) => void
+  }) => (
     <div role="grid">
+      <output aria-label="First column width">{columnWidths.get('0')?.width ?? 'Default'}</output>
+      <button
+        onClick={() => onColumnWidthsChange(new Map([['0', { type: 'resized', width: 420 }]]))}
+      >
+        Resize first column
+      </button>
       {page.rows.map((row, index) => (
         <div key={index}>
           {page.offset + index + 1}: {row.join('|')}
@@ -82,6 +97,36 @@ const renderPreview = (
 }
 
 describe('SpreadsheetPreviewSurface', () => {
+  it('retains resized columns across pages and calculation modes, isolating sheets and files', async () => {
+    vi.mocked(spreadsheetApi.readPage).mockImplementation(async (request) => ({
+      ...page,
+      sheet: request.sheet ?? 'First',
+      offset: request.offset ?? 0,
+    }))
+    const view = renderPreview()
+    await screen.findByRole('grid')
+    fireEvent.click(screen.getByRole('button', { name: 'Resize first column' }))
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('420')
+
+    fireEvent.click(screen.getByRole('button', { name: 'preview.spreadsheetNext' }))
+    await screen.findByRole('grid')
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('420')
+    fireEvent.click(screen.getByRole('button', { name: 'preview.spreadsheetCalculate' }))
+    await screen.findByRole('grid')
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('420')
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Second' } })
+    await screen.findByRole('grid')
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('Default')
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'First' } })
+    await screen.findByRole('grid')
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('420')
+
+    view.rerender(<SpreadsheetPreviewSurface path="/next.xlsx" title="next.xlsx" />)
+    await screen.findByRole('grid')
+    expect(screen.getByLabelText('First column width')).toHaveTextContent('Default')
+  })
+
   it('calculates Excel formulas explicitly, retains mode across page and sheet changes, and resets on file change', async () => {
     vi.mocked(spreadsheetApi.readPage).mockImplementation(async (request) => ({
       ...page,

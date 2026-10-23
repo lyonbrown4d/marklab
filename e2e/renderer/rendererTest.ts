@@ -11,7 +11,7 @@ import {
 } from './rendererHarness.js'
 /* eslint-enable no-restricted-imports */
 
-type Options = { documents: Record<string, string>; initialFile: string }
+type Options = { documents: Record<string, string | Uint8Array>; initialFile: string }
 export const test = base.extend<Options & { session: RendererSession }>({
   documents: [
     {

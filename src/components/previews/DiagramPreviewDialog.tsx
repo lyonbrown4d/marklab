@@ -4,7 +4,9 @@ import {
   ZoomableVisualViewport,
   type ZoomableVisual,
 } from '@/components/previews/ZoomableVisualViewport'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResizableDialogContent } from '@/components/ui/ResizableDialogContent'
+import { useI18n } from '@/i18n/useI18n'
 
 type DiagramPreviewDialogProps = {
   labels: {
@@ -29,6 +31,7 @@ export const DiagramPreviewDialog = ({
   returnFocusRef,
   visual,
 }: DiagramPreviewDialogProps) => {
+  const { t } = useI18n()
   useNativeSurfaceOcclusion('diagram-preview-dialog', open, { blocksCommandPalette: true })
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -39,8 +42,13 @@ export const DiagramPreviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex h-[92vh] max-w-[96vw] transform-gpu flex-col gap-0 overflow-hidden p-0 will-change-auto"
+      <ResizableDialogContent
+        className="flex transform-gpu flex-col gap-0 p-0 will-change-auto"
+        resizeLabels={{
+          width: t('preview.resizeWidth'),
+          height: t('preview.resizeHeight'),
+          size: t('preview.resizeSize'),
+        }}
         onClick={stopEditorEvent}
         onCloseAutoFocus={(event) => {
           event.preventDefault()
@@ -55,7 +63,7 @@ export const DiagramPreviewDialog = ({
           <DialogTitle className="truncate text-sm">{labels.title}</DialogTitle>
         </DialogHeader>
         <ZoomableVisualViewport labels={labels} visual={visual} />
-      </DialogContent>
+      </ResizableDialogContent>
     </Dialog>
   )
 }

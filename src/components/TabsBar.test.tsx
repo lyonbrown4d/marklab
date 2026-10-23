@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import TabsBar from '@/components/TabsBar'
 import i18n from '@/i18n/setup'
+import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
@@ -95,6 +96,25 @@ describe('TabsBar immersive dock', () => {
     expect(screen.queryByRole('tablist', { name: 'Open files' })).not.toBeInTheDocument()
   })
 
+  it('occludes the native webpage only while its floating list is expanded', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = createProps()
+    const view = render(<TabsBar {...props} placement="web" />)
+    const handle = screen.getByRole('button', { name: /Show open files/ })
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
+
+    await user.click(handle)
+    expect(handle).toHaveAttribute('aria-expanded', 'true')
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBe(1)
+    await user.keyboard('{Escape}')
+    expect(handle).toHaveAttribute('aria-expanded', 'false')
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
+
+    await user.click(handle)
+    view.unmount()
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
+  })
+
   it('uses a horizontally virtualized track for many open files', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const tabs = Array.from({ length: 20 }, (_, index) => ({
@@ -135,5 +155,17 @@ describe('TabsBar immersive dock', () => {
     renderTabsBar({ tabs: [], activeTabId: null })
 
     expect(screen.queryByTestId('tabs-dock')).not.toBeInTheDocument()
+  })
+
+  it.each(['{Enter}', ' '])('closes the focused tab button with %s', async (key) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = renderTabsBar()
+    await user.click(screen.getByRole('button', { name: /Show open files/ }))
+    screen.getByRole('button', { name: /Close tab.*current · Source/i }).focus()
+
+    await user.keyboard(key)
+
+    expect(props.onCloseTab).toHaveBeenCalledWith(getWorkspaceTabId(currentTab))
+    expect(props.onOpenTab).not.toHaveBeenCalled()
   })
 })

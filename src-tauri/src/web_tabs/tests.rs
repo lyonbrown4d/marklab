@@ -74,7 +74,7 @@ fn stale_callbacks_do_not_match_a_recreated_tab_with_the_same_id() {
   assert!(!manager.current("main", "one", "new-native-view"));
 }
 
-fn entry(id: &str, active: bool, touched: u64) -> Entry {
+pub(super) fn entry(id: &str, active: bool, touched: u64) -> Entry {
   Entry {
     view: None,
     state: TabState {
@@ -95,6 +95,7 @@ fn entry(id: &str, active: bool, touched: u64) -> Entry {
     },
     touched,
     generation: 0,
+    workspace_generation: 1,
     monitor: None,
     instance: "new-native-view".into(),
     load: None,
@@ -148,4 +149,28 @@ fn resident_capacity_evicts_only_the_owners_least_recently_used_inactive_tab() {
     ])
     .is_err()
   );
+}
+
+#[test]
+fn preview_capture_only_accepts_the_ready_active_instance_and_current_url() {
+  let mut tab = entry("one", true, 0);
+  let url = tab.state.url.clone();
+  assert!(!create::capture_eligible(&tab, "new-native-view", &url));
+  tab.state.status = TabStatus::Ready;
+  assert!(create::capture_eligible(&tab, "new-native-view", &url));
+  assert!(!create::capture_eligible(
+    &tab,
+    "replaced-native-view",
+    &url
+  ));
+  assert!(!create::capture_eligible(
+    &tab,
+    "new-native-view",
+    "https://example.com/previous-page"
+  ));
+  tab.state.active = false;
+  assert!(!create::capture_eligible(&tab, "new-native-view", &url));
+  tab.state.active = true;
+  tab.state.status = TabStatus::Closed;
+  assert!(!create::capture_eligible(&tab, "new-native-view", &url));
 }

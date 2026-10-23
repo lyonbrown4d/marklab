@@ -65,6 +65,7 @@ export type PreferencesState = AiCompletionPreferencesState &
     defaultFileView: FileViewKind
     hideMarkdownDefaultAppPrompt: boolean
     markdownAssetImportStrategy: MarkdownAssetImportStrategy
+    markdownContentWidth: 'standard' | 'full'
     motionSmoothScrolling: boolean
     motionAnimatedCursor: boolean
     motionAnimatedPanels: boolean
@@ -85,6 +86,7 @@ export type PreferencesState = AiCompletionPreferencesState &
     setDefaultFileView: (view: FileViewKind) => void
     setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
     setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
+    setMarkdownContentWidth: (width: 'standard' | 'full') => void
     setMotionSmoothScrolling: (enabled: boolean) => void
     setMotionAnimatedCursor: (enabled: boolean) => void
     setMotionAnimatedPanels: (enabled: boolean) => void
@@ -119,6 +121,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       defaultFileView: 'edit',
       hideMarkdownDefaultAppPrompt: false,
       markdownAssetImportStrategy: 'copy-to-document-assets',
+      markdownContentWidth: 'standard',
       motionSmoothScrolling: true,
       motionAnimatedCursor: true,
       motionAnimatedPanels: true,
@@ -214,6 +217,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       setMotionSmoothScrolling: (motionSmoothScrolling) =>
         set((state) =>
           state.motionSmoothScrolling === motionSmoothScrolling ? state : { motionSmoothScrolling },
+        ),
+      setMarkdownContentWidth: (markdownContentWidth) =>
+        set((state) =>
+          state.markdownContentWidth === markdownContentWidth ? state : { markdownContentWidth },
         ),
       setMotionAnimatedCursor: (motionAnimatedCursor) =>
         set((state) =>

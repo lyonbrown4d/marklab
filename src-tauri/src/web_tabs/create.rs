@@ -11,6 +11,7 @@ pub async fn view(
   url: url::Url,
   bounds: &Bounds,
 ) -> BackendResult<Webview> {
+  let workspace_generation = manager.entry(window.label(), id)?.workspace_generation;
   let navigation_manager = manager.clone();
   let navigation_owner = window.clone();
   let navigation_id = id.to_owned();
@@ -25,8 +26,18 @@ pub async fn view(
   let title_instance = instance.to_owned();
   let new_owner = window.clone();
   let new_id = id.to_owned();
-  let builder = WebviewBuilder::new(instance, WebviewUrl::External(url))
-    .incognito(true)
+  // Interactive tabs share one persistent browser profile across windows and
+  // workspaces. Capture workers retain their separate incognito data store.
+  let builder = WebviewBuilder::new(instance, WebviewUrl::External(url)).incognito(false);
+  #[cfg(target_os = "macos")]
+  let builder = builder.data_store_identifier(*b"marklab-web-tabs");
+  #[cfg(any(target_os = "windows", target_os = "linux"))]
+  let builder = {
+    let directory = window.app_handle().path().app_data_dir()?.join("web-tabs");
+    tokio::fs::create_dir_all(&directory).await?;
+    builder.data_directory(directory)
+  };
+  let builder = builder
     .focused(false)
     .devtools(false)
     .on_download(|_, _| false)
@@ -67,12 +78,21 @@ pub async fn view(
         v.state.title = bounded_text(&title, 512)
       })
     })
-    .on_page_load(move |_, payload| {
+    .on_page_load(move |view, payload| {
       if !page_manager.current(page_owner.label(), &page_id, &page_instance) {
         return;
       }
       if payload.event() == PageLoadEvent::Finished {
         page_manager.ready(&page_owner, &page_id);
+        capture_ready_tab(
+          page_manager.clone(),
+          page_owner.clone(),
+          page_id.clone(),
+          page_instance.clone(),
+          view,
+          payload.url().to_string(),
+          workspace_generation,
+        );
       } else {
         page_manager.loading(&page_owner, &page_id, payload.url().to_string());
       }
@@ -87,6 +107,31 @@ pub async fn view(
   }
   Ok(view)
 }
+
+pub(super) fn capture_eligible(entry: &Entry, instance: &str, url: &str) -> bool {
+  entry.instance == instance
+    && entry.state.active
+    && matches!(entry.state.status, TabStatus::Ready)
+    && entry.state.url == url
+}
+
+fn capture_ready_tab(
+  manager: WebTabs,
+  window: TrustedWindow,
+  id: String,
+  instance: String,
+  view: Webview,
+  url: String,
+  generation: u64,
+) {
+  let Ok(entry) = manager.entry(window.label(), &id) else {
+    return;
+  };
+  if capture_eligible(&entry, &instance, &url) {
+    previews::capture(window, view, url, generation);
+  }
+}
+
 pub fn bounds(window: &TrustedWindow, bounds: &Bounds) -> BackendResult<Bounds> {
   let size = window.inner_size()?;
   let scale = window.scale_factor()?;

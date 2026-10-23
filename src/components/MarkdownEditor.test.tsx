@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
@@ -10,7 +10,10 @@ import {
   renderEditor,
   renderEmbeddedEditor,
   resetMarkdownEditorMocks,
+  slashLabels,
 } from '@/components/MarkdownEditor.testFixtures'
+import MarkdownEditor from '@/components/MarkdownEditor'
+import * as configuredEditor from '@/components/plate/useConfiguredPlateEditor'
 
 const preferencesMock = Object.assign(controllerMock, {
   immersiveTypewriterMode: false,
@@ -38,6 +41,7 @@ describe('MarkdownEditor playground baseline', () => {
     preferencesMock.immersiveFocusMode = false
     preferencesMock.immersiveFocusScope = 'block'
     preferencesMock.immersiveTypewriterMode = false
+    preferencesMock.markdownContentWidth = 'standard'
     keepAliveState.active = true
     keepAliveState.cacheKey = undefined
   })
@@ -46,6 +50,44 @@ describe('MarkdownEditor playground baseline', () => {
     renderEditor()
 
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-editor-engine', 'plate')
+  })
+
+  it('changes body width without replacing the editor, unsaved text, selection or undo history', async () => {
+    const editorHook = vi.spyOn(configuredEditor, 'useConfiguredPlateEditor')
+    const ref = createRef<MarkdownEditorHandle>()
+    const view = renderEditor(ref)
+    const editor = editorHook.mock.results.at(-1)!.value
+    const root = screen.getByTestId('markdown-editor')
+    expect(root).not.toHaveClass('[--markdown-content-width:100%]')
+    act(() => {
+      editor.tf.select({
+        anchor: { path: [0, 0], offset: 7 },
+        focus: { path: [0, 0], offset: 7 },
+      })
+      editor.tf.insertText(' unsaved')
+    })
+    const selection = structuredClone(editor.selection)
+    preferencesMock.markdownContentWidth = 'full'
+    view.rerender(
+      <MarkdownEditor
+        activePath="notes/example.md"
+        value="# Heading"
+        onChange={vi.fn()}
+        placeholder="Write"
+        slashLabels={slashLabels}
+        ref={ref}
+      />,
+    )
+    expect(screen.getByTestId('markdown-editor')).toBe(root)
+    expect(root).toHaveClass('[--markdown-content-width:100%]')
+    expect(editorHook.mock.results.at(-1)!.value).toBe(editor)
+    expect(editor.selection).toEqual(selection)
+    expect((await ref.current?.getMarkdown())?.trim()).toBe('# Heading unsaved')
+    act(() => editor.undo())
+    expect((await ref.current?.getMarkdown())?.trim()).toBe('# Heading')
+    act(() => editor.redo())
+    expect((await ref.current?.getMarkdown())?.trim()).toBe('# Heading unsaved')
+    editorHook.mockRestore()
   })
 
   it('prevents editing without enabling typewriter presentation in read-only mode', () => {
@@ -140,10 +182,12 @@ describe('MarkdownEditor playground baseline', () => {
   })
 
   it('scopes embedded presentation without creating a second editor path', () => {
+    preferencesMock.markdownContentWidth = 'full'
     renderEmbeddedEditor()
 
     expect(screen.getAllByTestId('markdown-editor')).toHaveLength(1)
     expect(screen.getByTestId('markdown-editor')).toHaveClass('markdown-editor--embedded')
+    expect(screen.getByTestId('markdown-editor')).not.toHaveClass('[--markdown-content-width:100%]')
   })
 
   it('keeps large documents on one chunked Plate editor path', () => {

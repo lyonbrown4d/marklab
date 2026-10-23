@@ -1,9 +1,14 @@
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import { rendererReadyPhases, type RendererReadySignal } from '@/types/rendererReady'
 // eslint-disable-next-line no-restricted-imports -- Node-run test fixtures remain outside production.
 import { createFixtureBuffers } from './fixtureBuffers.js'
 // eslint-disable-next-line no-restricted-imports -- Test-only capability store serves only generated fixture files.
 import { createFixtureAssets } from './fixtureAssets.js'
+// eslint-disable-next-line no-restricted-imports -- Test-only native command fixture.
+import { readFixtureSpreadsheet } from './fixtureSpreadsheet.js'
+// eslint-disable-next-line no-restricted-imports -- Test-only native publication analysis DTO.
+import { readFixturePublication } from './fixturePublication.js'
 
 type Payload = Record<string, unknown>
 const record = (value: unknown): Payload => {
@@ -96,6 +101,13 @@ export const createFixtureBackend = async (
       }
       case 'lifecycle_get_launch_info':
         return { args: [], cwd: root, deepLinks: [] }
+      case 'fs_get_workspace_publication_plan':
+        return readFixturePublication(
+          (await entries())
+            .filter((entry) => entry.kind === 'file' && /\.md$/i.test(entry.path))
+            .map((entry) => entry.path),
+          buffers.snapshot,
+        )
       case 'fs_get_root_info':
         return rootInfo()
       case 'fs_set_root': {
@@ -149,6 +161,29 @@ export const createFixtureBackend = async (
         return []
       case 'assets_issue_capability':
         return assets.issue(text(request.path))
+      case 'spreadsheet_read_page':
+        return readFixtureSpreadsheet(request, buffers.target, assets.read)
+      case 'fs_resolve_markdown_asset': {
+        const document = text(request.documentPath)
+        buffers.target(document)
+        const target = text(request.target)
+        if (/^[a-z][\w+.-]*:/i.test(target) || target.startsWith('//'))
+          throw new Error('Fixture supports only local Markdown assets')
+        const decoded = decodeURIComponent(target.split(/[?#]/)[0])
+        const relative = path.posix.join(path.posix.dirname(document), decoded)
+        const exists = await fs.stat(buffers.target(relative)).then(
+          (stat) => stat.isFile(),
+          () => false,
+        )
+        return {
+          source_path: document,
+          target,
+          relative_path: relative,
+          is_external: false,
+          media_type: null,
+          exists,
+        }
+      }
       case 'fs_get_path_metadata': {
         const stat = await fs.stat(buffers.target(text(request.path)))
         return {
@@ -169,7 +204,7 @@ export const createFixtureBackend = async (
           return {
             version: 2,
             state: {
-              locale: 'en',
+              locale: 'en-US',
               themeMode: 'system',
               vimModeEnabled: false,
               sidebarCollapsed: true,
@@ -195,6 +230,10 @@ export const createFixtureBackend = async (
         return { currentVersion: '0.2.8', installOnQuit: false, status: 'unavailable' }
       case 'menu_set_locale':
         return { ok: true, locale: request.locale }
+      case 'menu_dispatch':
+        if (text(request.id) !== 'file.export_workspace')
+          throw new Error('Unsupported fixture menu action')
+        return { ok: true }
       case 'window_set_vim_keyboard_ownership':
         return
       case 'language_document_open':

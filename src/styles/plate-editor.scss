@@ -56,7 +56,7 @@
 .markdown-editor > [data-slate-node='element'],
 .markdown-editor > .plate-block-draggable,
 .markdown-editor > [data-slate-chunk='true'] {
-  width: min(100%, 780px);
+  width: min(100%, var(--markdown-content-width, 780px));
   margin-inline: auto;
 }
 

@@ -6,12 +6,12 @@ import AppAlert from '@/components/AppAlert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ResizableDialogContent } from '@/components/ui/ResizableDialogContent'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
@@ -182,7 +182,14 @@ const LocalHistoryPreviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(78vh,760px)] max-w-[min(94vw,1120px)] flex-col gap-0 overflow-hidden p-0">
+      <ResizableDialogContent
+        className="flex flex-col gap-0 p-0"
+        resizeLabels={{
+          width: t('preview.resizeWidth'),
+          height: t('preview.resizeHeight'),
+          size: t('preview.resizeSize'),
+        }}
+      >
         <DialogHeader className="shrink-0 border-b border-border/70 px-5 py-4 pr-12">
           <DialogTitle className="flex items-center gap-2 text-base">
             <History aria-hidden="true" className="size-4 text-primary" />
@@ -244,7 +251,7 @@ const LocalHistoryPreviewDialog = ({
             {t('localHistory.restore')}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ResizableDialogContent>
     </Dialog>
   )
 }

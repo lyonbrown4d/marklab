@@ -126,6 +126,14 @@ export const createEventHub = () => {
       return
     }
     if (
+      event === 'link-preview-updated' &&
+      payload &&
+      typeof payload === 'object' &&
+      'generation' in payload &&
+      payload.generation !== nativeGeneration
+    )
+      return
+    if (
       event === 'fs-buffer-status' &&
       payload &&
       typeof payload === 'object' &&

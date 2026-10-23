@@ -17,6 +17,24 @@ beforeEach(() => {
 })
 
 describe('writing-first layout preferences', () => {
+  it('defaults body width to standard and persists and restores the full-width choice', async () => {
+    expect(usePreferencesStore.getState().markdownContentWidth).toBe('standard')
+    usePreferencesStore.getState().setMarkdownContentWidth('full')
+    expect(storage.setItem).toHaveBeenLastCalledWith(
+      'marklab.preferences',
+      expect.objectContaining({ state: expect.objectContaining({ markdownContentWidth: 'full' }) }),
+    )
+    usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
+    storage.getItem.mockReturnValue({ state: { markdownContentWidth: 'full' }, version: 2 })
+    await usePreferencesStore.persist.rehydrate()
+    expect(usePreferencesStore.getState().markdownContentWidth).toBe('full')
+
+    usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
+    storage.getItem.mockReturnValue({ state: { silentSave: false }, version: 2 })
+    await usePreferencesStore.persist.rehydrate()
+    expect(usePreferencesStore.getState().markdownContentWidth).toBe('standard')
+  })
+
   it('defaults Vim mode off and persists both enabled and disabled values', () => {
     expect(usePreferencesStore.getState().vimModeEnabled).toBe(false)
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
@@ -238,6 +238,15 @@ describe('AppWorkspacePanels render isolation', () => {
 
     expect(screen.getByTestId('tabs-dock')).toBeInTheDocument()
     expect(screen.getByText('Editor')).toBeInTheDocument()
+  })
+
+  it('uses native surface occlusion for the active webpage floating tabs', async () => {
+    const webTab = { kind: 'web' as const, id: 'docs', title: 'Docs', url: 'https://example.com' }
+    render(renderPanels({ ...baseState, activeTabId: 'web:docs', tabs: [webTab] } as never))
+    fireEvent.click(screen.getByRole('button', { name: /tabs.showOpenFiles/ }))
+    await waitFor(() =>
+      expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBe(1),
+    )
   })
 
   it('hides the file tabs dock while the workspace map is active', () => {

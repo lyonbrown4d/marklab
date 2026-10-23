@@ -60,6 +60,13 @@ pub struct Capture {
   pub src: String,
   pub url: String,
 }
+#[derive(Clone, Serialize, specta::Type)]
+pub(crate) struct PreviewUpdated {
+  pub capture: Capture,
+  #[serde(with = "crate::ipc_number")]
+  #[specta(type = u64)]
+  pub generation: u64,
+}
 #[derive(Clone)]
 pub struct LinkPreviewService {
   inner: std::sync::Arc<cache::Inner>,

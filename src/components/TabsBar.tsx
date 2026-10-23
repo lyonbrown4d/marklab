@@ -8,10 +8,13 @@ import { useTabsDockDisclosure } from '@/components/useTabsDockDisclosure'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible'
 import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import type { WorkspaceTab } from '@/store/appTypes'
 
 type TabsBarProps = {
+  placement?: 'document' | 'web'
   tabs: WorkspaceTab[]
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
@@ -22,6 +25,7 @@ type TabsBarProps = {
 }
 
 const TabsBarComponent = ({
+  placement = 'document',
   tabs,
   dirtyPaths,
   saveStates,
@@ -32,6 +36,8 @@ const TabsBarComponent = ({
 }: TabsBarProps) => {
   const { t } = useI18n()
   const disclosure = useTabsDockDisclosure()
+  const web = placement === 'web'
+  useNativeSurfaceOcclusion('tabs-dock', web && tabs.length > 0 && disclosure.expanded)
   const labels = useMemo<TabLabelText>(
     () => ({
       source: t('editor.modeSource'),
@@ -67,24 +73,35 @@ const TabsBarComponent = ({
     >
       <Collapsible
         open={disclosure.expanded}
-        className="pointer-events-none relative flex min-h-11 w-full max-w-[min(56rem,calc(100vw-3rem))] justify-center"
+        className={cn(
+          'pointer-events-none relative flex min-h-11 w-full max-w-[min(56rem,calc(100vw-3rem))] justify-center',
+          web && 'max-w-none',
+        )}
       >
-        {!disclosure.expanded ? (
+        {!disclosure.expanded || web ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
             aria-label={`${t('tabs.showOpenFiles')}: ${activeLabel}`}
-            aria-expanded="false"
-            className="pointer-events-auto absolute left-1/2 top-0 z-0 h-7 max-w-64 -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
-            onClick={disclosure.pinOpen}
+            aria-expanded={disclosure.expanded}
+            className={cn(
+              'pointer-events-auto absolute left-1/2 top-0 z-0 h-7 max-w-64 -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none',
+              web && 'left-auto right-16 w-[min(15rem,30vw)] translate-x-0',
+            )}
+            onClick={web && disclosure.expanded ? disclosure.collapse : disclosure.pinOpen}
           >
             <Files aria-hidden="true" className="size-3.5 shrink-0" />
             <span className="truncate">{activeLabel}</span>
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary/70" />
           </Button>
         ) : null}
-        <CollapsibleContent className="pointer-events-auto relative z-10 w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 data-[state=open]:duration-[180ms] data-[state=closed]:duration-100 motion-reduce:animate-none">
+        <CollapsibleContent
+          className={cn(
+            'pointer-events-auto relative z-10 w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 data-[state=open]:duration-[180ms] data-[state=closed]:duration-100 motion-reduce:animate-none',
+            web && 'absolute left-1/2 top-10 max-w-[min(56rem,calc(100vw-3rem))] -translate-x-1/2',
+          )}
+        >
           <div className="flex h-11 w-full items-center gap-1.5 rounded-xl border border-border/65 bg-background/92 p-1.5 shadow-lg shadow-foreground/10 backdrop-blur-xl">
             <TabsBarVirtualList
               activeTabId={activeTabId}

@@ -78,9 +78,8 @@ describe('useAiGenerationEvents', () => {
 
   it('cancels buffered deltas and unregisters the listener on cleanup', async () => {
     const onDelta = vi.fn()
-    const { result, unmount } = renderHook(() =>
-      useAiGenerationEvents({ onDelta, onTerminal: vi.fn() }),
-    )
+    const onTerminal = vi.fn()
+    const { result, unmount } = renderHook(() => useAiGenerationEvents({ onDelta, onTerminal }))
     await act(async () => result.current.listenerReadyRef.current)
 
     act(() => {
@@ -88,9 +87,91 @@ describe('useAiGenerationEvents', () => {
       generationEventMock.handler?.({ requestId: 'request-1', type: 'delta', delta: 'pending' })
     })
     unmount()
+    generationEventMock.handler?.({ requestId: 'request-1', type: 'cancelled' })
 
     expect(frameCallbacks).toHaveLength(0)
     expect(onDelta).not.toHaveBeenCalled()
+    expect(onTerminal).not.toHaveBeenCalled()
     expect(generationEventMock.unlisten).toHaveBeenCalledOnce()
   })
+
+  it.each(['finish', 'error', 'cancelled'] as const)(
+    'replays only the acknowledged request and preserves an early %s event',
+    async (type) => {
+      const onDelta = vi.fn()
+      const onTerminal = vi.fn()
+      const { result } = renderHook(() => useAiGenerationEvents({ onDelta, onTerminal }))
+      await act(async () => result.current.listenerReadyRef.current)
+      act(() => {
+        expect(result.current.beginRequest()).toBe(true)
+        expect(result.current.beginRequest()).toBe(false)
+        generationEventMock.handler?.({ requestId: 'old', type: 'delta', delta: 'ignored' })
+        generationEventMock.handler?.({ requestId: 'current', type: 'delta', delta: 'Hello' })
+        const terminal: AiGenerationEvent =
+          type === 'finish'
+            ? { requestId: 'current', type, finishReason: 'stop', usage: {}, warnings: [] }
+            : type === 'error'
+              ? { requestId: 'current', type, message: 'Provider unavailable' }
+              : { requestId: 'current', type }
+        generationEventMock.handler?.(terminal)
+        expect(onTerminal).not.toHaveBeenCalled()
+        expect(result.current.activateRequest('current')).toBe(true)
+      })
+      expect(onDelta).toHaveBeenCalledExactlyOnceWith('Hello')
+      expect(onTerminal).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ type }))
+      expect(result.current.requestIdRef.current).toBeNull()
+    },
+  )
+
+  it('clears cancelled startup events before a replacement request', async () => {
+    const onDelta = vi.fn()
+    const onTerminal = vi.fn()
+    const { result } = renderHook(() => useAiGenerationEvents({ onDelta, onTerminal }))
+    await act(async () => result.current.listenerReadyRef.current)
+    act(() => {
+      result.current.beginRequest()
+      generationEventMock.handler?.({ requestId: 'old', type: 'delta', delta: 'stale' })
+      result.current.clearBufferedDeltas()
+      expect(result.current.activateRequest('old')).toBe(false)
+      generationEventMock.handler?.({ requestId: 'next', type: 'error', message: 'stale error' })
+      result.current.beginRequest()
+      generationEventMock.handler?.({ requestId: 'old', type: 'error', message: 'old error' })
+      generationEventMock.handler?.({ requestId: 'next', type: 'delta', delta: 'fresh' })
+      result.current.activateRequest('next')
+      generationEventMock.handler?.({ requestId: 'next', type: 'cancelled' })
+    })
+    expect(onDelta).toHaveBeenCalledExactlyOnceWith('fresh')
+    expect(onTerminal).toHaveBeenCalledExactlyOnceWith({ requestId: 'next', type: 'cancelled' })
+  })
+
+  it.each(['count', 'size'] as const)(
+    'fails explicitly when the startup %s bound is exceeded',
+    async (bound) => {
+      const onDelta = vi.fn()
+      const onTerminal = vi.fn()
+      const { result } = renderHook(() => useAiGenerationEvents({ onDelta, onTerminal }))
+      await act(async () => result.current.listenerReadyRef.current)
+      act(() => {
+        result.current.beginRequest()
+        for (let index = 0; index < (bound === 'count' ? 513 : 1); index += 1) {
+          generationEventMock.handler?.({
+            requestId: 'current',
+            type: 'delta',
+            delta: bound === 'size' ? 'x'.repeat(256 * 1_024) : 'x',
+          })
+        }
+        expect(result.current.activateRequest('current')).toBe(false)
+      })
+      expect(onDelta).not.toHaveBeenCalled()
+      expect(onTerminal).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          requestId: 'current',
+          type: 'error',
+          message: expect.stringContaining('buffer limit'),
+        }),
+      )
+      expect(result.current.requestIdRef.current).toBeNull()
+      expect(result.current.beginRequest()).toBe(true)
+    },
+  )
 })

@@ -16,7 +16,7 @@ import {
   type AiComposerOutputKind,
   type InlineAiComposerMessages,
 } from '@/components/ai/inlineAiComposerPrompt'
-import { aiApi, type AiGenerationEvent } from '@/services/aiApi'
+import { aiApi } from '@/services/aiApi'
 import { matchesShortcutAction, type ShortcutBindings } from '@/logic/shortcuts'
 import {
   applyPlateAiReplacement,
@@ -57,23 +57,21 @@ export const usePlateInlineAiComposer = ({
   const activePathRef = useLatest(activePath)
   const captureRef = useLatest(capture)
   const proposalRef = useLatest(proposal)
+  const availabilityRef = useLatest({ readOnly, ready })
   const requestVersionRef = useRef(0)
   const mountedRef = useRef(true)
 
-  const handleTerminalEvent = useCallback(
-    (event: Exclude<AiGenerationEvent, { type: 'delta' }>) => {
-      if (event.type === 'finish') setPhase('proposal')
-      else if (event.type === 'error') {
-        setError(event.message)
-        setPhase('error')
-      } else setPhase('prompt')
-    },
-    [],
-  )
-  const { clearBufferedDeltas, listenerReadyRef, requestIdRef } = useAiGenerationEvents({
-    onDelta: (delta) => setProposal((current) => current + delta),
-    onTerminal: handleTerminalEvent,
-  })
+  const { activateRequest, beginRequest, clearBufferedDeltas, listenerReadyRef, requestIdRef } =
+    useAiGenerationEvents({
+      onDelta: (delta) => setProposal((current) => current + delta),
+      onTerminal: (event) => {
+        if (event.type === 'finish') setPhase('proposal')
+        else if (event.type === 'error') {
+          setError(event.message)
+          setPhase('error')
+        } else setPhase('prompt')
+      },
+    })
 
   useEffect(() => {
     mountedRef.current = true
@@ -194,9 +192,9 @@ export const usePlateInlineAiComposer = ({
         reset(false)
         return
       }
+      if (!beginRequest()) return
       const requestVersion = requestVersionRef.current + 1
       requestVersionRef.current = requestVersion
-      clearBufferedDeltas()
       setInstruction(nextInstruction)
       setOutputKind(nextOutputKind)
       setError(null)
@@ -204,6 +202,7 @@ export const usePlateInlineAiComposer = ({
       setPhase('starting')
       try {
         await listenerReadyRef.current
+        if (!mountedRef.current || requestVersion !== requestVersionRef.current) return
         const result = await aiApi.startGeneration({
           providerId: provider.id,
           prompt: buildAiReplacementPrompt(nextInstruction, currentCapture.sourceText),
@@ -213,21 +212,30 @@ export const usePlateInlineAiComposer = ({
         if (
           !mountedRef.current ||
           requestVersion !== requestVersionRef.current ||
-          currentCapture.documentPath !== activePathRef.current
+          currentCapture.documentPath !== activePathRef.current ||
+          availabilityRef.current.readOnly ||
+          !availabilityRef.current.ready
         ) {
+          if (requestVersion === requestVersionRef.current) clearBufferedDeltas()
           void aiApi.cancelGeneration(result.requestId).catch(() => undefined)
           return
         }
-        requestIdRef.current = result.requestId
         setPhase('streaming')
+        if (!activateRequest(result.requestId)) {
+          void aiApi.cancelGeneration(result.requestId).catch(() => undefined)
+        }
       } catch (nextError) {
         if (requestVersion !== requestVersionRef.current) return
+        clearBufferedDeltas()
         setError(nextError instanceof Error ? nextError.message : String(nextError))
         setPhase('error')
       }
     },
     [
       activePathRef,
+      activateRequest,
+      availabilityRef,
+      beginRequest,
       captureRef,
       clearBufferedDeltas,
       getEditor,

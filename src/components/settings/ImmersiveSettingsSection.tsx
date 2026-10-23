@@ -11,6 +11,8 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const ImmersiveSettingsSection = () => {
   const { t } = useI18n()
+  const markdownContentWidth = usePreferencesStore((state) => state.markdownContentWidth)
+  const setMarkdownContentWidth = usePreferencesStore((state) => state.setMarkdownContentWidth)
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const setImmersiveZenMode = usePreferencesStore((state) => state.setImmersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
@@ -33,6 +35,15 @@ const ImmersiveSettingsSection = () => {
       icon={Eye}
     >
       <SettingsFieldGroup>
+        <SettingsSelectField
+          title={t('settings.markdownContentWidth')}
+          value={markdownContentWidth}
+          onValueChange={(value) => setMarkdownContentWidth(value === 'full' ? 'full' : 'standard')}
+          options={[
+            { value: 'standard', label: t('settings.markdownContentWidthStandard') },
+            { value: 'full', label: t('settings.markdownContentWidthFull') },
+          ]}
+        />
         <SettingsSwitchRow
           title={t('settings.zenMode')}
           description={t('settings.zenModeDescription')}

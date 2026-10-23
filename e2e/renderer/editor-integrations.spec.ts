@@ -3,6 +3,10 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './rendererTest.js'
 
 const selectPhrase = async (page: Page, phrase: string) => {
+  // Pointer coordinates must be measured after webfonts settle the text layout.
+  await page.evaluate(async () => {
+    await document.fonts.ready
+  })
   const points = await page.getByTestId('markdown-editor').evaluate((editor, target) => {
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode()
@@ -100,13 +104,23 @@ test('keeps the selection toolbar anchored across scroll, browser zoom, IME and 
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1.35 })
     await expect.poll(() => page.evaluate(() => visualViewport?.scale)).toBeCloseTo(1.35, 2)
     await expectAnchored(page)
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 })
+    await expect.poll(() => page.evaluate(() => visualViewport?.scale)).toBe(1)
+    const phrase = 'Selectable phrase'
+    await cdp.send('Input.imeSetComposition', {
+      text: phrase,
+      selectionStart: phrase.length,
+      selectionEnd: phrase.length,
+    })
+    await expect(page.getByRole('toolbar', { name: /^(Text|文本)$/i })).toBeHidden()
+    await cdp.send('Input.insertText', { text: phrase })
+    // Committing real IME input collapses the selection; select the committed text again.
+    await selectPhrase(page, phrase)
+    await expectAnchored(page)
   } finally {
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 })
     await cdp.detach()
   }
-  await editor.dispatchEvent('compositionstart')
-  await expect(page.getByRole('toolbar', { name: /^(Text|文本)$/i })).toBeHidden()
-  await editor.dispatchEvent('compositionend')
   await page.keyboard.press('ControlOrMeta+Shift+L')
   await page
     .getByRole('region', { name: /^(Files|文件)$/i })

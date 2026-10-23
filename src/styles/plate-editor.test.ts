@@ -59,7 +59,7 @@ describe('Plate editor styles', () => {
     const styles = readFileSync(stylePath, 'utf8') as string
 
     expect(styles).toMatch(
-      /\.markdown-editor > \[data-slate-node='element'\],\s*\.markdown-editor > \.plate-block-draggable,\s*\.markdown-editor > \[data-slate-chunk='true'\] \{\s*width: min\(100%, 780px\);/s,
+      /\.markdown-editor > \[data-slate-node='element'\],\s*\.markdown-editor > \.plate-block-draggable,\s*\.markdown-editor > \[data-slate-chunk='true'\] \{\s*width: min\(100%, var\(--markdown-content-width, 780px\)\);/s,
     )
     expect(styles).toMatch(
       /\.markdown-editor--embedded > \[data-slate-node='element'\],\s*\.markdown-editor--embedded > \.plate-block-draggable,\s*\.markdown-editor--embedded > \[data-slate-chunk='true'\] \{\s*width: min\(100%, 680px\);/s,

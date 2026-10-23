@@ -57,7 +57,7 @@ export const capturePlateSlashUrlInsertion = (
           })
         } else {
           editor.tf.insertNodes({
-            alt: text.trim(),
+            caption: [{ text: text.trim() }],
             children: [{ text: '' }],
             type: 'img',
             url: destination,

@@ -1,31 +1,26 @@
 import { toWebviewAssetUrl } from '@/runtime/assetUrl'
-import { useLink } from '@platejs/link/react'
 import { Maximize2 } from 'lucide-react'
-import type { TElement, TLinkElement } from 'platejs'
+import type { TElement } from 'platejs'
 import { PlateElement, type PlateElementProps } from 'platejs/react'
-import { useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react'
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import { DiagramPreviewDialog } from '@/components/previews/DiagramPreviewDialog'
 import { Button } from '@/components/ui/button'
 import {
-  isLocalEmbeddedPreviewTarget,
   platePreviewKindForTarget,
   resolvePlateImageSource,
-  safeExternalLinkUrl,
   safePreviewUrl,
 } from '@/components/plate/nodes/previewAdapters'
-import { usePlateLinkPreviewPortal } from '@/components/plate/nodes/usePlateLinkPreviewPortal'
+import type { PlatePreviewOptions } from '@/components/plate/nodes/LinkElement'
 import { useI18n } from '@/i18n/useI18n'
+
+export { createLinkElement, LinkElement } from '@/components/plate/nodes/LinkElement'
+export type { PlatePreviewOptions } from '@/components/plate/nodes/LinkElement'
 
 type ImageElementNode = TElement & {
   caption?: Array<{ text?: string }>
   title?: string
   url?: string
-}
-
-export type PlatePreviewOptions = {
-  getDocumentPath?: () => string | null
-  onWorkspaceLink?: (target: string, documentPath: string | null) => void
 }
 
 type ResolvedPlateImageProps = {
@@ -54,21 +49,6 @@ const imageAlt = (element: ImageElementNode) => {
     .trim()
   return caption || element.title?.trim() || ''
 }
-
-const elementText = (node: unknown): string => {
-  if (!node || typeof node !== 'object') return ''
-  if ('text' in node && typeof node.text === 'string') return node.text
-  if (!('children' in node) || !Array.isArray(node.children)) return ''
-  return node.children.map(elementText).join('')
-}
-
-const LINK_SCHEME = /^[a-z][a-z\d+.-]*:/i
-
-const isWorkspaceLinkTarget = (target: string): boolean =>
-  Boolean(target) &&
-  !target.startsWith('#') &&
-  !target.startsWith('//') &&
-  !LINK_SCHEME.test(target)
 
 export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPlateImageProps) => {
   const { t } = useI18n()
@@ -195,64 +175,6 @@ export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPl
     </div>
   )
 }
-
-export const createLinkElement = ({
-  getDocumentPath,
-  onWorkspaceLink,
-}: PlatePreviewOptions = {}) => {
-  const PlateLinkElement = (props: PlateElementProps<TLinkElement>) => {
-    const { props: linkProps } = useLink({ element: props.element })
-    const target = props.element.url?.trim() ?? ''
-    const documentPath = getDocumentPath?.() ?? null
-    const previewKind = platePreviewKindForTarget(target)
-    const localPreview = Boolean(previewKind && isLocalEmbeddedPreviewTarget(target))
-    const externalHref = safeExternalLinkUrl(target)
-      ? safeExternalLinkUrl(linkProps.href ?? target)
-      : undefined
-    const workspaceTarget = isWorkspaceLinkTarget(target)
-    const href = externalHref ?? (target.startsWith('#') ? target : undefined)
-    const title = elementText(props.element).trim() || target
-    const { anchorRef, preview } = usePlateLinkPreviewPortal({
-      documentPath,
-      externalUrl: externalHref,
-      target,
-      title,
-    })
-    const handleClick = workspaceTarget
-      ? (event: MouseEvent<HTMLAnchorElement>) => {
-          if (!event.ctrlKey && !event.metaKey) return
-          event.preventDefault()
-          onWorkspaceLink?.(target, documentPath)
-        }
-      : undefined
-    const attributes = {
-      ...props.attributes,
-      ...linkProps,
-      href,
-      onClick: handleClick,
-      rel: externalHref ? 'noopener noreferrer' : undefined,
-      role: 'link',
-      target: externalHref ? '_blank' : undefined,
-    }
-
-    return (
-      <>
-        <PlateElement
-          {...props}
-          as="a"
-          attributes={attributes}
-          className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary"
-          ref={localPreview || externalHref ? anchorRef : undefined}
-        />
-        {localPreview || externalHref ? preview : null}
-      </>
-    )
-  }
-
-  return PlateLinkElement
-}
-
-export const LinkElement = createLinkElement()
 
 export const createImageElement = ({ getDocumentPath }: PlatePreviewOptions = {}) => {
   const ImageElement = (props: PlateElementProps<ImageElementNode>) => {

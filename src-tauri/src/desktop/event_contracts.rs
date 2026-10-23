@@ -189,6 +189,7 @@ event_contracts! {
   TERMINAL_OUTPUT: terminal_output => "terminal-output": crate::terminal::Output,
   TERMINAL_EXIT: terminal_exit => "terminal-exit": crate::terminal::Exit,
   WEB_TABS_STATE: web_tabs_state => "web-tabs-state": crate::web_tabs::types::Event,
+  LINK_PREVIEW_UPDATED: link_preview_updated => "link-preview-updated": crate::link_preview::PreviewUpdated,
   SYSTEM_THEME_CHANGED: system_theme_changed => "system-theme-changed": SystemThemeChanged,
   MENU_ACTION: menu_action => "menu-action": String,
   WINDOW_OPENING_PROGRESS: window_opening_progress => "window-opening-progress": super::startup::Progress,

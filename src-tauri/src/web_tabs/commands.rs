@@ -61,6 +61,7 @@ pub async fn web_tabs_hide(
   identifier(&request.tab_id)?;
   let _guard = manager.inner.operations.lock().await;
   if let Ok(entry) = manager.entry(window.label(), &request.tab_id) {
+    previews::capture_hidden(&manager, &window, &entry);
     if let Some(view) = entry.view {
       view.hide()?;
     }

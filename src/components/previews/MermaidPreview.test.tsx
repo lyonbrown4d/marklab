@@ -78,7 +78,9 @@ describe('MermaidPreview', () => {
     fireEvent.click(expandButton)
 
     const dialog = screen.getByRole('dialog', { name: 'Mermaid diagram preview' })
-    expect(dialog).toHaveClass('h-[92vh]', 'max-w-[96vw]')
+    expect(dialog).toHaveClass('max-h-[96vh]', 'max-w-[96vw]')
+    expect(Number.parseFloat(dialog.style.width)).toBeCloseTo(window.innerWidth * 0.92)
+    expect(Number.parseFloat(dialog.style.height)).toBeCloseTo(window.innerHeight * 0.92)
     expect(document.querySelector('[data-plate-preview="mermaid"] svg text')).toHaveTextContent(
       'Diagram',
     )

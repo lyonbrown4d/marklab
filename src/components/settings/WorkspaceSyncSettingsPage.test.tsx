@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceSyncSettingsPage from '@/components/settings/WorkspaceSyncSettingsPage'
@@ -121,4 +121,55 @@ describe('WorkspaceSyncSettingsPage', () => {
     await userEvent.click(editButtons[1]!)
     expect(screen.getByLabelText('sync.settings.name')).toHaveValue('Beta')
   })
+  it.each(['resolve', 'reject'] as const)(
+    'preserves a reopened form when an older save finishes with %s',
+    async (outcome) => {
+      const profile = {
+        id: 'cloud',
+        label: 'Home cloud',
+        endpoint: 'https://dav.example.com',
+        basePath: '/',
+        username: 'ada',
+        allowInsecureLocal: false,
+        sessionOnly: false,
+        hasPassword: true,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      }
+      let resolveSave: (value: typeof profile) => void = () => {}
+      let rejectSave: (reason: Error) => void = () => {}
+      vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([profile])
+      vi.mocked(workspaceSyncApi.saveWebDavProfile)
+        .mockReturnValueOnce(
+          new Promise((resolve, reject) => {
+            resolveSave = resolve
+            rejectSave = reject
+          }),
+        )
+        .mockResolvedValue(profile)
+      renderPage()
+      await screen.findByText('Home cloud')
+      await userEvent.click(screen.getByRole('button', { name: 'sync.settings.editConnection' }))
+      await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+      await waitFor(() => expect(workspaceSyncApi.saveWebDavProfile).toHaveBeenCalledOnce())
+      await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
+      await userEvent.click(screen.getByRole('button', { name: 'sync.settings.editConnection' }))
+      const name = screen.getByLabelText('sync.settings.name')
+      await userEvent.clear(name)
+      await userEvent.type(name, 'New unsaved name')
+      expect(screen.getByRole('button', { name: 'common.save' })).toBeEnabled()
+      await act(async () => {
+        if (outcome === 'resolve') resolveSave(profile)
+        else rejectSave(new Error('Old save failed'))
+      })
+      expect(name).toHaveValue('New unsaved name')
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.queryByText('sync.settings.saveFailed')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(workspaceSyncApi.saveWebDavProfile).toHaveBeenLastCalledWith(
+        expect.objectContaining({ label: 'New unsaved name' }),
+      )
+    },
+  )
 })

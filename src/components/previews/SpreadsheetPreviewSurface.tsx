@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useDebounce, useInViewport } from 'ahooks'
+import type { ColumnWidths } from 'react-data-grid'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import AppAlert from '@/components/AppAlert'
@@ -23,6 +24,8 @@ export type SpreadsheetPreviewSurfaceProps = {
   presentation?: 'embedded' | 'full' | 'graph'
 }
 
+const EMPTY_COLUMN_WIDTHS: ColumnWidths = new Map()
+
 const SpreadsheetPageSurface = ({
   path,
   source,
@@ -36,6 +39,9 @@ const SpreadsheetPageSurface = ({
   const [sheet, setSheet] = useState<string>()
   const [offset, setOffset] = useState(0)
   const [recalculate, setRecalculate] = useState(false)
+  const [columnWidthsBySheet, setColumnWidthsBySheet] = useState<ReadonlyMap<string, ColumnWidths>>(
+    () => new Map(),
+  )
   const excel = /\.(xlsx|xlsm)$/i.test(path)
   const query = useSpreadsheetPage(
     {
@@ -56,8 +62,8 @@ const SpreadsheetPageSurface = ({
       ref={viewportRef}
       aria-label={t('preview.spreadsheetLabel', { name: title })}
       className={cn(
-        'flex min-h-80 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-background',
-        presentation === 'full' ? 'h-full' : 'h-[440px]',
+        'flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-background',
+        presentation === 'full' ? 'h-full min-h-0' : 'h-[440px] min-h-80',
       )}
     >
       {excel ? (
@@ -169,6 +175,10 @@ const SpreadsheetPageSurface = ({
               key={`${page.sheet}:${page.offset}:${recalculate}`}
               page={page}
               label={t('preview.spreadsheetLabel', { name: title })}
+              columnWidths={columnWidthsBySheet.get(page.sheet) ?? EMPTY_COLUMN_WIDTHS}
+              onColumnWidthsChange={(widths) =>
+                setColumnWidthsBySheet((previous) => new Map(previous).set(page.sheet, widths))
+              }
             />
           ) : (
             <p className="p-6 text-sm text-muted-foreground">{t('preview.spreadsheetEmpty')}</p>

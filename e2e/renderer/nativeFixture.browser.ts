@@ -1,5 +1,6 @@
 import { emit } from '@tauri-apps/api/event'
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks'
+import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 
 type Payload = Record<string, unknown>
 type Host = {
@@ -22,6 +23,11 @@ mockIPC(
     )
       throw new Error('Fixture expects an object request DTO')
     const result = await host.__marklabRendererFixtureInvoke(command, (args ?? {}) as Payload)
+    if (command === 'menu_dispatch') {
+      // Mirror the native menu relay only after the fixture validates its allowlist.
+      const { request } = args as DesktopCommandArgs['menu_dispatch']
+      await emit('menu-action', request.id)
+    }
     if (
       command === 'fs_apply_buffer_update' &&
       result &&

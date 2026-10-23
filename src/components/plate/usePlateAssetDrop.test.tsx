@@ -53,7 +53,7 @@ describe('usePlateAssetDrop', () => {
     expect(editor.children).toContainEqual({
       type: 'img',
       url: './Page.assets/photo.png',
-      alt: 'photo',
+      caption: [{ text: 'photo' }],
       children: [{ text: '' }],
     })
   })
