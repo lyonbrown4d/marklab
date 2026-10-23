@@ -136,7 +136,7 @@ mod tests {
       .expect("ready fields");
     assert!(ready_request.contains("error?: string | null"));
     let branch_request = output
-      .split("export type BranchRequest =")
+      .split("export type BranchRequest_Deserialize =")
       .nth(1)
       .expect("branch request input")
       .split("};")

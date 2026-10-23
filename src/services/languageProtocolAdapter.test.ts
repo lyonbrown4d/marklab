@@ -13,14 +13,13 @@ import {
 const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } }
 
 describe('native language protocol adapter', () => {
-  it('validates LSP completion enums and normalizes nullable optional fields', () => {
+  it('validates LSP completion enums and handles omitted optional fields', () => {
     const result = parseLanguageCompletion({
       isIncomplete: false,
       items: [
         {
           label: 'Note',
           kind: CompletionItemKind.File,
-          documentation: null,
           insertTextFormat: InsertTextFormat.PlainText,
           textEdit: { range, newText: 'note.md' },
         },
@@ -28,9 +27,9 @@ describe('native language protocol adapter', () => {
     })
     expect(result.items[0]).toMatchObject({
       kind: CompletionItemKind.File,
-      documentation: undefined,
       textEdit: { range, newText: 'note.md' },
     })
+    expect(result.items[0]?.documentation).toBeUndefined()
     expect(() =>
       parseLanguageCompletion({
         isIncomplete: false,
@@ -46,7 +45,6 @@ describe('native language protocol adapter', () => {
           range,
           message: 'Missing note',
           severity: DiagnosticSeverity.Warning,
-          source: null,
         },
       ]),
     ).toEqual([

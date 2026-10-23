@@ -13,7 +13,7 @@ describe('preloadWorkspaceGraph', () => {
     let finish!: () => void
     vi.mocked(fsApi.getWorkspaceGraph).mockReturnValueOnce(
       new Promise((resolve) => {
-        finish = () => resolve({ mode: 'mindmap', nodes: [], edges: [] })
+        finish = () => resolve({ revision: '1', mode: 'mindmap', nodes: [], edges: [] })
       }),
     )
     const queryClient = new QueryClient({
@@ -27,6 +27,7 @@ describe('preloadWorkspaceGraph', () => {
 
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
     expect(queryClient.getQueryData(['workspace-graph', 'external:D:/wiki'])).toEqual({
+      revision: '1',
       mode: 'mindmap',
       nodes: [],
       edges: [],
