@@ -55,6 +55,8 @@ const defaultSpecs = [
   './e2e/tauri/native.spec.ts',
   './e2e/tauri/memory.spec.ts',
   './e2e/tauri/webTabs.spec.ts',
+  './e2e/tauri/webTabs.persistence.spec.ts',
+  './e2e/tauri/webTabs.layout.spec.ts',
   './e2e/tauri/plantuml.spec.ts',
   './e2e/tauri/documentPreviews.spec.ts',
   ...(process.env.MARKLAB_E2E_NETWORK_PREVIEWS === '1'

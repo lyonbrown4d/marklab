@@ -20,6 +20,7 @@
 | 失败反馈          | 内嵌预览可重试，系统打开失败可见；避免重复操作和旧请求回写                                   | `src/components/previews/EmbeddedFilePreview.tsx`、`src/pages/FilePreviewPage.tsx`                |
 | 图视图内嵌 PDF    | 刷新资源地址时保留有效预览组件，避免丢失用户点击加载的状态                                   | `src/components/previews/EmbeddedFilePreview.tsx`                                                 |
 | 网页标签栏        | 去掉顶部 44px 固定留白，收起入口与地址栏共用一行；展开列表浮动显示，并复用原生网页遮挡机制   | `src/components/TabsBar.tsx`、`src/pages/web/WebTabSurface.tsx`                                   |
+| 网页标签选择      | 选择标签后收起浮动列表，释放原生网页遮挡；文档标签保持原有固定展开行为                       | `src/components/TabsBar.tsx`                                                                      |
 | 标签关闭          | 关闭按钮的 Enter/Space 不再同时激活父标签                                                    | `src/components/TabsBarTab.tsx`                                                                   |
 | 终端              | 终端内 Escape 交给终端，切换语言不重建会话；启动确认前的输出与退出按顺序回放，缓存有上限     | `src/components/TerminalPanel.tsx`、`src/components/terminal/`                                    |
 | AI 生成           | 启动确认前到达的事件有界缓存并按请求回放；取消、切文档及卸载后不更新旧界面，阻止重复启动     | `src/components/ai/useAiGenerationEvents.ts`、`src/components/plate/usePlateInlineAiComposer.ts`  |
@@ -32,6 +33,8 @@
 - 前端全量：651 个测试文件、3,479 项测试通过，逐文件覆盖率门槛保持不变。网页标签栏追加的 28 项定向检查也通过。
 - 最终生产构建及 23 项浏览器回归通过，包括真实 Chromium IME、选区工具栏、表格/光标、本地跳转、Excel 缩放及 640/800/1440 像素发布布局。静态检查、类型检查、格式与 300 有效行限制均通过。
 - 定向测试覆盖上述改动的正常、失败、异步失效和取消路径。
+- 提交后的补充检查复现了网页标签选择后仍被遮挡的问题；修复后 19 项标签栏和网页工具栏定向测试通过。新增原生用例覆盖共享 Cookie、同网址截图更新，以及 900/640 像素下的浮动标签布局，类型、静态和格式检查通过。
+- 这次原生验收尚未完成：桌面控制服务报告 Mac 锁屏，首次运行也在 CLI 预检阶段超时，未进入窗口用例。新增原生用例不能视为已通过，安装等待解锁后的实际验收。
 - 浏览器回归使用生产渲染器及类型明确的原生命令替身，不启动 Tauri 原生窗口，不访问用户的私有站点，不执行真实导出。
 - 原生登录、重启后的 Cookie 保留、网页标签栏与原生网页的叠层，以及 Windows/Linux 原生截图仍需实际环境验收。旧隐私会话的登录信息无法迁移，需要重新登录一次。
 - 依赖更新包含前端、网站和 Cargo；保留原生绑定与协议生成工具要求的兼容版本。生成的 IPC 代码仍不纳入 Git。

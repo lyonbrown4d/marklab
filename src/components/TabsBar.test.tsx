@@ -111,6 +111,12 @@ describe('TabsBar immersive dock', () => {
     expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
 
     await user.click(handle)
+    await user.click(screen.getByRole('tab', { selected: true }))
+    expect(props.onOpenTab).toHaveBeenCalledWith(props.activeTabId)
+    expect(handle).toHaveAttribute('aria-expanded', 'false')
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
+
+    await user.click(handle)
     view.unmount()
     expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
   })

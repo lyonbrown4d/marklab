@@ -138,6 +138,17 @@ processes start during a run. Native physical footprint after interaction was
 
 ## Checks and evidence
 
+`webTabs.persistence.spec.ts` uses a loopback HTTP fixture to check HttpOnly-cookie
+sharing across new and recreated native views. A second journey reloads the same
+URL with different page pixels and compares the SHA-256 digests of the real native
+preview assets. It keeps child-view journeys inside one root-driver invocation,
+without intercepting IPC or adding a production test API.
+`webTabs.layout.spec.ts` opens the fixture through the real Markdown preview's
+Open in app action. At 900 and 640 pixels it checks address/tab separation,
+the absence of the former tab spacer, native suspension during expansion, and
+stable host bounds after collapse. These cases do not sign in to private services
+or establish persistence across a complete application restart.
+
 The first journey waits for the actual renderer handshake, verifies the CLI root,
 inserts text into Plate through WebDriver's element send-keys endpoint, calls the production buffer flush, and checks the Rust-written
 file and buffer snapshot. The second opens a second real native window through

@@ -1,4 +1,4 @@
-import { memo, useMemo, type FocusEvent, type KeyboardEvent } from 'react'
+import { memo, useCallback, useMemo, type FocusEvent, type KeyboardEvent } from 'react'
 import { Files, PanelTopClose, Pin } from 'lucide-react'
 
 import type { SaveState } from '@/app/useEditorBuffer'
@@ -36,8 +36,16 @@ const TabsBarComponent = ({
 }: TabsBarProps) => {
   const { t } = useI18n()
   const disclosure = useTabsDockDisclosure()
+  const { collapse } = disclosure
   const web = placement === 'web'
   useNativeSurfaceOcclusion('tabs-dock', web && tabs.length > 0 && disclosure.expanded)
+  const openTab = useCallback(
+    (id: string) => {
+      if (web) collapse()
+      onOpenTab(id)
+    },
+    [collapse, onOpenTab, web],
+  )
   const labels = useMemo<TabLabelText>(
     () => ({
       source: t('editor.modeSource'),
@@ -115,7 +123,7 @@ const TabsBarComponent = ({
               tabs={tabs}
               tablistLabel={t('tabs.openFiles')}
               onCloseTab={onCloseTab}
-              onOpenTab={onOpenTab}
+              onOpenTab={openTab}
             />
             <Button
               type="button"
