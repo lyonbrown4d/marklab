@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphData } from '@/logic/graph'
 import { useWorkspaceMapPresentedGraph } from '@/pages/workspace-map/useWorkspaceMapPresentedGraph'
@@ -75,5 +75,57 @@ describe('workspace map presentation identity', () => {
     expect(editor?.readOnly).toBe(true)
     expect(result.current.renderedGraph.nodes[1]?.data.workspaceMapMode).toBe('focus')
     expect(result.current.renderedGraph.edges[0]?.type).toBe('smoothstep')
+  })
+
+  it('retains resource previews while typing and retains the editor when closing a web view', () => {
+    const mixedGraph: GraphData = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: 'web',
+          type: 'external',
+          position: { x: 0, y: 0 },
+          data: { label: 'Docs', url: 'https://example.com/' },
+        },
+        {
+          id: 'preview',
+          type: 'preview',
+          position: { x: 0, y: 0 },
+          data: { label: 'PDF', target: 'guide.pdf', previewKind: 'pdf' },
+        },
+      ],
+    }
+    const { result, rerender } = renderHook(
+      ({ editorLoadState }) =>
+        useWorkspaceMapPresentedGraph({
+          ...options,
+          activePath: 'a.md',
+          editorLoadState,
+          graph: mixedGraph,
+          showExternalResources: true,
+        }),
+      {
+        initialProps: { editorLoadState: { status: 'ready' as const, content: 'Original' } },
+      },
+    )
+    act(() => result.current.webViews.activate('web'))
+    const previous = result.current.renderedGraph
+    rerender({ editorLoadState: { status: 'ready', content: 'Changed' } })
+
+    const updated = result.current.renderedGraph
+    expect(updated.nodes[0]?.data.workspaceMapEditor?.loadState).toEqual({
+      status: 'ready',
+      content: 'Changed',
+    })
+    expect(updated.nodes[2]).toBe(previous.nodes[2])
+    expect(updated.nodes[2]?.data.webView?.active).toBe(true)
+    expect(updated.nodes[3]).toBe(previous.nodes[3])
+    expect(updated.edges).toBe(previous.edges)
+
+    act(() => result.current.webViews.deactivate())
+    expect(result.current.renderedGraph.nodes[0]).toBe(updated.nodes[0])
+    expect(result.current.renderedGraph.nodes[3]).toBe(updated.nodes[3])
+    expect(result.current.renderedGraph.nodes[2]?.data.webView?.active).toBe(false)
   })
 })
