@@ -4,6 +4,7 @@ import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native acceptance helpers only. */
 import { fixturePaths } from './fixturePaths.js'
 import { openEditor, switchToWorkspace } from './nativeHarness.js'
+import { assertWindowButtonsAligned } from './windowButtons.js'
 /* eslint-enable no-restricted-imports */
 
 const fixture = fixturePaths()
@@ -21,6 +22,19 @@ const unmaximize = () =>
     if (!window.marklabTauri) throw new Error('The real Tauri window API is unavailable')
     await window.marklabTauri.window.unmaximize()
   })
+
+const setFullscreen = async (fullscreen: boolean) => {
+  await browser.execute(async (enabled) => {
+    const host = window as unknown as {
+      __TAURI_INTERNALS__: {
+        invoke: (command: string, payload: { request: { fullscreen: boolean } }) => Promise<void>
+      }
+    }
+    await host.__TAURI_INTERNALS__.invoke('window_set_fullscreen', {
+      request: { fullscreen: enabled },
+    })
+  }, fullscreen)
+}
 
 const doubleClick = (selector: string) =>
   browser.execute((targetSelector) => {
@@ -67,6 +81,7 @@ describe('native titlebar double click', () => {
   it('maximizes and restores the real window while excluding buttons and their SVG descendants', async () => {
     await switchToWorkspace(fixture.alpha)
     await openEditor()
+    await assertWindowButtonsAligned(fixture.alpha)
     await unmaximize()
     await waitForMaximized(false)
     const original = await browser.getWindowRect()
@@ -74,6 +89,7 @@ describe('native titlebar double click', () => {
       await browser.setWindowRect(120, 140, 900, 700)
       const restored = await browser.getWindowRect()
       assert.equal(await isMaximized(), false)
+      await assertWindowButtonsAligned(fixture.alpha)
 
       await doubleClick(titlebar)
       await waitForMaximized(true)
@@ -97,9 +113,22 @@ describe('native titlebar double click', () => {
       )
 
       await assertControlsKeepGeometry(sidebarButton)
+      await assertWindowButtonsAligned(fixture.alpha)
       await assertControlsKeepGeometry(`${sidebarButton} svg`)
       await assertControlsKeepGeometry(`${sidebarButton} svg path`)
+      if (process.platform === 'darwin') {
+        await setFullscreen(true)
+        await browser.waitUntil(
+          async () => (await browser.getWindowRect()).height > restored.height,
+        )
+        await setFullscreen(false)
+        await browser.waitUntil(
+          async () => Math.abs((await browser.getWindowRect()).height - restored.height) <= 1,
+        )
+        await assertWindowButtonsAligned(fixture.alpha)
+      }
     } finally {
+      if (process.platform === 'darwin') await setFullscreen(false)
       await unmaximize()
       await waitForMaximized(false)
       await browser.setWindowRect(original.x, original.y, original.width, original.height)

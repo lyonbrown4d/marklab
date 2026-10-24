@@ -9,6 +9,7 @@ import { promisify } from 'node:util'
 import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
 import { fixturePaths } from './fixturePaths.js'
+import { assertWindowButtonsAligned } from './windowButtons.js'
 import {
   closeThroughApplication,
   openEditor,
@@ -30,6 +31,7 @@ const reopen = async () => {
   })
   await switchToWorkspace(fixture.alpha)
   await openEditor()
+  await assertWindowButtonsAligned(fixture.alpha)
 }
 
 const macOS = process.platform === 'darwin' ? describe : describe.skip

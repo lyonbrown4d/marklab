@@ -22,6 +22,7 @@ mod protocol;
 mod startup;
 mod transitions;
 mod visibility;
+mod window_chrome;
 mod window_state;
 pub mod windows;
 use crate::error::BackendResult;

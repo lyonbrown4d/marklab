@@ -209,6 +209,7 @@ pub async fn ready(
       super::geometry::apply_pending_maximize(window)?;
       window.show()?;
       window.set_focus()?;
+      super::window_chrome::align(&window.as_ref().window());
       if let Some(opening) = crate::native_window::get(app, &format!("opening-{owner}")) {
         opening.destroy()?;
       }

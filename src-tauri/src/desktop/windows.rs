@@ -78,20 +78,11 @@ pub async fn create(
   #[cfg(not(target_os = "macos"))]
   let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()));
   #[cfg(target_os = "macos")]
-  let builder = WebviewWindowBuilder::from_config(
-    app,
-    &tauri::utils::config::WindowConfig {
-      label: label.into(),
-      url: WebviewUrl::App("index.html".into()),
-      // The 52px header has 51px of content above its bottom border.
-      // Measured AppKit button height 14pt and local center 16pt give
-      // Wry inset 25.5 + 16 - 14 = 27.5pt. Seed both Tao and Wry.
-      traffic_light_position: Some(tauri::utils::config::LogicalPosition { x: 16.0, y: 27.5 }),
-      ..Default::default()
-    },
-  )?
-  .title_bar_style(tauri::TitleBarStyle::Overlay)
-  .hidden_title(true);
+  // AppKit can rebuild its titlebar after focus/resize. One native owner lays
+  // out the actual button frames instead of competing with Wry's fixed inset.
+  let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+    .title_bar_style(tauri::TitleBarStyle::Overlay)
+    .hidden_title(true);
   let builder = builder
     .title(title.unwrap_or("Marklab"))
     .inner_size(state.width.max(640) as f64, state.height.max(480) as f64)
@@ -102,6 +93,7 @@ pub async fn create(
     .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
   let window = builder.build()?;
   crate::native_window::register(&window)?;
+  super::window_chrome::align(&window.as_ref().window());
   let default_restored = super::geometry::apply_default(&window)?;
   if !default_restored && let (Some(x), Some(y)) = (state.x, state.y) {
     let displays = window

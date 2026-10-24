@@ -110,7 +110,7 @@ objc2 = "0.6.5"
 block2 = "0.6.2"
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSBundle", "NSData", "NSDictionary", "NSError", "NSString", "NSValue"] }
 objc2-web-kit = { version = "0.3.2", default-features = false, features = ["std", "WKWebView", "WKSnapshotConfiguration", "WKNavigation", "objc2-app-kit", "block2"] }
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSEvent", "NSResponder", "NSView", "NSWindow", "block2"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSEvent", "NSResponder", "NSView", "NSWindow", "NSButton", "NSControl", "block2"] }
 objc2-user-notifications = { version = "0.3.2", default-features = false, features = ["std", "block2", "UNUserNotificationCenter", "UNNotification", "UNNotificationContent", "UNNotificationRequest", "UNNotificationResponse", "UNNotificationSettings", "UNNotificationSound", "UNNotificationCategory", "UNNotificationAction", "UNNotificationTrigger"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

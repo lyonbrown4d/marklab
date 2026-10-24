@@ -20,12 +20,15 @@ pub fn window_event(window: &Window, event: &WindowEvent) {
     WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
       if !window.label().starts_with("opening-") && window.label() != "splash" {
         super::geometry::changed(window.app_handle(), window.label());
+        super::window_chrome::align(window);
       }
     }
     WindowEvent::Focused(true) => {
+      super::window_chrome::align(window);
       let _ = super::menus::refresh_shortcuts(window.app_handle(), window.label());
     }
     WindowEvent::ThemeChanged(theme) => {
+      super::window_chrome::align(window);
       let _ = crate::desktop::event_contracts::SYSTEM_THEME_CHANGED.emit_to(
         window.app_handle(),
         tauri::EventTarget::webview_window(window.label()),

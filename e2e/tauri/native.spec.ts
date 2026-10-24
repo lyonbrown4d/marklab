@@ -6,6 +6,7 @@ import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
 import { fixturePaths } from './fixturePaths.js'
 import { sessionOwnerCount } from './nativeMetadata.js'
+import { assertWindowButtonsAligned } from './windowButtons.js'
 import {
   closeThroughApplication,
   currentRoot,
@@ -61,6 +62,7 @@ describe('real Tauri desktop', () => {
     const betaHandle = await browser.getWindowHandle()
     assert.notEqual(betaHandle, alphaHandle)
     await openEditor()
+    await assertWindowButtonsAligned(fixture.alpha)
     const editor = await browser.$('[data-testid="markdown-editor"]')
     assert.match(await editor.getText(), /beta-only native workspace/)
     await typeAtEditorEnd(' beta-persisted-marker')

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native UI acceptance uses only generated documents. */
 import { fixturePaths } from './fixturePaths.js'
+import { assertWindowButtonsAligned } from './windowButtons.js'
 import { openEditor, switchToWorkspace } from './nativeHarness.js'
 /* eslint-enable no-restricted-imports */
 
@@ -167,6 +168,7 @@ describe('native floating webpage tabs', () => {
           'Expanding tabs moved the native page host',
         )
         assert.deepEqual(result.after, result.before, 'Collapsing tabs moved the native page host')
+        await assertWindowButtonsAligned(fixture.alpha)
       }
     } finally {
       await browser.setTimeout({ script: 20_000 })
