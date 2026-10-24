@@ -234,6 +234,12 @@ pub fn install(app: &AppHandle, locale: &str) -> BackendResult<super::policy::Me
     &mut shortcuts,
   )?)?;
   app.set_menu(menu)?;
+  // Rebuilding the menu (for example after changing language) shows GTK's bar
+  // again. Keep its actions/accelerators while the renderer owns Linux chrome.
+  #[cfg(target_os = "linux")]
+  for window in app.windows().values() {
+    window.hide_menu()?;
+  }
   let state = app.state::<MenuState>();
   *state
     .items

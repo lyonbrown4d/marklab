@@ -93,6 +93,10 @@ pub async fn create(
     .on_navigation(workspace_navigation)
     .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
   let window = builder.build()?;
+  // GTK embeds the application menu in each window even without decorations.
+  // Linux already exposes these actions through the renderer's inline menu.
+  #[cfg(target_os = "linux")]
+  window.hide_menu()?;
   crate::native_window::register(&window)?;
   super::window_chrome::align(&window.as_ref().window());
   let default_restored = super::geometry::apply_default(&window)?;
