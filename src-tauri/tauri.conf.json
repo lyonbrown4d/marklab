@@ -20,6 +20,11 @@
     "targets": "all",
     "icon": [
       "../resources/icons/marklab.png",
+      "../resources/icons/marklab-32.png",
+      "../resources/icons/marklab-48.png",
+      "../resources/icons/marklab-128.png",
+      "../resources/icons/marklab-256.png",
+      "../resources/icons/marklab-512.png",
       "../resources/icons/marklab.icns",
       "../resources/icons/marklab.ico"
     ],
