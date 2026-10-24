@@ -56,7 +56,8 @@ by relative paths are not loaded; embedded raster data images are supported.
 ## Development
 
 Install the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/)
-and Rust 1.99.1 or newer. Use Node.js 24 LTS and pnpm 12.14.0 (pinned in
+and Rust through [rustup](https://rustup.rs/). The repository pins Rust 1.99.1 in
+`rust-toolchain.toml`; rustup selects it automatically. Use Node.js 24 LTS and pnpm 12.15.0 (pinned in
 `package.json`) for build tooling; the Tauri app does not embed Node.js.
 Dependency build permissions, including `canvas`, are declared in
 `pnpm-workspace.yaml` using `allowBuilds`. Newly published packages can be installed
@@ -67,6 +68,21 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
+On Debian/Ubuntu, install the native development libraries first:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+```
+
+After installing rustup, open a new terminal or run `source "$HOME/.cargo/env"`
+so Cargo uses the pinned toolchain instead of the distribution's Rust version.
+
+If React DevTools reports `Electron failed to install correctly` while using an
+HTTP/HTTPS proxy, retry with `NODE_USE_ENV_PROXY=1 pnpm dev` on Node.js 24 so its
+automatic Electron download uses the proxy environment. To run the app while
+diagnosing DevTools installation, use `MARKLAB_REACT_DEVTOOLS=false pnpm dev`.
+
 Rust defines the desktop IPC types, commands, and event payloads. Development,
 type checking, tests, lint, and renderer builds regenerate the TypeScript bindings
 when the Rust contracts change. Generated files live in `src/generated/desktop/`
@@ -74,7 +90,9 @@ and are excluded from Git; do not edit or commit them. Run `pnpm bindings:genera
 to regenerate them explicitly. Generation uses the repository's
 `src-tauri/target/` directory and does not open an application window.
 
-`pnpm dev` opens the official standalone React DevTools and waits for its backend
+`pnpm dev` generates IPC bindings before launching Tauri so a cold Rust build
+does not exhaust Tauri's frontend readiness timeout. It then opens the official
+standalone React DevTools and waits for its backend
 before starting Tauri. Its blocking development HTML script installs the React hook
 before React DOM loads. Closing either launched process stops the other; Ctrl+C
 cleans up both process trees. An already-running DevTools backend is reused and

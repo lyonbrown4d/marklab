@@ -52,6 +52,7 @@ const selectedSpecs = (() => {
 const defaultSpecs = [
   './e2e/tauri/windowState.spec.ts',
   './e2e/tauri/titlebar.spec.ts',
+  './e2e/tauri/rendering.spec.ts',
   './e2e/tauri/native.spec.ts',
   './e2e/tauri/memory.spec.ts',
   './e2e/tauri/webTabs.spec.ts',

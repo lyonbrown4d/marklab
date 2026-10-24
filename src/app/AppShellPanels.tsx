@@ -71,11 +71,11 @@ const AppShellPanelsView = ({
           )}
           collapsedSize="0px"
           collapsible
-          defaultSize="280px"
+          defaultSize={terminalOpen ? '280px' : '0px'}
           groupResizeBehavior="preserve-pixel-size"
           id="terminal"
-          maxSize="65vh"
-          minSize="160px"
+          maxSize={terminalOpen ? '65vh' : '0px'}
+          minSize={terminalOpen ? '160px' : '0px'}
           panelRef={terminalPanelRef}
         >
           {terminalInitialized && (

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const bindings = vi.hoisted(() => vi.fn(async (signal?: AbortSignal) => signal?.throwIfAborted()))
+vi.mock('../../scripts/generate-desktop-bindings', () => ({
+  generateDesktopBindings: bindings,
+}))
+
 const subprocess = vi.hoisted(() => ({
   launch: vi.fn(() =>
     Object.assign(Promise.resolve({ exitCode: 0 }), {
@@ -43,6 +48,7 @@ describe('React DevTools startup cancellation', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((_url: string, options: RequestInit) => {
+        expect(bindings).toHaveBeenCalledExactlyOnceWith(expect.any(AbortSignal))
         probeStarted()
         return new Promise((_resolve, reject) => {
           options.signal?.addEventListener('abort', () => reject(options.signal?.reason), {

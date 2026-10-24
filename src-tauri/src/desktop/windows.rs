@@ -88,6 +88,7 @@ pub async fn create(
     .inner_size(state.width.max(640) as f64, state.height.max(480) as f64)
     .min_inner_size(640.0, 480.0)
     .visible(false)
+    // Only macOS keeps native titlebar controls; Linux/Windows use app chrome.
     .decorations(cfg!(target_os = "macos"))
     .on_navigation(workspace_navigation)
     .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);

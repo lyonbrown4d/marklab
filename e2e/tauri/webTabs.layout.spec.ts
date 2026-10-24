@@ -26,6 +26,11 @@ describe('native floating webpage tabs', () => {
       for (const width of [900, 640]) {
         await browser.setWindowRect(120, 140, width, 700)
         await openEditor('NativeWeb.md')
+        await browser
+          .$(
+            '[data-marklab-editor-chrome="external-link-preview"] button:has(svg.lucide-app-window)',
+          )
+          .waitForDisplayed()
         const result = await browser.execute(async () => {
           const wait = async (condition: () => boolean, message: string) => {
             const deadline = Date.now() + 20_000

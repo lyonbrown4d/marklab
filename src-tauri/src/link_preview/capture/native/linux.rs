@@ -1,5 +1,5 @@
 use super::{BackendResult, failure};
-use webkit2gtk::prelude::*;
+use webkit2gtk::WebViewExt;
 
 pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
   let (sender, receiver) = tokio::sync::oneshot::channel();
@@ -60,7 +60,7 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
       for pixel in row.chunks_exact(4).take(width as usize) {
         let native = u32::from_ne_bytes([pixel[0], pixel[1], pixel[2], pixel[3]]);
         let alpha = if opaque { 255 } else { (native >> 24) as u8 };
-        let channel = |shift| {
+        let channel = |shift: u32| {
           let value = (native >> shift) & 255;
           if alpha == 0 {
             0

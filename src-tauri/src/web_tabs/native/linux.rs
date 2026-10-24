@@ -1,6 +1,6 @@
 use super::*;
 use gtk::prelude::*;
-use webkit2gtk::prelude::*;
+use webkit2gtk::WebViewExt;
 
 pub async fn action(view: &Webview, action: &'static str) -> BackendResult<()> {
   let (sender, receiver) = tokio::sync::oneshot::channel();

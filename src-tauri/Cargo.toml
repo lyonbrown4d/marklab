@@ -121,6 +121,8 @@ windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com"
 windows-core = "0.62.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+# tauri-plugin-deep-link 2.6.2 initializes ParseOption using its pre-0.21.2 fields.
+rust-ini = "=0.21.1"
 webkit2gtk = { version = "2.0.2", features = ["v2_40"] }
 # Match WebKitGTK/Tauri's binding family; native links cannot mix these releases.
 gtk = "0.18.2"

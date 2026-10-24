@@ -37,6 +37,8 @@ const selectFile = async (name: string) => {
       .$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-panel-left)')
       .click({ button: 'left' })
   const button = await browser.$(`button[data-file-tree-node]=${name}`)
+  await button.waitForExist()
+  await button.scrollIntoView()
   await button.waitForDisplayed()
   await button.click()
 }

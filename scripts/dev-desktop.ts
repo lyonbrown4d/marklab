@@ -5,6 +5,8 @@ import type { ProcessPromise } from 'zx'
 import { z } from 'zod'
 // eslint-disable-next-line no-restricted-imports -- Workflow scripts share their typed configuration directly.
 import { createDevelopmentCsp, loadDevelopmentConfig } from './development-config.ts'
+// eslint-disable-next-line no-restricted-imports -- Prepare Rust contracts before Tauri starts its frontend readiness timer.
+import { generateDesktopBindings } from './generate-desktop-bindings.ts'
 
 const { configuration, environment } = loadDevelopmentConfig()
 const run = $({ stdio: 'inherit', nothrow: true, env: environment })
@@ -68,6 +70,9 @@ const waitForBackend = async () => {
 }
 
 try {
+  // A cold Rust build can exceed Tauri's frontend readiness timeout.
+  await generateDesktopBindings(shutdown.signal)
+  shutdown.signal.throwIfAborted()
   let tools: ProcessPromise | undefined
   let configArguments: string[] = []
   if (configuration.enabled) {

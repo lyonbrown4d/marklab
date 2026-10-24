@@ -9,6 +9,7 @@ import App from '@/App'
 import AppToaster from '@/app/AppToaster'
 import { ApplicationFocusCycle } from '@/app/ApplicationFocusCycle'
 import { queryClient } from '@/app/queryClient'
+import { isQueryDevtoolsLocaleSupported } from '@/dev/queryDevtoolsLocale'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import '@/i18n/setup'
 import '@/styles/app.scss'
@@ -19,6 +20,10 @@ import '@/styles/source-editor.scss'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
+      if (!isQueryDevtoolsLocaleSupported(navigator.language || 'en-US')) {
+        console.warn('Query Devtools unavailable for browser locale:', navigator.language)
+        return { default: () => null }
+      }
       const { ReactQueryDevtools: Devtools } = await import('@tanstack/react-query-devtools')
       return { default: Devtools }
     })
