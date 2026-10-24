@@ -1,6 +1,15 @@
-/// Keep AppKit's real window controls centered with Titlebar.tsx's 52px header.
-/// Loading windows have no native controls; other platforms keep their own chrome.
+/// Align AppKit controls and keep GTK's native menu out of custom window chrome.
 pub(super) fn align(window: &tauri::Window) {
+  #[cfg(target_os = "linux")]
+  {
+    let owner = window.clone();
+    if let Err(error) = window.run_on_main_thread(move || match owner.gtk_window() {
+      Ok(native) => hide_linux_menu_widgets(gtk::prelude::Cast::upcast_ref(&native)),
+      Err(error) => log::warn!("Could not access native menu widgets: {error}"),
+    }) {
+      log::warn!("Could not schedule native menu visibility: {error}");
+    }
+  }
   #[cfg(target_os = "macos")]
   {
     if window.label() == "splash" || window.label().starts_with("opening-") {
@@ -18,8 +27,25 @@ pub(super) fn align(window: &tauri::Window) {
       log::warn!("Could not schedule native titlebar alignment: {error}");
     }
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "linux")))]
   let _ = window;
+}
+
+#[cfg(target_os = "linux")]
+fn hide_linux_menu_widgets(widget: &gtk::Widget) {
+  use gtk::prelude::*;
+  if widget.is::<gtk::MenuBar>() {
+    // Tao calls show_all when presenting/reopening a GTK window. hide() alone
+    // is temporary; no_show_all keeps the menu hidden while retaining shortcuts.
+    widget.set_no_show_all(true);
+    widget.hide();
+    return;
+  }
+  if let Some(container) = widget.downcast_ref::<gtk::Container>() {
+    for child in container.children() {
+      hide_linux_menu_widgets(&child);
+    }
+  }
 }
 
 #[cfg(target_os = "macos")]
