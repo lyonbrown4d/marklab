@@ -27,10 +27,15 @@ const visibleSourceEditor = async () => {
   return editor
 }
 const selectFile = async (name: string) => {
-  // An unpinned drawer can already be open during its file-selection transition.
-  // Check the live file button so another toggle cannot close that drawer.
-  if (!(await browser.$(`button[data-file-tree-node]=${name}`).isDisplayed()))
-    await browser.$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-panel-left)').click()
+  // A file click closes the drawer; its old button can remain visible during
+  // the exit animation. Read the persistent open state before toggling.
+  if (
+    (await browser.$('[data-app-focus-zone="editor"]').getAttribute('data-sidebar-pinned')) !==
+    'true'
+  )
+    await browser
+      .$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-panel-left)')
+      .click({ button: 'left' })
   const button = await browser.$(`button[data-file-tree-node]=${name}`)
   await button.waitForDisplayed()
   await button.click()
@@ -42,6 +47,12 @@ describe('native document previews', () => {
   it('previews Excel sheets and CSV/TSV in standalone tabs without modifying source buffers', async () => {
     await switchToWorkspace(fixture.alpha)
     await openEditor()
+    await browser.waitUntil(
+      async () =>
+        (await browser.$('[data-app-focus-zone="editor"]').getAttribute('data-sidebar-pinned')) ===
+        'false',
+      { timeoutMsg: 'The initial editor focus handoff did not close the file drawer' },
+    )
     const workbookPath = path.join(fixture.alpha, 'Workbook.xlsx')
     const originalWorkbook = await fs.readFile(workbookPath)
     await selectFile('Workbook.xlsx')
@@ -88,7 +99,12 @@ describe('native document previews', () => {
     await browser.waitUntil(async () =>
       (await browser.$('[role="grid"]').getText()).includes('second-sheet-content'),
     )
-    assert.match(await browser.$('[role="grid"]').getText(), /\b100(?:\.00)?\b/)
+    assert.match(
+      await browser
+        .$('[role="row"][aria-rowindex="2"] [role="gridcell"][aria-colindex="3"]')
+        .getText(),
+      /^100(?:\.00)?$/,
+    )
     assert.deepEqual(
       await fs.readFile(workbookPath),
       originalWorkbook,

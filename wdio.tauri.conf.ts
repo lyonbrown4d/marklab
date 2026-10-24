@@ -107,7 +107,13 @@ export const config: WebdriverIO.Config = {
     const { browser } = await import('@wdio/globals')
     await browser.setTimeout({ script: 20_000, pageLoad: 30_000, implicit: 0 })
   },
-  afterTest: async (_test, _context, result) => {
+  beforeTest: (test) => {
+    console.info(`[native] ${new Date().toISOString()} start ${test.parent}: ${test.title}`)
+  },
+  afterTest: async (test, _context, result) => {
+    console.info(
+      `[native] ${new Date().toISOString()} ${result.passed ? 'passed' : 'failed'} ${test.parent}: ${test.title}`,
+    )
     if (result.passed && process.env.MARKLAB_E2E_GRAPH_SCREENSHOT !== '1') return
     const { browser } = await import('@wdio/globals')
     await fs.mkdir(artifacts, { recursive: true })

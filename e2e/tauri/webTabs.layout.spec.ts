@@ -6,18 +6,19 @@ import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native UI acceptance uses only generated documents. */
 import { fixturePaths } from './fixturePaths.js'
 import { openEditor, switchToWorkspace } from './nativeHarness.js'
-import { createWebTabFixture } from './webTabs.fixture.js'
 /* eslint-enable no-restricted-imports */
 
 describe('native floating webpage tabs', () => {
   it('keeps navigation usable without a tab spacer and restores the native page after collapse', async () => {
     const fixture = fixturePaths()
-    const site = await createWebTabFixture()
     const original = await browser.getWindowRect()
     try {
       await fs.writeFile(
         path.join(fixture.alpha, 'NativeWeb.md'),
-        `# Native browser\n\n[Local web fixture](${site.base}/layout)\n`,
+        // The UI accepts HTTPS. A reserved, unreachable origin keeps geometry
+        // acceptance independent of network responses; loaded pixels are
+        // verified separately by the real loopback snapshot journey.
+        '# Native browser\n\n[Native web fixture](https://layout.marklab.invalid/)\n',
       )
       await switchToWorkspace(fixture.alpha)
       await browser.setTimeout({ script: 60_000 })
@@ -123,7 +124,18 @@ describe('native floating webpage tabs', () => {
               overlap: input.right - trigger.left,
             }
           } catch (error) {
-            return { error: String(error) }
+            return {
+              failure: {
+                message: String(error),
+                width: innerWidth,
+                expanded: document
+                  .querySelector('[data-testid="tabs-dock"] button[aria-expanded]')
+                  ?.getAttribute('aria-expanded'),
+                native: document.querySelector<HTMLElement>('[data-testid="web-tab-native-host"]')
+                  ?.dataset,
+                focused: document.activeElement?.outerHTML.slice(0, 400),
+              },
+            }
           } finally {
             close?.click()
             if (!close) window.location.hash = startRoute
@@ -135,7 +147,7 @@ describe('native floating webpage tabs', () => {
             )
           }
         })
-        assert.equal(result.error, undefined)
+        assert.equal(result.failure, undefined, JSON.stringify(result.failure))
         assert.ok(
           Math.abs(result.spacer ?? Infinity) <= 1,
           'The page reserves a separate row for tabs',
@@ -157,12 +169,8 @@ describe('native floating webpage tabs', () => {
         assert.deepEqual(result.after, result.before, 'Collapsing tabs moved the native page host')
       }
     } finally {
-      try {
-        await browser.setTimeout({ script: 20_000 })
-        await browser.setWindowRect(original.x, original.y, original.width, original.height)
-      } finally {
-        await site.close()
-      }
+      await browser.setTimeout({ script: 20_000 })
+      await browser.setWindowRect(original.x, original.y, original.width, original.height)
     }
   })
 })
