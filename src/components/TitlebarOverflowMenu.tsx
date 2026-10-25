@@ -1,3 +1,4 @@
+import { useI18n } from '@/i18n/useI18n'
 import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
 import { cn } from '@/lib/utils'
 import { useCallback, useRef, useState } from 'react'
@@ -48,7 +49,7 @@ type TitlebarOverflowMenuProps = {
   viewMode: ViewMode
   wysiwygLabel: string
   onChangeView: (mode: ViewMode) => void
-  onExport: (format: Extract<ExportFormat, 'pdf' | 'docx'>) => void
+  onExport: (format: ExportFormat) => void
   onOpenSearch: () => void
   onOpenSettings: () => void
   onToggleOutline: () => void
@@ -73,6 +74,7 @@ const TitlebarOverflowMenu = ({
   onOpenSettings,
   onToggleOutline,
 }: TitlebarOverflowMenuProps) => {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   useNativeSurfaceOcclusion('overflow-menu', open)
   const pendingCloseActionRef = useRef<(() => void) | null>(null)
@@ -181,6 +183,16 @@ const TitlebarOverflowMenu = ({
                     <FileText aria-hidden="true" />
                     {exportDocxLabel}
                   </DropdownMenuItem>
+                  {(['epub', 'txt'] as const).map((format) => (
+                    <DropdownMenuItem
+                      key={format}
+                      className={menuItemStyles()}
+                      onSelect={() => onExport(format)}
+                    >
+                      <FileText aria-hidden="true" />
+                      {t(format === 'epub' ? 'actions.exportEpub' : 'actions.exportTxt')}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>

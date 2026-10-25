@@ -37,4 +37,27 @@ describe('exportApi', () => {
 
     expect(invoke).toHaveBeenCalledWith('export_cancel', { taskId: 'export-pdf-1' })
   })
+
+  it.each(['epub', 'txt'] as const)('queues %s with the correct save filter', async (format) => {
+    vi.mocked(saveDialog).mockResolvedValue(`/exports/guide.${format}`)
+    vi.mocked(invoke).mockResolvedValue(`export-${format}-1`)
+    await exportApi.exportDocument(format, { rootPath: '/notes', activePath: 'guide.md' })
+    expect(saveDialog).toHaveBeenCalledWith({
+      defaultPath: `/notes/guide.${format}`,
+      filters: [{ name: format.toUpperCase(), extensions: [format] }],
+    })
+    expect(invoke).toHaveBeenCalledWith('export_markdown', {
+      format,
+      outputPath: `/exports/guide.${format}`,
+      sourceDocumentPath: 'guide.md',
+    })
+  })
+
+  it('does not enqueue an export after cancelling the save dialog', async () => {
+    vi.mocked(saveDialog).mockResolvedValue(null)
+    await expect(
+      exportApi.exportDocument('epub', { rootPath: '/notes', activePath: 'guide.md' }),
+    ).resolves.toBeUndefined()
+    expect(invoke).not.toHaveBeenCalled()
+  })
 })

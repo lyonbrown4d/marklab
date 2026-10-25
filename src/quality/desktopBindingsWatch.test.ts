@@ -10,7 +10,16 @@ const { generate } = vi.hoisted(() => ({
 }))
 vi.mock('../../scripts/generate-desktop-bindings.ts', () => ({ generateDesktopBindings: generate }))
 
-const rustFile = path.join(process.cwd(), 'src-tauri/src/workspace/types.rs')
+const contractInputs = [
+  'src-tauri/src/workspace/types.rs',
+  'crates/marklab-document/src/types.rs',
+  'Cargo.toml',
+  'Cargo.lock',
+  'src-tauri/Cargo.toml',
+  'crates/marklab-document/Cargo.toml',
+  'scripts/generate-desktop-bindings.ts',
+].map((file) => path.join(process.cwd(), file))
+const rustFile = contractInputs[0]
 const fixture = () => {
   const watcher = Object.assign(new EventEmitter(), { add: vi.fn() })
   const httpServer = new EventEmitter()
@@ -36,19 +45,22 @@ describe('desktop contract development watcher', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it('coalesces Rust edits, ignores renderer changes, and refreshes after generation', async () => {
-    const { watcher, httpServer, send } = fixture()
-    watcher.emit('all', 'change', '/renderer.tsx')
-    await vi.advanceTimersByTimeAsync(300)
-    expect(generate).not.toHaveBeenCalled()
-    watcher.emit('all', 'change', rustFile)
-    watcher.emit('all', 'add', rustFile)
-    await vi.advanceTimersByTimeAsync(300)
-    expect(generate).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith({ type: 'full-reload' })
-    httpServer.emit('close')
-    expect(watcher.listenerCount('all')).toBe(0)
-  })
+  it.each(contractInputs)(
+    'coalesces %s edits, ignores renderer changes, and refreshes after generation',
+    async (file) => {
+      const { watcher, httpServer, send } = fixture()
+      watcher.emit('all', 'change', '/renderer.tsx')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(generate).not.toHaveBeenCalled()
+      watcher.emit('all', 'change', file)
+      watcher.emit('all', 'add', file)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(send).toHaveBeenCalledWith({ type: 'full-reload' })
+      httpServer.emit('close')
+      expect(watcher.listenerCount('all')).toBe(0)
+    },
+  )
 
   it('reports generation failures through the development overlay', async () => {
     generate.mockRejectedValueOnce(new Error('Rust contract failed'))

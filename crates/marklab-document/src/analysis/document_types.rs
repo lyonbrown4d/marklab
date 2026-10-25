@@ -2,7 +2,8 @@ pub use AnalysisLinkKind as LinkKind;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "lowercase")]
 pub enum AnalysisLinkKind {
   Markdown,
@@ -17,7 +18,8 @@ impl LinkKind {
   }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Heading {
   pub path: String,
   pub slug: String,
@@ -26,7 +28,8 @@ pub struct Heading {
   pub line: usize,
   pub column: usize,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Link {
   pub source_path: String,
   pub target: String,
@@ -51,7 +54,8 @@ pub struct Link {
   #[serde(skip)]
   pub span_end: usize,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Document {
   pub path: String,
   pub title: String,

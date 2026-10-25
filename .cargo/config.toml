@@ -1,0 +1,3 @@
+[build]
+# Preserve desktop build locations while sharing artifacts with the document library and CLI.
+target-dir = "src-tauri/target"

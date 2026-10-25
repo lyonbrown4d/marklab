@@ -31,6 +31,15 @@ const boundaryContractTests = [
   '../../e2e/renderer/editor-integrations.spec.ts',
   '../../src-tauri/src/settings/tests.rs',
   '../../src-tauri/src/analysis/cache_tests.rs',
+  '../../crates/marklab-document/src/analysis/document_positions_tests.rs',
+  '../../crates/marklab-document/src/analysis/link_positions_tests.rs',
+  '../../crates/marklab-document/src/tests.rs',
+  '../../crates/marklab-document/src/html_tests.rs',
+  '../../crates/marklab-document/src/txt_tests.rs',
+  '../../crates/marklab-document/src/epub_tests.rs',
+  '../../crates/marklab-cli/tests/cli.rs',
+  '../../crates/marklab-cli/tests/inspect.rs',
+  '../../crates/marklab-cli/tests/links.rs',
   '../../src-tauri/src/workspace/shared_tests.rs',
   '../../src-tauri/src/workspace/lifecycle_tests.rs',
   '../../src-tauri/src/workspace/event_tests.rs',
@@ -88,6 +97,7 @@ describe('quality gates', () => {
     )
     expect(lineLimitScript).toContain("'src/components/ui/sidebar.tsx'")
     expect(lineLimitScript).toContain('MAX_EFFECTIVE_LINES = 300')
+    expect(lineLimitScript).toContain("SOURCE_ROOTS = ['crates',")
     expect(lineLimitScript).toContain('filter((line) => line.trim().length > 0)')
     expect(lineLimitScript).toContain("ROOT_SOURCE_DIRECTORY = '.'")
     expect(lineLimitScript).toContain('collectRootSourceFiles()')
@@ -181,8 +191,11 @@ describe('quality gates', () => {
     expect(config).toContain("screenshot: 'only-on-failure'")
     expect(config).toContain("trace: 'retain-on-failure'")
     expect(config).toContain('test-results/renderer')
-    expect(nativeWorkflow).toContain('cargo test --manifest-path src-tauri/Cargo.toml')
-    expect(nativeWorkflow).toContain('--lib --locked')
+    expect(nativeWorkflow).toContain('cargo fmt --all --check')
+    expect(nativeWorkflow).toContain('cargo clippy --workspace')
+    expect(nativeWorkflow).toContain(
+      'cargo test --workspace --target ${{ matrix.target }} --locked',
+    )
     expect(nativeWorkflow).toContain('--all-targets --locked -- -D warnings')
   })
 

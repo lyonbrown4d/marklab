@@ -67,10 +67,24 @@ export const useAppMenuAction = ({
         openWorkspacePublication?.()
         return
       }
-      if (id === 'file.export_pdf' || id === 'file.export_docx' || id === 'file.export_html') {
+      if (
+        id === 'file.export_pdf' ||
+        id === 'file.export_docx' ||
+        id === 'file.export_html' ||
+        id === 'file.export_epub' ||
+        id === 'file.export_txt'
+      ) {
         if (!isDesktopRuntime()) return
         const format =
-          id === 'file.export_pdf' ? 'pdf' : id === 'file.export_docx' ? 'docx' : 'html'
+          id === 'file.export_pdf'
+            ? 'pdf'
+            : id === 'file.export_docx'
+              ? 'docx'
+              : id === 'file.export_epub'
+                ? 'epub'
+                : id === 'file.export_txt'
+                  ? 'txt'
+                  : 'html'
         const { activePath, rootPath } = currentState
         if (!activePath) return
         void (async () => {

@@ -1,0 +1,37 @@
+[package]
+name = "marklab-document"
+version = "0.2.8"
+description = "Shared local document rendering for Marklab"
+edition = "2024"
+rust-version = "1.99.1"
+
+[features]
+default = []
+specta = ["dep:specta"]
+
+[dependencies]
+base64 = "0.23.1"
+chrono = { version = "0.4.45", features = ["serde"] }
+docx-rs = "0.4.22"
+memchr = "2.8.3"
+mitex = "0.2.4"
+percent-encoding = "2"
+pulldown-cmark = "0.13.5"
+regex = "1"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = "1"
+specta = { version = "=2.0.0-rc.26", features = ["derive"], optional = true }
+thiserror = "2"
+tokio-util = { version = "0.7", features = ["rt"] }
+typst = "0.15"
+typst-as-lib = { version = "0.17.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
+typst-layout = "0.15"
+typst-pdf = "0.15"
+typst-render = "0.15"
+url = "2.5.8"
+uuid = { version = "1.29.0", features = ["v4", "serde"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+imagesize = "0.15"
+quick-xml = { version = "0.42.0", features = ["serialize"] }

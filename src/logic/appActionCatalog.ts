@@ -55,9 +55,11 @@ const appActionDefinitions = {
   },
   'file.export_pdf': { keywords: 'export pdf', labelKey: 'actions.exportPdf' },
   'file.export_docx': { keywords: 'export docx word', labelKey: 'actions.exportDocx' },
+  'file.export_epub': { keywords: 'export epub ebook', labelKey: 'actions.exportEpub' },
+  'file.export_txt': { keywords: 'export txt text', labelKey: 'actions.exportTxt' },
   'file.export_html': { keywords: 'export html', labelKey: 'actions.exportHtml' },
   'file.export_workspace': {
-    keywords: 'export workspace book publication pdf word',
+    keywords: 'export workspace book publication pdf word epub txt',
     labelKey: 'actions.exportWorkspace',
   },
   'view.wysiwyg': {

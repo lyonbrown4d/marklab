@@ -1,0 +1,9 @@
+[workspace]
+members = ["src-tauri", "crates/marklab-document", "crates/marklab-cli"]
+default-members = ["crates/marklab-document", "crates/marklab-cli"]
+resolver = "3"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = true

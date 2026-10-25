@@ -60,6 +60,28 @@ describe('WorkspacePublicationDialog', () => {
     })
   })
 
+  it.each(['EPUB', 'TXT'])(
+    'exports %s without paper controls or fixed page previews',
+    async (format) => {
+      render(
+        <PlateDndProvider>
+          <WorkspacePublicationDialog onOpenChange={vi.fn()} open rootPath="/workspace" />
+        </PlateDndProvider>,
+      )
+      await screen.findAllByText('Product Guide')
+      fireEvent.click(screen.getByRole('button', { name: format }))
+      expect(screen.queryByText('workspaceExport.pageSize')).not.toBeInTheDocument()
+      expect(screen.getByText('workspaceExport.flowPreview')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: `Export ${format}` }))
+      await waitFor(() => expect(workspacePublicationApi.exportPublication).toHaveBeenCalledOnce())
+      expect(workspacePublicationApi.exportPublication).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ format: format.toLowerCase() }),
+        '/workspace',
+      )
+    },
+  )
+
   it('excludes chapters and exports the remaining ordered selection', async () => {
     const onOpenChange = vi.fn()
     render(

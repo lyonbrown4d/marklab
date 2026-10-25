@@ -59,7 +59,7 @@ type ImmersiveTitlebarChromeProps = {
   onOpenFile: () => void
   onCreateFile: () => void
   onExportWorkspace: () => void
-  onExport: (format: Extract<ExportFormat, 'pdf' | 'docx'>) => void
+  onExport: (format: ExportFormat) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
   workspaceWindowOpening: boolean

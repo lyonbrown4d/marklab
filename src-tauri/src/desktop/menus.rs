@@ -14,6 +14,8 @@ const ACTIONS: &[&str] = &[
   "file.export_pdf",
   "file.export_docx",
   "file.export_html",
+  "file.export_epub",
+  "file.export_txt",
   "file.export_workspace",
   "window.open_current_workspace_in_new_window",
   "edit.undo",

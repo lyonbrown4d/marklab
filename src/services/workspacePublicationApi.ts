@@ -36,13 +36,13 @@ const exportPublication = async (
   options: WorkspacePublicationOptions,
   rootPath: string,
 ): Promise<string | undefined> => {
-  const extension = options.format === 'docx' ? 'docx' : 'pdf'
+  const extension = options.format === 'markdown' ? 'md' : options.format
   const outputPath = await saveDialog({
     defaultPath: defaultOutputPath(rootPath, options.title, extension),
     filters: [
       {
         extensions: [extension],
-        name: options.format === 'docx' ? 'Word' : 'PDF',
+        name: options.format === 'docx' ? 'Word' : options.format.toUpperCase(),
       },
     ],
   })

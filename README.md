@@ -9,6 +9,25 @@ Marklab uses Tauri and Rust for its desktop runtime and native integration, with
 React editor and typed runtime boundary. The former Electron backend and its
 packaging dependencies have been removed; historical measurements remain in `docs/performance/`.
 
+## Standalone CLI and shared document library
+
+The Rust workspace includes `marklab-document`, `marklab-cli`, and the desktop app.
+Desktop parsing and export use the same document library as the standalone CLI.
+The library exposes Markdown ASTs, heading/link/asset analysis, and Markdown, TXT,
+HTML, EPUB, PDF, and DOCX output without Tauri or a running desktop.
+See the [CLI guide](crates/marklab-cli/README.md) for directory conversion, ordered
+publications, JSON inspection, and terminal progress.
+
+```bash
+cargo run -p marklab-cli -- export ./notes --recursive --format txt --output ./output
+cargo run -p marklab-cli -- publish ./book --format epub --output ./book.epub
+cargo run -p marklab-cli -- inspect ./notes.md --ast
+```
+
+`pnpm cli:build` builds a release binary in `src-tauri/target/release`.
+The standalone CLI workflow checks Linux, macOS, and Windows and packages binaries
+with SHA-256 checksums. A `cli-v<version>` tag prepares a separate draft release.
+
 ## Features
 
 - Markdown editing with block, source, and graph-oriented views.

@@ -106,7 +106,7 @@ jobs:
           components: rustfmt,clippy
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> src-tauri/target'
       - run: pnpm install --frozen-lockfile
       - name: Prepare public updater configuration and require signing credentials
         env:
@@ -124,13 +124,13 @@ jobs:
           REQUESTED_TAG: ${{ needs.validate.outputs.tag }}
         run: node --experimental-strip-types scripts/prepare-tauri-release.ts configure
       - name: Check Rust formatting
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+        run: cargo fmt --all --check
       - name: Generate application icons before compiling native targets
         run: pnpm icons:generate
       - name: Check Rust targets and tests without executing them
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Run native library regression tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --lib --locked
+        run: cargo test --workspace --target ${{ matrix.target }} --locked
       - name: Build and upload signed updater artifacts to draft release
         uses: tauri-apps/tauri-action@v1
         env:

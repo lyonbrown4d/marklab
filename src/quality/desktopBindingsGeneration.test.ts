@@ -10,8 +10,10 @@ const io = vi.hoisted(() => ({
   cargo: vi.fn(),
 }))
 vi.mock('node:fs/promises', () => ({
-  glob: async function* () {
-    yield 'src-tauri/src/contracts.rs'
+  glob: async function* (pattern: string) {
+    yield pattern.startsWith('src-tauri/')
+      ? 'src-tauri/src/contracts.rs'
+      : 'crates/marklab-document/src/types.rs'
   },
   mkdir: vi.fn(),
   readFile: vi.fn(async (file: string, encoding?: string) => {
@@ -50,7 +52,10 @@ describe('desktop contract generation cache', () => {
     io.foreignPublish = false
     for (const file of [
       'src-tauri/Cargo.toml',
-      'src-tauri/Cargo.lock',
+      'Cargo.toml',
+      'Cargo.lock',
+      'crates/marklab-document/Cargo.toml',
+      'crates/marklab-document/src/types.rs',
       'scripts/generate-desktop-bindings.ts',
       'src-tauri/src/contracts.rs',
     ])
@@ -73,6 +78,19 @@ describe('desktop contract generation cache', () => {
     io.files.set(bindings, 'manually edited output')
     await generateDesktopBindings()
     expect(io.cargo).toHaveBeenCalledTimes(3)
+    expect(io.files.get(bindings)).toBe(`bindings for ${io.files.get(source)}`)
+  })
+
+  it.each([
+    'Cargo.toml',
+    'Cargo.lock',
+    'crates/marklab-document/Cargo.toml',
+    'crates/marklab-document/src/types.rs',
+  ])('invalidates cached bindings after changing %s', async (file) => {
+    await generateDesktopBindings()
+    io.files.set(path.join(process.cwd(), file), `updated ${file}`)
+    await generateDesktopBindings()
+    expect(io.cargo).toHaveBeenCalledTimes(2)
     expect(io.files.get(bindings)).toBe(`bindings for ${io.files.get(source)}`)
   })
 

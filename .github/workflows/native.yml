@@ -71,13 +71,13 @@ jobs:
           components: rustfmt,clippy
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> src-tauri/target'
       - run: pnpm install --frozen-lockfile
       - name: Generate native build resources
         run: pnpm icons:generate
       - name: Check Rust formatting
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+        run: cargo fmt --all --check
       - name: Check all native Rust targets
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --target ${{ matrix.target }} --all-targets --locked -- -D warnings
       - name: Run native library tests without a GUI event loop
-        run: cargo test --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --lib --locked
+        run: cargo test --workspace --target ${{ matrix.target }} --locked

@@ -48,9 +48,41 @@ describe('quality impact rules', () => {
   })
 
   it('flags project automation changes as build/package impact', () => {
-    const impacts = analyzeChangedFiles(['moon.yml', '.github/workflows/release.yml'])
+    const files = [
+      'moon.yml',
+      '.github/workflows/release.yml',
+      '.github/workflows/cli.yml',
+      'Cargo.toml',
+      'Cargo.lock',
+      '.cargo/config.toml',
+      'rust-toolchain.toml',
+      'crates/marklab-cli/src/main.rs',
+      'crates/marklab-document/Cargo.toml',
+    ]
+    const impacts = analyzeChangedFiles(files)
 
-    expect(impacts.map((impact) => impact.area)).toContain('Build/package')
+    const build = impacts.find((impact) => impact.area === 'Build/package')
+    expect(build?.files).toEqual(files)
+    expect(build?.checks).toEqual(expect.arrayContaining(['pnpm cli:test', 'pnpm cli:package']))
+  })
+
+  it('routes shared document analysis and root Cargo inputs to workspace checks', () => {
+    const shared = 'crates/marklab-document/src/analysis/document.rs'
+    const markdown = 'crates/marklab-document/src/markdown.rs'
+    const inputs = ['Cargo.toml', 'Cargo.lock', '.cargo/config.toml']
+    const impacts = analyzeChangedFiles([shared, markdown, ...inputs])
+    const native = impacts.find((impact) => impact.area === 'Tauri native runtime')
+    expect(native?.files).toEqual([shared, markdown, ...inputs])
+    expect(native?.checks).toEqual(
+      expect.arrayContaining([
+        'cargo fmt --all --check',
+        'cargo clippy --workspace --all-targets --locked -- -D warnings',
+        'cargo test --workspace --locked',
+      ]),
+    )
+    const analysis = impacts.find((impact) => impact.area === 'Knowledge engine / Rust analysis')
+    expect(analysis?.files).toEqual([shared, markdown])
+    expect(analysis?.checks).toContain('cargo test -p marklab-document --locked')
   })
 
   it('routes performance gate changes to the Plate performance checks', () => {

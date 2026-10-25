@@ -9,6 +9,12 @@ pub struct BackendError {
 
 pub type BackendResult<T> = Result<T, BackendError>;
 
+impl From<marklab_document::error::BackendError> for BackendError {
+  fn from(error: marklab_document::error::BackendError) -> Self {
+    Self::new(error.code, error.message)
+  }
+}
+
 impl BackendError {
   pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
     Self {

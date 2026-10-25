@@ -1,3 +1,4 @@
+import { useI18n } from '@/i18n/useI18n'
 import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
 import { cn } from '@/lib/utils'
 import { FileDown, FileText } from 'lucide-react'
@@ -18,7 +19,7 @@ type TitlebarExportMenuProps = {
   exportLabel: string
   exportPdfLabel: string
   exportDocxLabel: string
-  onExport: (format: Extract<ExportFormat, 'pdf' | 'docx'>) => void
+  onExport: (format: ExportFormat) => void
 }
 
 export const TitlebarExportMenu = ({
@@ -28,6 +29,7 @@ export const TitlebarExportMenu = ({
   exportDocxLabel,
   onExport,
 }: TitlebarExportMenuProps) => {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   useNativeSurfaceOcclusion('export-menu', open)
   return (
@@ -59,6 +61,16 @@ export const TitlebarExportMenu = ({
           <FileText aria-hidden="true" />
           {exportDocxLabel}
         </DropdownMenuItem>
+        {(['epub', 'txt'] as const).map((format) => (
+          <DropdownMenuItem
+            key={format}
+            className={menuItemStyles()}
+            onSelect={() => onExport(format)}
+          >
+            <FileText aria-hidden="true" />
+            {t(format === 'epub' ? 'actions.exportEpub' : 'actions.exportTxt')}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   )

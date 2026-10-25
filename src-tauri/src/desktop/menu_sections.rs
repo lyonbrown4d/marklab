@@ -115,6 +115,16 @@ pub fn install(app: &AppHandle, locale: &str) -> BackendResult<super::policy::Me
         None,
       ),
       (
+        "file.export_epub",
+        text("Export to EPUB...", "导出为 EPUB..."),
+        None,
+      ),
+      (
+        "file.export_txt",
+        text("Export to TXT...", "导出为 TXT..."),
+        None,
+      ),
+      (
         if cfg!(target_os = "macos") {
           "window.close"
         } else {

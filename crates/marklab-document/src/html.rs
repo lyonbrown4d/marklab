@@ -4,8 +4,9 @@ use super::{
   markdown::{self, Kind, Node},
   typst_engine,
 };
-use crate::error::BackendResult;
+use crate::{analysis::slug, error::BackendResult};
 use base64::{Engine, engine::general_purpose::STANDARD};
+use std::collections::{BTreeMap, BTreeSet};
 use tokio_util::sync::CancellationToken;
 
 pub fn escape(value: &str) -> String {
@@ -56,7 +57,14 @@ pub fn render(
     {
       body.push_str(&format!("<h1>{}</h1>", escape(&document.title)));
     }
-    body.push_str(&nodes_html(&nodes, document, cancelled, index)?);
+    let mut headings = Headings::new(index, documents.len());
+    body.push_str(&nodes_html(
+      &nodes,
+      document,
+      cancelled,
+      index,
+      &mut headings,
+    )?);
     body.push_str("</section>");
   }
   let (width, height) = options.dimensions_mm();
@@ -90,6 +98,7 @@ fn nodes_html(
   document: &SourceDocument,
   cancelled: &CancellationToken,
   chapter: usize,
+  headings: &mut Headings,
 ) -> BackendResult<String> {
   let mut html = String::new();
   for node in nodes {
@@ -121,7 +130,7 @@ fn nodes_html(
         escape(label)
       )),
       Node::Element(kind, children) => {
-        let body = nodes_html(children, document, cancelled, chapter)?;
+        let body = nodes_html(children, document, cancelled, chapter, headings)?;
         match kind {
           Kind::Image(url) => {
             if let Some(bytes) = document.assets.get(url) {
@@ -135,15 +144,19 @@ fn nodes_html(
               html.push_str(&body);
             }
           }
-          Kind::Heading(level) => html.push_str(&format!("<h{level}>{body}</h{level}>")),
+          Kind::Heading(level) => {
+            let id = headings.id(&markdown::plain(children));
+            html.push_str(&format!("<h{level} id=\"{id}\">{body}</h{level}>"));
+          }
           Kind::CodeBlock(language) => html.push_str(&format!(
             "<pre><code class=\"language-{}\">{}</code></pre>",
             escape(language),
             escape(&markdown::plain(children))
           )),
-          Kind::Link(url) if markdown::safe_link(url) => {
-            html.push_str(&format!("<a href=\"{}\">{body}</a>", escape(url)))
-          }
+          Kind::Link(url) if safe_link(url) => html.push_str(&format!(
+            "<a href=\"{}\">{body}</a>",
+            escape(&headings.href(url))
+          )),
           Kind::Footnote(label) => html.push_str(&format!(
             "<aside id=\"fn-{chapter}-{}\"><sup>{}</sup>{body}</aside>",
             escape(label),
@@ -177,3 +190,88 @@ fn nodes_html(
   }
   Ok(html)
 }
+
+// Batch exports may link only to another HTML document or a local anchor.
+// Keep PDF/DOCX's external-link policy unchanged.
+fn safe_link(url: &str) -> bool {
+  if markdown::safe_link(url) {
+    return true;
+  }
+  let decoded = percent_encoding::percent_decode_str(url).decode_utf8_lossy();
+  let url = decoded.trim();
+  if url.is_empty()
+    || url
+      .chars()
+      .any(|value| value.is_ascii_control() || value == '\\')
+  {
+    return false;
+  }
+  if url.starts_with('#') {
+    return true;
+  }
+  let path = url.split('#').next().unwrap_or_default();
+  !path.starts_with('/') && !path.contains(':') && path.to_ascii_lowercase().ends_with(".html")
+}
+
+struct Headings {
+  chapter: usize,
+  chapters: usize,
+  counts: BTreeMap<String, usize>,
+  used: BTreeSet<String>,
+}
+
+impl Headings {
+  fn new(chapter: usize, chapters: usize) -> Self {
+    Self {
+      chapter,
+      chapters,
+      counts: BTreeMap::new(),
+      used: BTreeSet::new(),
+    }
+  }
+
+  fn id(&mut self, text: &str) -> String {
+    let base = slug(text);
+    let count = self.counts.entry(base.clone()).or_default();
+    let mut fragment = base.clone();
+    while self.used.contains(&fragment) {
+      *count += 1;
+      fragment = format!("{base}-{count}");
+    }
+    self.used.insert(fragment.clone());
+    self.prefixed(&fragment)
+  }
+
+  fn prefixed(&self, fragment: &str) -> String {
+    if self.chapters > 1 {
+      format!("chapter-{}-heading-{fragment}", self.chapter)
+    } else {
+      fragment.into()
+    }
+  }
+
+  fn href(&self, url: &str) -> String {
+    let Some(fragment) = url.trim().strip_prefix('#') else {
+      return url.into();
+    };
+    if fragment.is_empty() {
+      return format!("#chapter-{}", self.chapter);
+    }
+    let decoded = percent_encoding::percent_decode_str(fragment).decode_utf8_lossy();
+    // CLI publication links already refer to the destination chapter's namespace.
+    let destination = decoded.strip_prefix("chapter-").and_then(|value| {
+      let (number, suffix) = value.split_once('-').unwrap_or((value, ""));
+      number.parse::<usize>().ok().filter(|chapter| {
+        *chapter < self.chapters && (suffix.is_empty() || suffix.starts_with("heading-"))
+      })
+    });
+    if self.chapters > 1 && destination.is_some() {
+      return format!("#{decoded}");
+    }
+    format!("#{}", self.prefixed(&slug(&decoded)))
+  }
+}
+
+#[cfg(test)]
+#[path = "html_tests.rs"]
+mod tests;

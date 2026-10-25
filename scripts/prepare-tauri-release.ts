@@ -26,17 +26,26 @@ const repository = 'lyonbrown4d/marklab'
 if (environment.GITHUB_REPOSITORY !== repository) {
   throw new Error(`Release workflow must run from ${repository}.`)
 }
-const [packageText, configText, cargoText] = await Promise.all([
+const [packageText, configText, cargoText, documentText, cliText] = await Promise.all([
   readFile('package.json', 'utf8'),
   readFile('src-tauri/tauri.conf.json', 'utf8'),
   readFile('src-tauri/Cargo.toml', 'utf8'),
+  readFile('crates/marklab-document/Cargo.toml', 'utf8'),
+  readFile('crates/marklab-cli/Cargo.toml', 'utf8'),
 ])
 const versionSchema = z.object({ version: z.string().regex(/^\d+\.\d+\.\d+$/) })
 const { version } = versionSchema.parse(JSON.parse(packageText))
 const configVersion = versionSchema.parse(JSON.parse(configText)).version
 const cargoVersion = z.object({ package: versionSchema }).parse(parse(cargoText)).package.version
-if (version !== configVersion || version !== cargoVersion) {
-  throw new Error('package.json, tauri.conf.json, and Cargo.toml versions must match.')
+const sharedVersions = [documentText, cliText].map(
+  (text) => z.object({ package: versionSchema }).parse(parse(text)).package.version,
+)
+if (
+  version !== configVersion ||
+  version !== cargoVersion ||
+  sharedVersions.some((value) => value !== version)
+) {
+  throw new Error('package.json, tauri.conf.json, and all Rust package versions must match.')
 }
 const expectedTag = `app-v${version}`
 const tag =

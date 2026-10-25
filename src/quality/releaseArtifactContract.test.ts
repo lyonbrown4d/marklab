@@ -36,7 +36,15 @@ const macCredentials = [
   'APPLE_PASSWORD',
   'APPLE_TEAM_ID',
 ]
-const fixture = (versions: { package?: string; tauri?: string; cargo?: string } = {}) => {
+const fixture = (
+  versions: {
+    package?: string
+    tauri?: string
+    cargo?: string
+    document?: string
+    cli?: string
+  } = {},
+) => {
   const directory = mkdtempSync(join(tmpdir(), 'marklab-release-contract-'))
   directories.push(directory)
   mkdirSync(join(directory, 'src-tauri'))
@@ -52,6 +60,14 @@ const fixture = (versions: { package?: string; tauri?: string; cargo?: string } 
     join(directory, 'src-tauri/Cargo.toml'),
     `[package]\nversion = "${versions.cargo ?? version}"\n`,
   )
+  for (const [name, crateVersion] of [
+    ['marklab-document', versions.document],
+    ['marklab-cli', versions.cli],
+  ] as const) {
+    const crate = join(directory, 'crates', name)
+    mkdirSync(crate, { recursive: true })
+    writeFileSync(join(crate, 'Cargo.toml'), `[package]\nversion = "${crateVersion ?? version}"\n`)
+  }
   return directory
 }
 const run = (directory: string, mode: string, overrides: Record<string, string | undefined> = {}) =>
@@ -111,9 +127,7 @@ describe('Tauri release workflow contract', () => {
     )
     expect(
       workflow.jobs.build.steps.some(
-        (step) =>
-          step.run ===
-          'cargo test --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --lib --locked',
+        (step) => step.run === 'cargo test --workspace --target ${{ matrix.target }} --locked',
       ),
     ).toBe(true)
     const prepare = workflow.jobs.build.steps.find((step) =>
@@ -164,7 +178,7 @@ describe('release preparation executed against disposable metadata', () => {
     expect(existsSync(join(directory, 'injected'))).toBe(false)
   })
 
-  it.each(['tauri', 'cargo'] as const)(
+  it.each(['tauri', 'cargo', 'document', 'cli'] as const)(
     'rejects a mismatched %s version before generating configuration',
     (field) => {
       const directory = fixture({ [field]: '0.0.0' })

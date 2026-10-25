@@ -139,12 +139,14 @@ pnpm exec vitest run <affected tests>
 pnpm typecheck
 pnpm lint
 pnpm build:renderer
-cargo fmt --manifest-path src-tauri/Cargo.toml --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --test-threads=2
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked -- --test-threads=2
 ```
 
-Cargo uses the repository's `src-tauri/target` by default. Do not redirect ordinary
+The Cargo workspace contains the desktop application, shared `marklab-document` library,
+and standalone `marklab-cli`. It uses one root `Cargo.lock` and the repository's
+`src-tauri/target` by default. Do not redirect ordinary
 build/test artifacts to a temporary target directory. The release workflow runs
 renderer regressions before native build jobs; each native job runs library tests
 and strict Clippy before drafting artifacts. The separate native workflow covers

@@ -36,13 +36,14 @@ export const WorkspacePublicationSettingsPanel = ({
   totalWords,
 }: SettingsPanelProps) => {
   const { t } = useI18n()
+  const paginated = options.format === 'pdf' || options.format === 'docx'
   return (
     <aside className="flex min-h-0 flex-col border-l bg-muted/10">
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
         <h2 className="text-sm font-semibold">{t('workspaceExport.printSettings')}</h2>
         <SettingsGroup label={t('workspaceExport.outputFormat')}>
           <div className="grid grid-cols-2 overflow-hidden rounded-md border p-1">
-            {(['pdf', 'docx'] as const).map((format) => (
+            {(['pdf', 'docx', 'epub', 'txt'] as const).map((format) => (
               <Button
                 className="h-8 rounded-sm text-xs"
                 key={format}
@@ -50,48 +51,50 @@ export const WorkspacePublicationSettingsPanel = ({
                 type="button"
                 variant={options.format === format ? 'secondary' : 'ghost'}
               >
-                {format === 'pdf' ? 'PDF' : 'Word'}
+                {format === 'docx' ? 'Word' : format.toUpperCase()}
               </Button>
             ))}
           </div>
         </SettingsGroup>
-        <SettingsGroup label={t('workspaceExport.pageSettings')}>
-          <SettingSelect
-            label={t('workspaceExport.pageSize')}
-            onChange={(value) =>
-              onOptionChange('pageSize', value as WorkspacePublicationOptions['pageSize'])
-            }
-            value={options.pageSize}
-            values={[
-              ['a4', 'A4 (210 × 297 mm)'],
-              ['a5', 'A5 (148 × 210 mm)'],
-              ['letter', 'Letter (8.5 × 11 in)'],
-            ]}
-          />
-          <SettingSelect
-            label={t('workspaceExport.orientation')}
-            onChange={(value) =>
-              onOptionChange('orientation', value as WorkspacePublicationOptions['orientation'])
-            }
-            value={options.orientation}
-            values={[
-              ['portrait', t('workspaceExport.portrait')],
-              ['landscape', t('workspaceExport.landscape')],
-            ]}
-          />
-          <SettingSelect
-            label={t('workspaceExport.margin')}
-            onChange={(value) =>
-              onOptionChange('margin', value as WorkspacePublicationOptions['margin'])
-            }
-            value={options.margin}
-            values={[
-              ['normal', t('workspaceExport.marginNormal')],
-              ['narrow', t('workspaceExport.marginNarrow')],
-              ['wide', t('workspaceExport.marginWide')],
-            ]}
-          />
-        </SettingsGroup>
+        {paginated && (
+          <SettingsGroup label={t('workspaceExport.pageSettings')}>
+            <SettingSelect
+              label={t('workspaceExport.pageSize')}
+              onChange={(value) =>
+                onOptionChange('pageSize', value as WorkspacePublicationOptions['pageSize'])
+              }
+              value={options.pageSize}
+              values={[
+                ['a4', 'A4 (210 × 297 mm)'],
+                ['a5', 'A5 (148 × 210 mm)'],
+                ['letter', 'Letter (8.5 × 11 in)'],
+              ]}
+            />
+            <SettingSelect
+              label={t('workspaceExport.orientation')}
+              onChange={(value) =>
+                onOptionChange('orientation', value as WorkspacePublicationOptions['orientation'])
+              }
+              value={options.orientation}
+              values={[
+                ['portrait', t('workspaceExport.portrait')],
+                ['landscape', t('workspaceExport.landscape')],
+              ]}
+            />
+            <SettingSelect
+              label={t('workspaceExport.margin')}
+              onChange={(value) =>
+                onOptionChange('margin', value as WorkspacePublicationOptions['margin'])
+              }
+              value={options.margin}
+              values={[
+                ['normal', t('workspaceExport.marginNormal')],
+                ['narrow', t('workspaceExport.marginNarrow')],
+                ['wide', t('workspaceExport.marginWide')],
+              ]}
+            />
+          </SettingsGroup>
+        )}
         <SettingsGroup label={t('workspaceExport.includeContent')}>
           <ToggleSetting
             checked={options.cover}
@@ -103,16 +106,20 @@ export const WorkspacePublicationSettingsPanel = ({
             label={t('workspaceExport.tableOfContents')}
             onChange={(value) => onOptionChange('tableOfContents', value)}
           />
-          <ToggleSetting
-            checked={options.pageBreaks}
-            label={t('workspaceExport.chapterBreaks')}
-            onChange={(value) => onOptionChange('pageBreaks', value)}
-          />
-          <ToggleSetting
-            checked={options.pageNumbers}
-            label={t('workspaceExport.pageNumbers')}
-            onChange={(value) => onOptionChange('pageNumbers', value)}
-          />
+          {paginated && (
+            <>
+              <ToggleSetting
+                checked={options.pageBreaks}
+                label={t('workspaceExport.chapterBreaks')}
+                onChange={(value) => onOptionChange('pageBreaks', value)}
+              />
+              <ToggleSetting
+                checked={options.pageNumbers}
+                label={t('workspaceExport.pageNumbers')}
+                onChange={(value) => onOptionChange('pageNumbers', value)}
+              />
+            </>
+          )}
         </SettingsGroup>
       </div>
       <div className="space-y-3 border-t p-4">
@@ -120,9 +127,11 @@ export const WorkspacePublicationSettingsPanel = ({
           <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {t('workspaceExport.estimatedOutput')}
           </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums">
-            {t('workspaceExport.pageCount', { count: estimatedPages })}
-          </div>
+          {paginated && (
+            <div className="mt-1 text-lg font-semibold tabular-nums">
+              {t('workspaceExport.pageCount', { count: estimatedPages })}
+            </div>
+          )}
           <div className="text-[11px] text-muted-foreground">
             {t('workspaceExport.wordCount', { count: totalWords.toLocaleString() })}
           </div>
@@ -134,7 +143,9 @@ export const WorkspacePublicationSettingsPanel = ({
           <Button disabled={exporting || selectedCount === 0} onClick={onExport} type="button">
             {exporting
               ? t('workspaceExport.exporting')
-              : t('workspaceExport.export', { format: options.format === 'pdf' ? 'PDF' : 'Word' })}
+              : t('workspaceExport.export', {
+                  format: options.format === 'docx' ? 'Word' : options.format.toUpperCase(),
+                })}
           </Button>
         </div>
       </div>

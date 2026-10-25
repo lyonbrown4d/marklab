@@ -177,6 +177,12 @@ const CommandActionSections = ({
           <FileText className="size-4" />
           {actions['file.export_html'].label}
         </CommandItem>
+        {(['file.export_epub', 'file.export_txt'] as const).map((id) => (
+          <CommandItem key={id} value={actions[id].searchValue} onSelect={() => onAction(id)}>
+            <FileText className="size-4" />
+            {actions[id].label}
+          </CommandItem>
+        ))}
       </CommandGroup>
       <CommandSeparator />
       <CommandWorkspaceSection

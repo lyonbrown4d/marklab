@@ -11,7 +11,9 @@ tasks:
     inputs:
       - src-tauri/src/**/*.rs
       - src-tauri/Cargo.toml
-      - src-tauri/Cargo.lock
+      - Cargo.toml
+      - crates/**/*
+      - Cargo.lock
       - tsconfig*.json
       - src/**/*
       - scripts/**/*
@@ -50,7 +52,9 @@ tasks:
       - src-tauri/src/analysis/**/*
       - src-tauri/src/workspace/**/*
       - src-tauri/Cargo.toml
-      - src-tauri/Cargo.lock
+      - Cargo.toml
+      - crates/**/*
+      - Cargo.lock
     options:
       cache: false
   lint:

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WorkspacePublicationChapterPanel } from '@/components/workspace-publication/WorkspacePublicationChapterPanel'
 import { WorkspacePublicationPreview } from '@/components/workspace-publication/WorkspacePublicationPreview'
+import { WorkspacePublicationFlowPreview } from '@/components/workspace-publication/WorkspacePublicationFlowPreview'
 import { WorkspacePublicationSettingsPanel } from '@/components/workspace-publication/WorkspacePublicationSettingsPanel'
 import { useWorkspacePublicationDialog } from '@/components/workspace-publication/useWorkspacePublicationDialog'
 import { useI18n } from '@/i18n/useI18n'
@@ -103,12 +104,16 @@ const WorkspacePublicationDialog = ({
               value="preview"
               className="col-start-1 row-start-2 flex min-h-0 min-w-0 data-[state=inactive]:hidden lg:col-start-2 lg:row-start-1 lg:data-[state=inactive]:flex [&>section]:min-w-0 [&>section]:flex-1"
             >
-              <WorkspacePublicationPreview
-                options={controller.options}
-                orphanCount={controller.orphanCount}
-                pages={controller.previewPages}
-                selectedPath={controller.selectedPath}
-              />
+              {controller.options.format === 'epub' || controller.options.format === 'txt' ? (
+                <WorkspacePublicationFlowPreview pages={controller.previewPages} />
+              ) : (
+                <WorkspacePublicationPreview
+                  options={controller.options}
+                  orphanCount={controller.orphanCount}
+                  pages={controller.previewPages}
+                  selectedPath={controller.selectedPath}
+                />
+              )}
             </TabsContent>
             <TabsContent
               forceMount

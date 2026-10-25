@@ -1,8 +1,10 @@
+//! Structured Markdown nodes shared by renderers and document inspection.
 use crate::error::{BackendError, BackendResult};
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Kind {
   Paragraph,
   Heading(u8),
@@ -23,7 +25,7 @@ pub enum Kind {
   Other,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Node {
   Element(Kind, Vec<Node>),
   Text(String),

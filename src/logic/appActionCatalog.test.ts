@@ -69,6 +69,8 @@ describe('appActionCatalog', () => {
     const openFile = vi.fn()
     const handlers = {
       'file.export_docx': vi.fn(),
+      'file.export_epub': vi.fn(),
+      'file.export_txt': vi.fn(),
       'file.export_html': vi.fn(),
       'file.export_pdf': vi.fn(),
       'file.export_workspace': vi.fn(),

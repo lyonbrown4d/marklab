@@ -10,6 +10,10 @@
     "node": "^22.22.0 || ^24.0.0 || ^25.0.0"
   },
   "scripts": {
+    "cli": "node --experimental-strip-types scripts/cli.ts run",
+    "cli:build": "node --experimental-strip-types scripts/cli.ts build",
+    "cli:test": "node --experimental-strip-types scripts/cli.ts test",
+    "cli:package": "node --experimental-strip-types scripts/cli.ts package",
     "dev": "moon run desktop:tauri-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",

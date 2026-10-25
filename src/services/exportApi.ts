@@ -16,6 +16,8 @@ const FORMAT_CONFIG: Record<
   pdf: { extensions: ['pdf'], filterName: 'PDF' },
   docx: { extensions: ['docx'], filterName: 'Word' },
   html: { extensions: ['html'], filterName: 'HTML' },
+  epub: { extensions: ['epub'], filterName: 'EPUB' },
+  txt: { extensions: ['txt'], filterName: 'TXT' },
 }
 const getDefaultExportPath = (
   rootPath: string,

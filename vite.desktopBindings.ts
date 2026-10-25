@@ -13,10 +13,16 @@ export const desktopBindingsPlugin = (): Plugin => {
     name: 'marklab-desktop-bindings',
     apply: 'serve',
     configureServer: (server) => {
-      const rustSources = path.join(server.config.root, 'src-tauri/src')
-      const manifests = ['Cargo.toml', 'Cargo.lock'].map((name) =>
-        path.join(server.config.root, 'src-tauri', name),
+      const rustSources = ['src-tauri/src', 'crates/marklab-document/src'].map((directory) =>
+        path.join(server.config.root, directory),
       )
+      const inputs = [
+        'Cargo.toml',
+        'Cargo.lock',
+        'crates/marklab-document/Cargo.toml',
+        'src-tauri/Cargo.toml',
+        'scripts/generate-desktop-bindings.ts',
+      ].map((file) => path.join(server.config.root, file))
       const queue = new PQueue({ concurrency: 1 })
       const shutdown = new AbortController()
       const regenerate = debounce(() => {
@@ -40,13 +46,14 @@ export const desktopBindingsPlugin = (): Plugin => {
       const onChange = (file: string) => {
         const candidate = path.resolve(file)
         if (
-          manifests.includes(candidate) ||
-          (candidate.startsWith(`${rustSources}${path.sep}`) && candidate.endsWith('.rs'))
+          inputs.includes(candidate) ||
+          (candidate.endsWith('.rs') &&
+            rustSources.some((directory) => candidate.startsWith(`${directory}${path.sep}`)))
         ) {
           regenerate()
         }
       }
-      server.watcher.add([rustSources, ...manifests])
+      server.watcher.add([...rustSources, ...inputs])
       const onWatch = (_event: string, file: string) => onChange(file)
       server.watcher.on('all', onWatch)
       dispose = () => {

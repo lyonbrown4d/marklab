@@ -7,13 +7,16 @@
       "^src/runtime/tauri/",
       "^src/runtime/assetUrl",
       "^scripts/build-renderer",
-      "^scripts/prepare-tauri-release"
+      "^scripts/prepare-tauri-release",
+      "^crates/marklab-document/",
+      "^Cargo\\.(toml|lock)$",
+      "^\\.cargo/"
     ],
     "checks": [
       "pnpm tauri:check",
-      "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
-      "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings",
-      "pnpm tauri:test",
+      "cargo fmt --all --check",
+      "cargo clippy --workspace --all-targets --locked -- -D warnings",
+      "cargo test --workspace --locked",
       "native multi-window/edit/save/splash acceptance"
     ]
   },
@@ -133,7 +136,9 @@
       "^src-tauri/src/.+/commands\\.rs$",
       "^src-tauri/src/desktop/invoke",
       "^src/runtime/",
-      "^src/services/.+Api"
+      "^src/services/.+Api",
+      "^crates/marklab-document/src/types\\.rs$",
+      "^crates/marklab-document/src/analysis/document_types\\.rs$"
     ],
     "checks": ["runtime/service contract tests", "native IPC capability tests", "pnpm typecheck"]
   },
@@ -150,9 +155,16 @@
   {
     "area": "Knowledge engine / Rust analysis",
     "risk": "workspace isolation drift, blocking I/O, index mismatch, or runtime lifecycle regression",
-    "patterns": ["^src-tauri/src/analysis/", "^src-tauri/src/language/", "^src-tauri/src/mcp/"],
+    "patterns": [
+      "^src-tauri/src/analysis/",
+      "^src-tauri/src/language/",
+      "^src-tauri/src/mcp/",
+      "^crates/marklab-document/src/analysis/",
+      "^crates/marklab-document/src/markdown\\.rs$"
+    ],
     "checks": [
       "Rust analysis/language/MCP tests",
+      "cargo test -p marklab-document --locked",
       "pnpm test:knowledge:integration",
       "pnpm typecheck"
     ]
@@ -191,9 +203,20 @@
       "^resources/",
       "^scripts/",
       "^vite",
-      "^tsconfig"
+      "^tsconfig",
+      "^crates/",
+      "^Cargo\\.(toml|lock)$",
+      "^\\.cargo/",
+      "^rust-toolchain\\.toml$"
     ],
-    "checks": ["pnpm typecheck", "pnpm lint", "pnpm build:renderer", "pnpm tauri:check"]
+    "checks": [
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build:renderer",
+      "pnpm tauri:check",
+      "pnpm cli:test",
+      "pnpm cli:package"
+    ]
   },
   {
     "area": "i18n",

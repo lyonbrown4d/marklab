@@ -13,11 +13,15 @@ const digest = (value: string | Uint8Array) => createHash('sha256').update(value
 
 const fingerprint = async () => {
   const files = [
+    'Cargo.toml',
+    'Cargo.lock',
+    'crates/marklab-document/Cargo.toml',
     'src-tauri/Cargo.toml',
-    'src-tauri/Cargo.lock',
     'scripts/generate-desktop-bindings.ts',
   ]
   for await (const file of glob('src-tauri/src/**/*.rs', { cwd: root })) files.push(file)
+  for await (const file of glob('crates/marklab-document/src/**/*.rs', { cwd: root }))
+    files.push(file)
   const hash = createHash('sha256')
   for (const file of files.sort()) {
     hash
