@@ -95,11 +95,18 @@ pub fn environment(command: &mut portable_pty::CommandBuilder) {
       command.env(key, value);
     }
   }
-  if !cfg!(windows)
-    && !["LC_ALL", "LC_CTYPE", "LANG"].iter().any(|key| {
-      std::env::var(key).is_ok_and(|v| v.to_ascii_lowercase().replace('-', "").contains("utf8"))
-    })
+  #[cfg(target_os = "linux")]
   {
+    let locales = ["LC_ALL", "LC_CTYPE", "LANG"].map(|key| std::env::var(key).ok());
+    if let Some(key) = utf8_override(locales.each_ref().map(|value| value.as_deref())) {
+      command.env(key, "C.UTF-8");
+    }
+  }
+  #[cfg(all(unix, not(target_os = "linux")))]
+  if !["LC_ALL", "LC_CTYPE", "LANG"].iter().any(|key| {
+    std::env::var(key)
+      .is_ok_and(|value| value.to_ascii_lowercase().replace('-', "").contains("utf8"))
+  }) {
     command.env(
       "LC_CTYPE",
       if cfg!(target_os = "macos") {
@@ -110,8 +117,45 @@ pub fn environment(command: &mut portable_pty::CommandBuilder) {
     );
   }
 }
+#[cfg(target_os = "linux")]
+fn utf8_override(locales: [Option<&str>; 3]) -> Option<&'static str> {
+  // POSIX locale precedence is LC_ALL > LC_CTYPE > LANG. A UTF-8 LANG
+  // cannot compensate for LC_ALL=C, and setting only LC_CTYPE cannot either.
+  let keys = ["LC_ALL", "LC_CTYPE", "LC_CTYPE"];
+  for (index, locale) in locales.into_iter().enumerate() {
+    if let Some(locale) = locale.filter(|value| !value.is_empty()) {
+      return (!locale
+        .to_ascii_lowercase()
+        .replace('-', "")
+        .contains("utf8"))
+      .then_some(keys[index]);
+    }
+  }
+  Some("LC_CTYPE")
+}
 #[cfg(test)]
 mod tests {
+  #[cfg(target_os = "linux")]
+  #[test]
+  fn terminal_locale_follows_posix_precedence() {
+    use super::utf8_override;
+    assert_eq!(
+      utf8_override([Some("C"), None, Some("en_US.UTF-8")]),
+      Some("LC_ALL")
+    );
+    assert_eq!(
+      utf8_override([Some("C"), Some("C.UTF-8"), None]),
+      Some("LC_ALL")
+    );
+    assert_eq!(
+      utf8_override([None, Some("C"), Some("en_US.UTF-8")]),
+      Some("LC_CTYPE")
+    );
+    assert_eq!(utf8_override([Some("C.UTF-8"), Some("C"), None]), None);
+    assert_eq!(utf8_override([Some(""), None, Some("zh_CN.utf8")]), None);
+    assert_eq!(utf8_override([None, None, Some("C")]), Some("LC_CTYPE"));
+    assert_eq!(utf8_override([None, None, None]), Some("LC_CTYPE"));
+  }
   #[test]
   fn rejects_relative_shell() {
     assert!(super::validate(std::path::Path::new("sh")).is_err());

@@ -13,6 +13,10 @@ const harness = vi.hoisted(() => ({
   signals: [] as string[],
 }))
 
+vi.mock('../../scripts/generate-desktop-bindings.ts', () => ({
+  generateDesktopBindings: vi.fn(async () => {}),
+}))
+
 vi.mock('zx', () => ({
   $: () => (pieces: TemplateStringsArray) => harness.execute(pieces.join('')),
 }))

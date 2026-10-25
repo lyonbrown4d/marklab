@@ -111,7 +111,14 @@ fn targets(matches: &Matches) -> Vec<Target> {
 
 fn is_deep_link_argument(value: &str) -> bool {
   // Native launch handling delivers URLs independently of filesystem targets.
-  value.contains("://")
+  value.contains("://") && !is_file_url(value)
+}
+
+fn is_file_url(value: &str) -> bool {
+  cfg!(target_os = "linux")
+    && value
+      .get(..7)
+      .is_some_and(|prefix| prefix.eq_ignore_ascii_case("file://"))
 }
 
 async fn resolve(targets: Vec<Target>, cwd: &Path) -> BackendResult<Vec<String>> {
@@ -123,7 +130,24 @@ async fn resolve(targets: Vec<Target>, cwd: &Path) -> BackendResult<Vec<String>>
         "An open target must be a nonempty filesystem path",
       ));
     }
-    let path = PathBuf::from(&target.value);
+    let path = if is_file_url(&target.value) {
+      url::Url::parse(&target.value)
+        .ok()
+        .filter(|url| {
+          url
+            .host_str()
+            .is_none_or(|host| host.eq_ignore_ascii_case("localhost"))
+        })
+        .and_then(|url| url.to_file_path().ok())
+        .ok_or_else(|| {
+          BackendError::new(
+            "CLI_TARGET_ERROR",
+            "A file URL must identify a local filesystem path",
+          )
+        })?
+    } else {
+      PathBuf::from(&target.value)
+    };
     if !path.is_absolute() && !cwd.is_absolute() {
       return Err(BackendError::new(
         "CLI_TARGET_ERROR",

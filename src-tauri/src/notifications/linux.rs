@@ -36,7 +36,12 @@ impl Backend {
       session: OnceCell::new(),
       shown: Arc::new(Mutex::new(HashMap::new())),
       events,
-      desktop_entry: app.config().identifier.clone(),
+      // Tauri names the installed desktop file after productName, not identifier.
+      desktop_entry: app
+        .config()
+        .product_name
+        .clone()
+        .unwrap_or_else(|| app.package_info().name.clone()),
     })
   }
   pub async fn prepare(&self) -> BackendResult<()> {
@@ -241,7 +246,7 @@ fn notify_body<'a>(
   (
     "Marklab",
     0,
-    "",
+    "marklab-desktop",
     &message.title,
     if body_markup {
       escaped_body(&message.body)

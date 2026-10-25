@@ -69,13 +69,14 @@ const AppShellPanelsView = ({
             'motion-panel motion-terminal-shell min-h-0',
             terminalOpen ? 'motion-panel-open' : 'motion-panel-collapsed',
           )}
+          // Keep constraints stable: re-registering them can reset an imperative expand.
           collapsedSize="0px"
           collapsible
-          defaultSize={terminalOpen ? '280px' : '0px'}
+          defaultSize="0px"
           groupResizeBehavior="preserve-pixel-size"
           id="terminal"
-          maxSize={terminalOpen ? '65vh' : '0px'}
-          minSize={terminalOpen ? '160px' : '0px'}
+          maxSize="65vh"
+          minSize="160px"
           panelRef={terminalPanelRef}
         >
           {terminalInitialized && (

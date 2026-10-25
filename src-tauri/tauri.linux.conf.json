@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown Document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": ["puml", "plantuml", "pu", "wsd", "iuml"],
+        "name": "PlantUML Document",
+        "role": "Editor",
+        "mimeType": "text/vnd.plantuml"
+      },
+      {
+        "ext": ["mmd", "mermaid"],
+        "name": "Mermaid Document",
+        "role": "Editor",
+        "mimeType": "text/vnd.mermaid"
+      },
+      {
+        "ext": ["csv"],
+        "name": "CSV Document",
+        "role": "Editor",
+        "mimeType": "text/csv"
+      },
+      {
+        "ext": ["tsv"],
+        "name": "TSV Document",
+        "role": "Editor",
+        "mimeType": "text/tab-separated-values"
+      },
+      {
+        "ext": ["html", "htm"],
+        "name": "HTML Document",
+        "role": "Editor",
+        "mimeType": "text/html"
+      },
+      {
+        "ext": ["xlsx"],
+        "name": "Spreadsheet",
+        "role": "Viewer",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      {
+        "ext": ["xlsm"],
+        "name": "Macro-enabled Spreadsheet",
+        "role": "Viewer",
+        "mimeType": "application/vnd.ms-excel.sheet.macroEnabled.12"
+      }
+    ],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/mime/packages/marklab.xml": "../resources/linux/marklab.xml"
+        },
+        "desktopTemplate": "../resources/linux/marklab.desktop.hbs"
+      }
+    }
+  }
+}

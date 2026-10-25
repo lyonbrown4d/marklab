@@ -226,3 +226,31 @@ async fn missing_cli_plugin_returns_an_error_instead_of_panicking() {
     "CLI_UNAVAILABLE"
   );
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn desktop_file_urls_decode_local_paths_without_ignoring_the_target() {
+  let app = app();
+  let sender = tempfile::tempdir().unwrap();
+  let file = sender.path().join("中文 note #1.md");
+  tokio::fs::write(&file, "# desktop file URL").await.unwrap();
+  let uri = url::Url::from_file_path(&file).unwrap().to_string();
+  for args in [vec![uri.as_str()], vec!["--file", uri.as_str()]] {
+    let Outcome::Open(paths) = request(&app, &args, sender.path()).await.unwrap() else {
+      panic!("expected file URL target");
+    };
+    assert_eq!(paths, vec![file.to_string_lossy()]);
+  }
+  assert!(
+    request(&app, &["file://remote.invalid/note.md"], sender.path())
+      .await
+      .is_err()
+  );
+  let Outcome::Open(paths) = request(&app, &["marklab://open?workspace=one"], sender.path())
+    .await
+    .unwrap()
+  else {
+    panic!("expected deep link without filesystem targets");
+  };
+  assert!(paths.is_empty());
+}

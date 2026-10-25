@@ -10,9 +10,9 @@ embedded driver also supports Windows; Windows integration is not being run in
 the current migration validation. Native Windows compilation remains a CI gate.
 
 WebdriverIO 10 requires Node.js 22.19 or later; the repository's Node requirement
-is stricter. The latest official Tauri service 1.5.0 still declares a WebdriverIO
+is stricter. The latest official Tauri service 1.5.1 still declares a WebdriverIO
 9 peer and uses removed APIs. The registered pnpm patches migrate its async
-execution and command override calls, including native-utils 2.8.0, to the public
+execution and command override calls, including native-utils 2.8.1, to the public
 WebdriverIO 10 API. The upstream peer warning remains visible. Remove these
 temporary patches when upstream supports 10 and native acceptance passes.
 
