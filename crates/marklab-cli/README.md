@@ -8,6 +8,7 @@ database, scan unrelated workspaces, start a server, or invoke external converte
 ```sh
 cargo build --release -p marklab-cli
 ./src-tauri/target/release/marklab --help
+marklab export notes.md --format pdf --output notes.pdf
 marklab export notes.md --format html --output notes.html
 marklab export notes --recursive --format txt --output exported
 marklab export notes --recursive --include '**/*.md' --exclude '**/drafts/**' --format html --output exported
@@ -18,6 +19,43 @@ marklab inspect notes.md > analysis.json
 cat notes.md | marklab inspect - --ast > ast.json
 marklab completions zsh > _marklab
 ```
+
+## PDF export
+
+PDF is rendered locally by the shared Rust/Typst engine, without Pandoc, TeX, or
+a browser. Export one document, convert a directory to individual PDFs, or combine
+ordered chapters into one PDF:
+
+```sh
+marklab export notes.md --format pdf --output notes.pdf
+marklab export notes --recursive --format pdf --output pdf-files --jobs 2
+marklab publish chapters --format pdf --output book.pdf --locale zh-CN
+```
+
+PDF requires an output file. Spreadsheet embeds are rendered as tables, and
+`--include-linked-spreadsheets` also expands local spreadsheet links. System and
+embedded fonts provide text rendering and fallback; the output remains static.
+
+## Spreadsheet imports
+
+Embed a local workbook with `![](scores.xlsx)` or `![[scores.xlsx]]`. XLSX,
+XLSM, CSV, and TSV imports expand into Markdown tables before rendering, so the
+same content appears in PDF, EPUB, HTML, DOCX, TXT, and Markdown exports. Every
+worksheet is included within the import limits. Ordinary links such as
+`[Scores](scores.xlsx)` remain links unless `--include-linked-spreadsheets` is set:
+
+```sh
+marklab export notes.md --format pdf --output notes.pdf --include-linked-spreadsheets
+marklab publish chapters --format epub --output book.epub --include-linked-spreadsheets
+```
+
+Workbook styles, merged cells, charts, and macros are not reproduced. Formula
+cells use saved cached values; missing values are marked with a warning. Save
+the workbook in a spreadsheet application to refresh its cached values. Imports
+must remain inside the resource root; remote imports are not fetched. Each file
+is limited to 16 MiB, with at most 32 references and 64 MiB of imported files per
+document. Oversized cell ranges are rejected; long table output is truncated
+with a warning.
 
 Supported formats are `html`, `txt`, `epub`, `pdf`, `docx`, and `markdown`.
 Single-file export accepts standard input (`-`). Standard output (`--output -`)

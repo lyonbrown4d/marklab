@@ -13,9 +13,7 @@ mod shared_formulas;
 #[cfg(test)]
 mod tests;
 mod workbook;
-mod zip_directory;
 mod zip_preflight;
-mod zip_relationship;
 
 use crate::error::{BackendError, BackendResult};
 use moka::sync::Cache;

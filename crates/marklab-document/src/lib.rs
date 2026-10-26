@@ -5,11 +5,14 @@ mod docx_inline;
 mod epub;
 pub mod error;
 mod html;
+pub mod imports;
 pub mod markdown;
 mod pdf;
+pub mod spreadsheet;
 mod txt;
 pub mod types;
 mod typst_engine;
+mod typst_fonts;
 
 use error::{BackendError, BackendResult};
 use tokio_util::sync::CancellationToken;

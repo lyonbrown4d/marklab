@@ -26,8 +26,14 @@ pub fn run(
     return Err("Only HTML, TXT, and Markdown can be written to stdout".into());
   }
   if args.input == Path::new("-") {
-    let document = source::stdin(args.resource_root.as_deref(), cancelled)?;
-    let options = PublicationOptions::document(format, document.title.clone());
+    let document = source::stdin(
+      args.resource_root.as_deref(),
+      args.include_linked_spreadsheets,
+      "en-US",
+      cancelled,
+    )?;
+    let mut options = PublicationOptions::document(format, document.title.clone());
+    options.include_linked_spreadsheets = args.include_linked_spreadsheets;
     let output = if stdout {
       None
     } else {
@@ -122,12 +128,20 @@ pub fn run(
     progress.message(format!("Exporting {}", path.display()));
     let result = (|| -> Result<()> {
       marklab_document::check_cancelled(cancelled)?;
-      let mut document = source::file(path, &root, source::title(path))?;
+      let mut document = source::file(
+        path,
+        &root,
+        source::title(path),
+        args.include_linked_spreadsheets,
+        "en-US",
+        cancelled,
+      )?;
       if directory && format == ExportFormat::Html {
         let parent = outputs[index].parent().ok_or("Output has no parent")?;
         document.markdown = links::rewrite(&document.markdown, path, &targets, Some(parent));
       }
-      let options = PublicationOptions::document(format, document.title.clone());
+      let mut options = PublicationOptions::document(format, document.title.clone());
+      options.include_linked_spreadsheets = args.include_linked_spreadsheets;
       let bytes = render(format, &[document], &options, cancelled)?;
       save(
         outputs.get(index).map(|path| path.as_path()),

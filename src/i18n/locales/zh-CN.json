@@ -129,6 +129,8 @@
   "workspaceExport.marginNormal": "标准边距",
   "workspaceExport.marginNarrow": "窄边距",
   "workspaceExport.marginWide": "宽边距",
+  "workspaceExport.includeLinkedSpreadsheets": "展开链接中的表格文件",
+  "workspaceExport.spreadsheetImportHint": "将本地 Excel、CSV、TSV 链接转换为表格内容。嵌入式引用会自动展开。",
   "workspaceExport.includeContent": "包含内容",
   "workspaceExport.cover": "封面",
   "workspaceExport.tableOfContents": "自动目录",

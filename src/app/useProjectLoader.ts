@@ -28,6 +28,7 @@ import type { UseProjectLoaderArgs } from '@/app/projectLoaderTypes'
 export const useProjectLoader = ({
   onWorkspaceOpened,
   onBeforeWorkspaceOpen,
+  onBeforePathMutation,
   rootSwitchingRef: externalRootSwitchingRef,
   rootPath,
   rootKind,
@@ -61,15 +62,25 @@ export const useProjectLoader = ({
 
   const loadWorkspace = useCallback(
     async (options?: LoadWorkspaceOptions) => {
+      // Watch refreshes must not supersede the authoritative path mutation load.
+      if (pathMutationInProgress.current && !options?.tabs) return
       const request = ++loadRequest.current
-      if (pathMutationInProgress.current && options?.snapshot) return
+      const isCurrent = () =>
+        request === loadRequest.current && !(pathMutationInProgress.current && !options?.tabs)
       await runInDesktop(async () => {
         let snapshot = options?.snapshot
         if (!snapshot) {
           useWorkspaceStore.getState().beginTreeLoad()
           try {
-            const projection = await fetchWorkspaceLoadProjection(options?.tabs ?? tabsRef.current)
-            if (request !== loadRequest.current) return
+            const projection = await fetchWorkspaceLoadProjection(
+              options?.tabs ?? tabsRef.current,
+              isCurrent,
+            )
+            if (!isCurrent()) {
+              if (request === loadRequest.current)
+                useWorkspaceStore.setState({ treeStatus: 'ready' })
+              return
+            }
             snapshot = projection.snapshot
             useWorkspaceStore.setState({
               loadedTreeParents: [''],
@@ -80,17 +91,18 @@ export const useProjectLoader = ({
               treeStatus: 'ready',
             })
           } catch (error) {
+            if (!isCurrent()) {
+              if (request === loadRequest.current)
+                useWorkspaceStore.setState({ treeStatus: 'ready' })
+              return
+            }
             useWorkspaceStore.getState().failTreeLoad(error)
             throw error
           }
         }
         const rootInfo = snapshot.root
-        if (rootPathRef.current !== rootInfo.path) {
-          setRootPath(rootInfo.path)
-        }
-        if (rootKindRef.current !== rootInfo.kind) {
-          setRootKind(rootInfo.kind)
-        }
+        if (rootPathRef.current !== rootInfo.path) setRootPath(rootInfo.path)
+        if (rootKindRef.current !== rootInfo.kind) setRootKind(rootInfo.kind)
 
         const nextEntries = snapshot.entries
 
@@ -272,7 +284,7 @@ export const useProjectLoader = ({
     }
   }, [loadWorkspace, onBeforeWorkspaceOpen, onWorkspaceOpened, rootKindRef, rootSwitchingRef, t])
 
-  const { createFile, createFolder, renamePath, movePath, deletePath } = useProjectPathActions({
+  const pathActions = useProjectPathActions({
     rootPath,
     rootKind,
     tabs,
@@ -280,6 +292,10 @@ export const useProjectLoader = ({
     locationPathname,
     loadWorkspace,
     mutationInProgress: pathMutationInProgress,
+    onBeforePathMutation,
+    setTabs,
+    setActiveTabId,
+    navigate,
   })
   return {
     loadWorkspace,
@@ -288,10 +304,6 @@ export const useProjectLoader = ({
     onSelectSingleFile,
     onUseInternalRoot,
     openFolder,
-    createFile,
-    createFolder,
-    renamePath,
-    movePath,
-    deletePath,
+    ...pathActions,
   }
 }

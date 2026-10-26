@@ -1,4 +1,5 @@
 use crate::error::{BackendError, BackendResult};
+use crate::typst_fonts::{CachedWorld, FontCache};
 use std::{
   borrow::Cow,
   collections::{BTreeMap, HashMap},
@@ -61,6 +62,7 @@ struct Renderer {
   engine: TypstEngine,
   assets: JobAssets,
   operation: Mutex<()>,
+  fonts: FontCache,
 }
 impl Renderer {
   fn new() -> Self {
@@ -81,6 +83,7 @@ impl Renderer {
       engine,
       assets,
       operation: Mutex::new(()),
+      fonts: FontCache::default(),
     }
   }
   fn compile(&self, source: String, assets: ImageMap) -> BackendResult<PagedDocument> {
@@ -97,13 +100,21 @@ impl Renderer {
     }
     let mut inputs = Dict::new();
     inputs.insert("document".into(), Value::Str(source.into()));
-    // Source exists only in this compile's inputs, never in the engine.
-    // Upstream's default comemo eviction age is zero (no unbounded history).
-    self
+    // Build a fresh source/input world, preserving job isolation and the
+    // upstream zero-age memo eviction while reusing only loaded font faces.
+    let world = self
       .engine
-      .compile_with_input("main.typ", inputs)
-      .output
-      .map_err(|error| BackendError::new("EXPORT_RENDER_FAILED", format!("Typst: {error:?}")))
+      .world_builder("main.typ")
+      .with_inputs(inputs)
+      .build()
+      .map_err(|error| BackendError::new("EXPORT_RENDER_FAILED", format!("Typst: {error:?}")))?;
+    let world = CachedWorld {
+      inner: &world,
+      fonts: &self.fonts,
+    };
+    let output = typst::compile::<PagedDocument>(&world).output;
+    typst::comemo::evict(0);
+    output.map_err(|error| BackendError::new("EXPORT_RENDER_FAILED", format!("Typst: {error:?}")))
   }
 }
 pub fn compile(source: String, assets: BTreeMap<String, Vec<u8>>) -> BackendResult<PagedDocument> {

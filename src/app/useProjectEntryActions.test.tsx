@@ -26,6 +26,9 @@ const options = (): Options => ({
   locationPathname: '/files/edit/draft.md',
   mutationInProgress: { current: false },
   loadWorkspace: vi.fn().mockResolvedValue(undefined),
+  setTabs: vi.fn(),
+  setActiveTabId: vi.fn(),
+  navigate: vi.fn(),
 })
 const deferred = () => {
   let resolve!: () => void
@@ -71,6 +74,8 @@ describe('workspace create and delete refresh', () => {
       await task
     })
     expect(props.loadWorkspace).toHaveBeenCalledExactlyOnceWith({
+      tabs: props.tabs,
+      activeTabId: props.activeTabId,
       preserveCurrentRoute: testCase.preserve,
     })
     expect(props.mutationInProgress.current).toBe(false)
@@ -128,7 +133,11 @@ describe('workspace create and delete refresh', () => {
       pending.resolve()
       await task
     })
-    expect(props.loadWorkspace).toHaveBeenCalledWith({ preserveCurrentRoute: true })
+    expect(props.loadWorkspace).toHaveBeenCalledWith({
+      tabs: props.tabs,
+      activeTabId: props.activeTabId,
+      preserveCurrentRoute: true,
+    })
   })
 
   it('rejects a second path mutation until creation and refresh finish', async () => {

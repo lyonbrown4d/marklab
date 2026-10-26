@@ -63,6 +63,7 @@ describe('recent workspace history menu', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Open notes' }))
     expect(onOpenProject).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Recent' }))
     await user.click(screen.getByRole('menuitem', { name: 'Open other' }))
     expect(onOpenProject).toHaveBeenCalledExactlyOnceWith('/other')
   })
@@ -89,18 +90,17 @@ describe('recent workspace history menu', () => {
     async (name) => {
       const { user } = await renderMenu()
       await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
-      await user.click(screen.getByRole('menuitem', { name: `workspace.removeHistory: ${name}` }))
-      await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
-      expect(recentWorkspaceApi.remove).toHaveBeenCalledWith(`/${name}`)
-      expect(useWorkspaceStore.getState().recentProjects).not.toContain(`/${name}`)
-      expect(useWorkspaceStore.getState().rootPath).toBe('/notes')
       vi.mocked(recentWorkspaceApi.list).mockResolvedValue(
         entries.filter((entry) => entry.path !== `/${name}`),
       )
-      await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+      await user.click(screen.getByRole('menuitem', { name: `workspace.removeHistory: ${name}` }))
       await waitFor(() =>
         expect(screen.queryByRole('menuitem', { name: `Open ${name}` })).not.toBeInTheDocument(),
       )
+      expect(screen.getByRole('menu', { name: 'Recent' })).toBeVisible()
+      expect(recentWorkspaceApi.remove).toHaveBeenCalledWith(`/${name}`)
+      expect(useWorkspaceStore.getState().recentProjects).not.toContain(`/${name}`)
+      expect(useWorkspaceStore.getState().rootPath).toBe('/notes')
     },
   )
 
@@ -119,11 +119,12 @@ describe('recent workspace history menu', () => {
     )
     finish(entries)
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
-    await user.keyboard('{Escape}')
+    screen.getByRole('menu', { name: 'Recent' }).focus()
+    await user.keyboard('{ArrowLeft}')
     vi.mocked(recentWorkspaceApi.list).mockResolvedValue(
       entries.map((entry) => ({ ...entry, status: 'missing' })),
     )
-    await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Recent' }))
     await waitFor(() =>
       expect(screen.getByRole('menuitem', { name: 'Open notes' })).toHaveAttribute(
         'aria-disabled',
@@ -154,8 +155,15 @@ describe('recent workspace history menu', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('workspace.historyRemoveFailed')
     expect(useWorkspaceStore.getState().recentProjects).toContain('/missing')
     expect(screen.getByRole('menuitem', { name: 'Open missing' })).toBeInTheDocument()
+    vi.mocked(recentWorkspaceApi.list).mockResolvedValue(
+      entries.filter((entry) => entry.path !== '/missing'),
+    )
     await user.click(screen.getByRole('menuitem', { name: 'workspace.removeHistory: missing' }))
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('menuitem', { name: 'Open missing' })).not.toBeInTheDocument(),
+    )
+    expect(recentWorkspaceApi.remove).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('menu', { name: 'Recent' })).toBeVisible()
   })
 
   it('prevents duplicate removal while a mutation is pending', async () => {
@@ -173,8 +181,14 @@ describe('recent workspace history menu', () => {
     await waitFor(() => expect(remove).toHaveAttribute('aria-disabled', 'true'))
     fireEvent.click(remove)
     expect(recentWorkspaceApi.remove).toHaveBeenCalledTimes(1)
+    vi.mocked(recentWorkspaceApi.list).mockResolvedValue(
+      entries.filter((entry) => entry.path !== '/notes'),
+    )
     finish()
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('menuitem', { name: 'Open notes' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('menu', { name: 'Recent' })).toBeVisible()
   })
 
   it('renders an empty history from the backend', async () => {
@@ -191,7 +205,10 @@ describe('recent workspace history menu', () => {
     const { user } = await renderMenu()
     await screen.findByRole('menuitem', { name: 'workspace.historyCheckFailed' })
     await user.click(screen.getByRole('menuitem', { name: 'workspace.removeHistory: missing' }))
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(useWorkspaceStore.getState().recentProjects).not.toContain('/missing'),
+    )
+    expect(screen.getByRole('menu', { name: 'Recent' })).toBeVisible()
     expect(useWorkspaceStore.getState().recentProjects).not.toContain('/missing')
   })
 

@@ -1,11 +1,13 @@
 import type { RefObject } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
+import type { BeginEditorPathMutation } from '@/app/useEditorBufferPathMutation'
 
 export type UseProjectLoaderArgs = {
   rootSwitchingRef?: RefObject<boolean>
   onBeforeWorkspaceOpen?: () => Promise<void>
   onWorkspaceOpened?: () => Promise<void>
+  onBeforePathMutation?: BeginEditorPathMutation
   rootPath: string
   rootKind: 'internal' | 'external' | 'single'
   entries: FileEntry[]

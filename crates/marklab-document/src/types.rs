@@ -31,6 +31,8 @@ impl ExportFormat {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PublicationOptions {
   pub cover: bool,
+  #[serde(default)]
+  pub include_linked_spreadsheets: bool,
   pub format: ExportFormat,
   pub locale: String,
   pub margin: String,
@@ -46,6 +48,7 @@ impl PublicationOptions {
   pub fn document(format: ExportFormat, title: String) -> Self {
     Self {
       cover: false,
+      include_linked_spreadsheets: false,
       format,
       locale: "en-US".into(),
       margin: "normal".into(),

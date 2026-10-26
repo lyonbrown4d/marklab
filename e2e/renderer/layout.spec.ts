@@ -3,6 +3,66 @@ import { PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 import { test, expect } from './rendererTest.js'
 /* eslint-enable no-restricted-imports */
 
+test('scrolls recent workspace submenu within the viewport and keeps keyboard targets visible', async ({
+  session: { page },
+}, info) => {
+  await page.evaluate(() => {
+    const host = window as unknown as {
+      __marklabRendererFixtureInvoke: (
+        command: string,
+        args: Record<string, unknown>,
+      ) => Promise<unknown>
+    }
+    const invoke = host.__marklabRendererFixtureInvoke
+    host.__marklabRendererFixtureInvoke = (command, args) =>
+      command === 'recent_workspaces_list'
+        ? Promise.resolve(
+            Array.from({ length: 40 }, (_, index) => ({
+              path: `/recent/workspace-${index}`,
+              status: 'available',
+            })),
+          )
+        : invoke(command, args)
+  })
+  await page.setViewportSize({ width: 800, height: 600 })
+  await page.getByRole('button', { name: /^Workspace:/ }).click()
+  await page.getByRole('menuitem', { name: 'Recently opened', exact: true }).hover()
+  const submenu = page.getByRole('menu', { name: 'Recently opened', exact: true })
+  await expect(submenu).toBeVisible()
+  await expect(
+    submenu.getByRole('menuitem', { name: 'Open in new window: workspace-39', exact: true }),
+  ).toBeAttached()
+  const geometry = await submenu.evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      scroll: element.scrollHeight,
+      height: element.clientHeight,
+      overflow: getComputedStyle(element).overflowY,
+    }
+  })
+  expect(geometry.top).toBeGreaterThanOrEqual(0)
+  expect(geometry.bottom).toBeLessThanOrEqual(600)
+  expect(geometry.scroll).toBeGreaterThan(geometry.height)
+  expect(geometry.overflow).toBe('auto')
+  await submenu.hover()
+  await page.mouse.wheel(0, 600)
+  await expect.poll(() => submenu.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await submenu.focus()
+  await page.keyboard.press('End')
+  const last = submenu.getByRole('menuitem').last()
+  await expect(last).toBeFocused()
+  await expect(last).toBeInViewport({ ratio: 1 })
+  await info.attach('recent-workspace-submenu.png', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await page.keyboard.press('ArrowLeft')
+  await expect(submenu).toBeHidden()
+  await expect(page.getByRole('menuitem', { name: 'Recently opened', exact: true })).toBeFocused()
+})
+
 test('keeps the editor aligned with responsive Chromium viewport sizes', async ({
   session: { page },
 }) => {

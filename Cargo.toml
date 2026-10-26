@@ -7,3 +7,11 @@ resolver = "3"
 codegen-units = 1
 lto = "thin"
 strip = true
+
+# Typst hashes large system font files on first use. Optimize this bounded hot
+# path in development too, so Chinese PDF previews do not stall in debug builds.
+[profile.dev.package.typst-utils]
+opt-level = 2
+
+[profile.dev.package.siphasher]
+opt-level = 2

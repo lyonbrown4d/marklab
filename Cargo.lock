@@ -4632,7 +4632,10 @@ name = "marklab-document"
 version = "0.2.8"
 dependencies = [
  "base64 0.23.1",
+ "calamine",
  "chrono",
+ "csv",
+ "csv-core",
  "docx-rs",
  "imagesize 0.15.0",
  "memchr",

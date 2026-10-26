@@ -97,6 +97,14 @@ export const WorkspacePublicationSettingsPanel = ({
         )}
         <SettingsGroup label={t('workspaceExport.includeContent')}>
           <ToggleSetting
+            checked={options.includeLinkedSpreadsheets ?? false}
+            label={t('workspaceExport.includeLinkedSpreadsheets')}
+            onChange={(value) => onOptionChange('includeLinkedSpreadsheets', value)}
+          />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            {t('workspaceExport.spreadsheetImportHint')}
+          </p>
+          <ToggleSetting
             checked={options.cover}
             label={t('workspaceExport.cover')}
             onChange={(value) => onOptionChange('cover', value)}

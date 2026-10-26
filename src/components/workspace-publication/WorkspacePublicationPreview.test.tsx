@@ -25,6 +25,7 @@ const options: WorkspacePublicationOptions = {
   pageNumbers: true,
   pageSize: 'a4',
   tableOfContents: false,
+  includeLinkedSpreadsheets: false,
   title: 'Product Guide',
 }
 

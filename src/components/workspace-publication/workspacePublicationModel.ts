@@ -18,6 +18,7 @@ export const defaultPublicationOptions = (
 ): WorkspacePublicationOptions => ({
   cover: true,
   format: 'pdf',
+  includeLinkedSpreadsheets: false,
   locale,
   margin: 'normal',
   orientation: 'portrait',

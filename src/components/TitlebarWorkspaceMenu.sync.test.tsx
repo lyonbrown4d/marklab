@@ -83,19 +83,21 @@ const renderMenu = () => {
 describe('TitlebarWorkspaceMenu sync flow', () => {
   beforeEach(() => vi.mocked(recentWorkspaceApi.isAvailable).mockReturnValue(false))
 
-  it('closes the workspace menu and returns focus after removing a history entry', async () => {
+  it('keeps the recent submenu open after removing a history entry', async () => {
     vi.mocked(recentWorkspaceApi.isAvailable).mockReturnValue(true)
     vi.mocked(recentWorkspaceApi.list).mockResolvedValue([
       { path: 'C:/notes', status: 'available' },
     ])
     vi.mocked(recentWorkspaceApi.remove).mockResolvedValue(undefined)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     renderMenu()
     const trigger = screen.getByRole('button', { name: 'Workspace: Notes' })
     await user.click(trigger)
+    expect(recentWorkspaceApi.list).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('menuitem', { name: 'Recent' }))
     await user.click(await screen.findByRole('menuitem', { name: 'workspace.removeHistory' }))
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
-    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(screen.getByRole('menu', { name: 'Recent' })).toBeVisible()
+    expect(screen.getByRole('menu', { name: 'Recent' })).toHaveFocus()
     expect(recentWorkspaceApi.remove).toHaveBeenCalledWith('C:/notes')
   })
 

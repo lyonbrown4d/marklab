@@ -163,3 +163,7 @@ fn node_source(node: &Node, context: &Context) -> BackendResult<String> {
     }
   })
 }
+
+#[cfg(test)]
+#[path = "pdf_tests.rs"]
+mod tests;

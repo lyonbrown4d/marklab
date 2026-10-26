@@ -130,6 +130,9 @@ pub async fn export_open_output_path(
 pub(super) async fn source(
   workspace: &Workspace,
   chapter: ChapterRequest,
+  include_linked: bool,
+  locale: String,
+  cancelled: tokio_util::sync::CancellationToken,
 ) -> BackendResult<SourceDocument> {
   if chapter.path.is_empty()
     || chapter.path.len() > 2048
@@ -142,13 +145,15 @@ pub(super) async fn source(
     ));
   }
   let markdown = workspace.read_file(&chapter.path).await?;
-  let (markdown, urls) = tokio::task::spawn_blocking(move || {
-    let urls = assets::image_urls(&markdown);
-    (markdown, urls)
-  })
-  .await
-  .map_err(|error| BackendError::new("EXPORT_RENDER_FAILED", error.to_string()))?;
-  let assets = assets::load(workspace, &chapter.path, urls).await?;
+  let (markdown, assets) = assets::prepare(
+    workspace,
+    &chapter.path,
+    markdown,
+    include_linked,
+    locale,
+    cancelled,
+  )
+  .await?;
   Ok(SourceDocument {
     path: chapter.path,
     title: chapter.title,

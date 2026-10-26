@@ -26,7 +26,14 @@ pub fn title(path: &Path) -> String {
     .unwrap_or_else(|| "Document".into())
 }
 
-pub fn file(path: &Path, root: &Path, title: String) -> Result<SourceDocument> {
+pub fn file(
+  path: &Path,
+  root: &Path,
+  title: String,
+  include_linked: bool,
+  locale: &str,
+  cancelled: &CancellationToken,
+) -> Result<SourceDocument> {
   let metadata = std::fs::symlink_metadata(path)?;
   if metadata.file_type().is_symlink() {
     return Err(format!("Symlink sources are not followed: {}", path.display()).into());
@@ -40,6 +47,14 @@ pub fn file(path: &Path, root: &Path, title: String) -> Result<SourceDocument> {
     return Err(format!("Source is outside the resource root: {}", path.display()).into());
   }
   let markdown = text(File::open(&canonical)?)?;
+  let markdown = marklab_document::imports::prepare(
+    &root,
+    canonical.parent().ok_or("Input has no parent")?,
+    &markdown,
+    include_linked,
+    locale,
+    cancelled,
+  )?;
   let images = assets::load(&root, &canonical, assets::image_urls(&markdown))?;
   Ok(SourceDocument {
     path: canonical.to_string_lossy().into_owned(),
@@ -66,8 +81,19 @@ pub fn stdin_text(cancelled: &CancellationToken) -> Result<String> {
   }
 }
 
-pub fn stdin(root: Option<&Path>, cancelled: &CancellationToken) -> Result<SourceDocument> {
+pub fn stdin(
+  root: Option<&Path>,
+  include_linked: bool,
+  locale: &str,
+  cancelled: &CancellationToken,
+) -> Result<SourceDocument> {
   let markdown = stdin_text(cancelled)?;
+  let markdown = if marklab_document::imports::has_imports(&markdown, include_linked) {
+    let root = root.ok_or("Spreadsheet imports from stdin require --resource-root")?;
+    marklab_document::imports::prepare(root, root, &markdown, include_linked, locale, cancelled)?
+  } else {
+    markdown
+  };
   let urls = assets::image_urls(&markdown);
   let images = if urls.is_empty() {
     Default::default()

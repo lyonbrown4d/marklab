@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useProjectLoader } from '@/app/useProjectLoader'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
+import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 
 const api = vi.hoisted(() => ({
   renamePath: vi.fn(),
@@ -73,12 +74,14 @@ const mockTreeProjection = (value = snapshot()) => {
   )
   treeApi.initialFile.mockResolvedValue({ ...resultBase, path: value.entries[0]?.path ?? null })
 }
-const deferred = () => {
-  let resolve!: () => void
-  const promise = new Promise<void>((done) => {
+const deferred = <T = void,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (error: Error) => void
+  const promise = new Promise<T>((done, fail) => {
     resolve = done
+    reject = fail
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 beforeEach(() => {
   vi.resetAllMocks()
@@ -167,6 +170,60 @@ describe('workspace path mutation navigation', () => {
     })
     expect(props.setTabs).toHaveBeenCalled()
   })
+
+  it.each(['result', 'error'] as const)(
+    'discards an in-flight watcher %s across rename',
+    async (outcome) => {
+      const page = deferred<Awaited<ReturnType<typeof treeApi.listChildren>>>()
+      const native = deferred()
+      treeApi.listChildren.mockReturnValueOnce(page.promise)
+      treeApi.initialFile.mockResolvedValueOnce({
+        generation: 0,
+        revision: 1,
+        root: snapshot().root,
+        path: null,
+      })
+      api.renamePath.mockReturnValueOnce(native.promise)
+      const props = createProps({
+        tabs: [createFileTab('draft.md')],
+        activeTabId: 'file:edit:draft.md',
+        locationPathname: '/files/edit/draft.md',
+      })
+      const { result } = renderHook(() => useProjectLoader(props))
+      const refresh = result.current.loadWorkspace({ preserveCurrentRoute: true })
+      const mutation = result.current.renamePath('draft.md', 'renamed.md')
+      if (outcome === 'result')
+        await act(async () => {
+          page.resolve({
+            generation: 0,
+            revision: 1,
+            root: snapshot().root,
+            entries: [],
+            nextCursor: null,
+          })
+          await refresh
+        })
+      if (outcome === 'result') {
+        expect(props.setTabs).not.toHaveBeenCalled()
+        expect(props.setEntries).not.toHaveBeenCalled()
+        expect(useWorkspaceStore.getState().treeStatus).toBe('ready')
+      }
+      await act(async () => {
+        native.resolve()
+        await mutation
+      })
+      if (outcome === 'error')
+        await act(async () => {
+          page.reject(new Error('Obsolete tree refresh failed'))
+          await expect(refresh).resolves.toBeUndefined()
+        })
+      expect(api.createFile).not.toHaveBeenCalled()
+      expect(useWorkspaceStore.getState().treeStatus).toBe('ready')
+      expect(useWorkspaceStore.getState().treeError).toBeNull()
+      expect(props.setTabs).toHaveBeenCalledWith([createFileTab('renamed.md')])
+      expect(props.navigate).toHaveBeenLastCalledWith('/files/edit/renamed.md', { replace: true })
+    },
+  )
 
   it('does not apply old mutation results to another workspace', async () => {
     const pending = deferred()

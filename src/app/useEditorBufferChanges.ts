@@ -33,6 +33,7 @@ type EditorBufferChangesOptions = {
   scheduleFlush: () => void
   updateErrorMessage: () => string
   bufferSync: ReturnType<typeof createEditorBufferSync>
+  isPathBlocked: (workspace: string, path: string) => boolean
 }
 
 export const useEditorBufferChanges = ({
@@ -54,13 +55,14 @@ export const useEditorBufferChanges = ({
   scheduleFlush,
   updateErrorMessage,
   bufferSync,
+  isPathBlocked,
 }: EditorBufferChangesOptions) =>
   useCallback(
     (value: string, changes?: EditorTextChange[]) => {
       // Delayed editor notifications belong to the document that produced them.
       const path = activePath
       const workspace = binding.workspace
-      if (!path) return
+      if (!path || isPathBlocked(workspace, path)) return
       const contents = workspaceFileContentsRef.current[workspace]
       if (
         workspaceLoadingPathsRef.current[workspace]?.[path] ||
@@ -70,6 +72,9 @@ export const useEditorBufferChanges = ({
         return
 
       const identity = editorBufferIdentity(workspace, path)
+      // Cached text at a renamed path is not editable until a versioned
+      // snapshot has loaded. Delayed editor notifications must honor that too.
+      if (!loadedRevision && !bufferSync.revisionFor(identity)) return
       const currentLoadedVersion = loadedVersionsRef.current[identity]
       // A disposed editor must not overwrite a newer disk load of the same path.
       if (currentLoadedVersion !== undefined && currentLoadedVersion !== loadedVersion) return
@@ -166,5 +171,6 @@ export const useEditorBufferChanges = ({
       persistence,
       scheduleFlush,
       updateErrorMessage,
+      isPathBlocked,
     ],
   )

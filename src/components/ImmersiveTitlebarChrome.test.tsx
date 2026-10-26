@@ -288,11 +288,12 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(screen.queryByRole('button', { name: '只读浏览' })).not.toBeInTheDocument()
   })
 
-  it('lists all recent workspaces directly without a standalone history page', async () => {
+  it('lists all recent workspaces in a submenu without a standalone history page', async () => {
     const props = createProps()
     render(<ImmersiveTitlebarChrome {...props} />)
 
     await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '最近打开' }))
     const current = screen.getByRole('menuitem', { name: '在新窗口打开工作区：随笔' })
     expect(current).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('menuitem', { name: '在新窗口打开工作区：研究' })).toBeInTheDocument()
@@ -306,6 +307,7 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(props.onOpenProject).not.toHaveBeenCalled()
 
     await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '最近打开' }))
     await userEvent.click(screen.getByRole('menuitem', { name: '在新窗口打开工作区：研究' }))
     expect(props.onOpenProject).toHaveBeenCalledExactlyOnceWith('D:/研究')
   })
@@ -317,8 +319,8 @@ describe('ImmersiveTitlebarChrome', () => {
 
     screen.getByRole('button', { name: '工作区: 随笔' }).focus()
     await user.keyboard('{ArrowDown}')
-    await screen.findByRole('menuitem', { name: '在新窗口打开工作区：随笔' })
-    await user.keyboard('{ArrowDown}{ArrowDown}')
+    screen.getByRole('menuitem', { name: '最近打开' }).focus()
+    await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('menuitem', { name: '在新窗口打开工作区：随笔' })).toHaveFocus()
     await user.keyboard('{Enter}')
 
@@ -330,6 +332,7 @@ describe('ImmersiveTitlebarChrome', () => {
     render(<ImmersiveTitlebarChrome {...createProps()} workspaceWindowOpening />)
     await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
 
+    await userEvent.click(screen.getByRole('menuitem', { name: '最近打开' }))
     expect(screen.getByRole('menuitem', { name: '在新窗口打开工作区：随笔' })).toHaveAttribute(
       'data-disabled',
     )

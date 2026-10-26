@@ -127,6 +127,7 @@ export const fetchWorkspaceTreeProjection = async (tabs: WorkspaceTab[]) => {
 
 export const fetchWorkspaceLoadProjection = async (
   tabs: WorkspaceTab[],
+  isCurrent: () => boolean = () => true,
 ): Promise<{
   generation: number
   snapshot: WorkspaceLoadSnapshot
@@ -135,6 +136,7 @@ export const fetchWorkspaceLoadProjection = async (
 }> => {
   let projection = await fetchWorkspaceTreeProjection(tabs)
   if (
+    isCurrent() &&
     projection.root.kind !== 'single' &&
     !projection.entries.some((entry) => entry.kind === 'file')
   ) {

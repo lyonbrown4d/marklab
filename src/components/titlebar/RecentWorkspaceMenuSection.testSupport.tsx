@@ -44,14 +44,16 @@ const Harness = ({
           enabled={open}
           opening={false}
           onOpenProject={onOpenProject}
-          onRemoved={() => setOpen(false)}
         />
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-export const renderMenu = async (rootKind: RecentWorkspaceMenuData['rootKind'] = 'external') => {
+export const renderMenu = async (
+  rootKind: RecentWorkspaceMenuData['rootKind'] = 'external',
+  openRecent = true,
+) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -61,7 +63,8 @@ export const renderMenu = async (rootKind: RecentWorkspaceMenuData['rootKind'] =
       <Harness onOpenProject={onOpenProject} rootKind={rootKind} />
     </QueryClientProvider>,
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ skipHover: true })
   await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+  if (openRecent) await user.click(screen.getByRole('menuitem', { name: 'Recent' }))
   return { user, onOpenProject }
 }

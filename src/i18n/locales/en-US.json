@@ -129,6 +129,8 @@
   "workspaceExport.marginNormal": "Normal margins",
   "workspaceExport.marginNarrow": "Narrow margins",
   "workspaceExport.marginWide": "Wide margins",
+  "workspaceExport.includeLinkedSpreadsheets": "Expand linked spreadsheets",
+  "workspaceExport.spreadsheetImportHint": "Convert local Excel, CSV, and TSV links to tables. Embedded references expand automatically.",
   "workspaceExport.includeContent": "Include content",
   "workspaceExport.cover": "Cover page",
   "workspaceExport.tableOfContents": "Automatic table of contents",

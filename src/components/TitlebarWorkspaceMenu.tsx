@@ -151,16 +151,12 @@ export const TitlebarWorkspaceMenu = ({
             onConfigureWebDav={configureWebDav}
           />
           <DropdownMenuSeparator className={menuSeparatorStyles} />
-          <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            {recentWorkspaces.sectionLabel}
-          </DropdownMenuLabel>
           <DropdownMenuGroup>
             <RecentWorkspaceMenuSection
               data={recentWorkspaces}
               enabled={open}
               opening={workspaceWindowOpening}
               onOpenProject={onOpenProject}
-              onRemoved={() => setOpen(false)}
             />
             <DropdownMenuSeparator className={menuSeparatorStyles} />
             <DropdownMenuItem

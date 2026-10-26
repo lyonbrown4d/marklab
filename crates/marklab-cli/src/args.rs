@@ -97,6 +97,9 @@ pub struct ExportArgs {
   /// Allowed root for local images (required for images read from stdin).
   #[arg(long, value_hint = ValueHint::DirPath)]
   pub resource_root: Option<PathBuf>,
+  /// Render local spreadsheet links as appended tables in addition to explicit embeds.
+  #[arg(long)]
+  pub include_linked_spreadsheets: bool,
 }
 
 #[derive(ClapArgs)]
@@ -117,6 +120,9 @@ pub struct PublishArgs {
   pub overwrite: bool,
   #[arg(long, value_hint = ValueHint::DirPath)]
   pub resource_root: Option<PathBuf>,
+  /// Render local spreadsheet links as appended tables in addition to explicit embeds.
+  #[arg(long)]
+  pub include_linked_spreadsheets: bool,
 }
 
 fn default_jobs() -> usize {

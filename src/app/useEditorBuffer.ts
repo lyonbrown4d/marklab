@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLatest, useUnmount } from 'ahooks'
-import { produce } from 'immer'
 import { fsApi } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
-import { isTextFileViewPath } from '@/logic/fileTypes'
 import { toast } from 'sonner'
 import { useEditorBufferMarkers } from '@/app/useEditorBufferMarkers'
 import { useEditorBufferCache } from '@/app/useEditorBufferCache'
+import { useEditorBufferLoad } from '@/app/useEditorBufferLoad'
+import { useEditorBufferPathMutation } from '@/app/useEditorBufferPathMutation'
 import { useEditorBufferChanges } from '@/app/useEditorBufferChanges'
 import { registerEditorBufferFlusher } from '@/app/editorCloseLifecycle'
 import { editorLoadGenerationFromState } from '@/app/editorLoadRouteState'
@@ -39,12 +39,10 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   const state = useEditorBufferState(workspaceKey)
   const {
     loadedVersions,
-    setLoadedVersions,
     dirtyPaths,
     fileContents,
     loadingPaths,
     saveStates,
-    setPathLoading,
     setPathSaveState,
     setWorkspaceDirtyPaths,
     setWorkspaceFileContents,
@@ -76,7 +74,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   const latestContentsRef = useRef<Record<string, string>>({})
   const changeVersionRef = useRef<Record<string, number>>({})
   const loadedVersionsRef = useLatest(loadedVersions)
-  const loadToken = useRef(0)
+  const loadTokenRef = useRef(0)
   const activeLoadRef = useRef<{ path: string; token: number; workspace: string } | null>(null)
   const workspaceSessionRef = useRef(workspaceKey)
   const externalGeneration = useEditorBufferInvalidation(
@@ -136,7 +134,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     if (workspaceSessionRef.current === workspaceKey) return
     const previousWorkspace = workspaceSessionRef.current
     workspaceSessionRef.current = workspaceKey
-    loadToken.current += 1
+    loadTokenRef.current += 1
     syncedContentsRef.current = {}
     latestContentsRef.current = {}
     changeVersionRef.current = {}
@@ -147,111 +145,31 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     )
   }, [bufferSync, flushNow, persistence, reportFlushError, workspaceKey])
 
-  useEffect(() => {
-    const previousLoad = activeLoadRef.current
-    if (previousLoad) {
-      activeLoadRef.current = null
-      setPathLoading(previousLoad.workspace, previousLoad.path, false)
-    }
+  const { beginPathMutation, pathMutationPending, mutationGeneration, isPathBlocked } =
+    useEditorBufferPathMutation({ activePath, workspaceKey, state, loadTokenRef, activeLoadRef })
 
-    if (!activePath || !isDesktopRuntime() || !isTextFileViewPath(activePath)) return
-
-    const identity = editorBufferIdentity(workspaceKey, activePath)
-    const hasLocalChange = Boolean(dirtyPathsRef.current[activePath])
-    const hasLoadedContent = Object.prototype.hasOwnProperty.call(
-      fileContentsRef.current,
-      activePath,
-    )
-    if (hasLocalChange || (hasLoadedContent && syncedContentsRef.current[identity] != null)) return
-
-    const token = loadToken.current + 1
-    loadToken.current = token
-    activeLoadRef.current = { path: activePath, token, workspace: workspaceKey }
-    const version = changeVersionRef.current[identity]
-    const isCurrentLoad = () =>
-      loadToken.current === token &&
-      changeVersionRef.current[identity] === version &&
-      !dirtyPathsRef.current[activePath]
-    setPathLoading(workspaceKey, activePath, !hasLoadedContent)
-
-    void fsApi
-      .openBufferSnapshot(activePath)
-      .then((snapshot) => {
-        const { content } = snapshot
-        if (!isCurrentLoad()) return
-        bufferSync.seed(identity, content, snapshot)
-        setWorkspaceFileContents((prev) =>
-          produce(prev, (draft) => {
-            const contents = draft[workspaceKey] ?? (draft[workspaceKey] = {})
-            contents[activePath] = content
-          }),
-        )
-        setLoadedVersions((previous) => ({ ...previous, [identity]: token }))
-        latestContentsRef.current[identity] = content
-        syncedContentsRef.current[identity] = content
-        delete changeVersionRef.current[identity]
-        persistence.resetDocument(identity)
-        setWorkspaceDirtyPaths((prev) =>
-          produce(prev, (draft) => {
-            const dirty = draft[workspaceKey]
-            if (dirty?.[activePath]) delete dirty[activePath]
-          }),
-        )
-        setPathSaveState(workspaceKey, activePath, { status: 'saved' })
-      })
-      .catch((error) => {
-        if (!isCurrentLoad()) return
-        if (!hasLoadedContent) {
-          setWorkspaceFileContents((prev) =>
-            produce(prev, (draft) => {
-              const contents = draft[workspaceKey]
-              if (!contents || !Object.prototype.hasOwnProperty.call(contents, activePath)) return
-              delete contents[activePath]
-              if (Object.keys(contents).length === 0) delete draft[workspaceKey]
-            }),
-          )
-          delete latestContentsRef.current[identity]
-          delete syncedContentsRef.current[identity]
-          delete changeVersionRef.current[identity]
-          persistence.deleteRevision(identity)
-        }
-        toast.error(tRef.current('editor.openFileFailed'), {
-          id: BUFFER_ERROR_TOAST_ID_PREFIX + ':open:' + activePath,
-          description: String(error),
-        })
-        setPathSaveState(workspaceKey, activePath, {
-          status: 'error',
-          message: String(error),
-        })
-      })
-      .finally(() => {
-        if (loadToken.current !== token) return
-        activeLoadRef.current = null
-        setPathLoading(workspaceKey, activePath, false)
-      })
-
-    return () => {
-      if (loadToken.current === token) loadToken.current += 1
-    }
-  }, [
+  useEditorBufferLoad({
     activePath,
-    bufferSync,
-    dirtyPathsRef,
-    fileContentsRef,
+    workspaceKey,
     loadGeneration,
     externalGeneration,
+    mutationGeneration,
+    isPathBlocked,
+    state,
+    bufferSync,
     persistence,
-    setPathLoading,
-    setPathSaveState,
-    setWorkspaceDirtyPaths,
-    setWorkspaceFileContents,
-    setLoadedVersions,
+    loadTokenRef,
+    activeLoadRef,
+    dirtyPathsRef,
+    fileContentsRef,
+    latestContentsRef,
+    syncedContentsRef,
+    changeVersionRef,
     tRef,
-    workspaceKey,
-  ])
+  })
 
   useUnmount(() => {
-    loadToken.current += 1
+    loadTokenRef.current += 1
     activeLoadRef.current = null
     void flushNow().catch(reportFlushError)
   })
@@ -293,6 +211,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     scheduleFlush,
     updateErrorMessage,
     bufferSync,
+    isPathBlocked,
   })
   const onPersistedContentChange = usePersistedEditorBufferContent({
     bufferSync,
@@ -313,5 +232,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     saveStates,
     onEditorChange,
     onPersistedContentChange,
+    beginPathMutation,
+    pathMutationPending,
   }
 }

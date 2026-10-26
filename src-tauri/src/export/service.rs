@@ -104,7 +104,14 @@ impl ExportService {
         let snapshot_guard = registry.lock_binding(window.label(), &workspace).await?;
         for chapter in chapters {
           super::check_cancelled(&task.cancelled)?;
-          let document = super::commands::source(&workspace, chapter).await?;
+          let document = super::commands::source(
+            &workspace,
+            chapter,
+            options.include_linked_spreadsheets,
+            options.locale.clone(),
+            task.cancelled.clone(),
+          )
+          .await?;
           text_bytes += document.markdown.len();
           image_bytes += document.assets.values().map(Vec::len).sum::<usize>();
           if text_bytes > 64 * 1024 * 1024 || image_bytes > 100 * 1024 * 1024 {

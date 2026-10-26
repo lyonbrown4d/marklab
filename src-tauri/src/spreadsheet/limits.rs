@@ -2,8 +2,8 @@ use super::{ReadPageRequest, SpreadsheetPage};
 use crate::error::{BackendError, BackendResult};
 
 pub const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
-pub const MAX_INFLATED_BYTES: u64 = 32 * 1024 * 1024;
-pub const MAX_XML_BYTES: u64 = 8 * 1024 * 1024;
+#[cfg(test)]
+pub use marklab_document::spreadsheet::MAX_XML_BYTES;
 pub const MAX_COLUMNS: usize = 256;
 pub const MAX_ROWS: usize = 500;
 pub const DEFAULT_ROWS: usize = 200;

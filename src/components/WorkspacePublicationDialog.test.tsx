@@ -104,6 +104,26 @@ describe('WorkspacePublicationDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it('lets users explicitly expand linked spreadsheets in the publication', async () => {
+    render(
+      <PlateDndProvider>
+        <WorkspacePublicationDialog onOpenChange={vi.fn()} open rootPath="/workspace" />
+      </PlateDndProvider>,
+    )
+    await screen.findAllByText('Product Guide')
+    const toggle = screen.getByRole('switch', { name: 'workspaceExport.includeLinkedSpreadsheets' })
+    expect(toggle).not.toBeChecked()
+    fireEvent.click(toggle)
+    expect(toggle).toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: 'Export PDF' }))
+    await waitFor(() => expect(workspacePublicationApi.exportPublication).toHaveBeenCalledOnce())
+    expect(workspacePublicationApi.exportPublication).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ includeLinkedSpreadsheets: true }),
+      '/workspace',
+    )
+  })
+
   it('keeps chapter selection while switching between the compact preview and export settings', async () => {
     render(
       <PlateDndProvider>

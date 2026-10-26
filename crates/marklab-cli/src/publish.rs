@@ -117,6 +117,7 @@ pub fn run(
     args.title.or(title).unwrap_or_else(|| "Publication".into()),
   );
   options.locale = args.locale.or(locale).unwrap_or_else(|| "en-US".into());
+  options.include_linked_spreadsheets = args.include_linked_spreadsheets;
   options.cover = true;
   options.table_of_contents = true;
   options.page_breaks = true;
@@ -142,7 +143,14 @@ pub fn run(
     if title.trim().is_empty() || title.chars().count() > 200 {
       return Err("Chapter title must contain 1–200 characters".into());
     }
-    let mut document = source::file(&chapter.path, &resource_root, title)?;
+    let mut document = source::file(
+      &chapter.path,
+      &resource_root,
+      title,
+      args.include_linked_spreadsheets,
+      &options.locale,
+      cancelled,
+    )?;
     text_bytes += document.markdown.len();
     image_bytes += document.assets.values().map(Vec::len).sum::<usize>();
     if text_bytes > source::MAX_TEXT || image_bytes > MAX_TOTAL_IMAGE_BYTES {

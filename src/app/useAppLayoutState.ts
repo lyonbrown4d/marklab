@@ -128,19 +128,12 @@ export const useAppLayoutState = () => {
   const activePathUnavailable = Boolean(
     editorBufferPath && unavailableTreePaths.includes(editorBufferPath),
   )
-  const {
-    fileContents,
-    editorValue,
-    dirtyPaths,
-    loadingPaths,
-    saveStates,
-    onEditorChange,
-    onPersistedContentChange,
-  } = useEditorBuffer({
-    activePath: editorBufferPath,
-    workspaceKey,
-    openPaths: tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
-  })
+  const { fileContents, editorValue, dirtyPaths, loadingPaths, saveStates, ...editorBuffer } =
+    useEditorBuffer({
+      activePath: editorBufferPath,
+      workspaceKey,
+      openPaths: tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
+    })
 
   const {
     loadWorkspace,
@@ -173,6 +166,7 @@ export const useAppLayoutState = () => {
     onWorkspaceOpened: recoveryBridge.onWorkspaceOpened,
     onBeforeWorkspaceOpen: recoveryBridge.onBeforeWorkspaceOpen,
     rootSwitchingRef: recoveryBridge.rootSwitchingRef,
+    onBeforePathMutation: editorBuffer.beginPathMutation,
   })
   useMarkdownFileDrop(openFolder)
   const {
@@ -263,7 +257,8 @@ export const useAppLayoutState = () => {
     defaultFileView,
     graphMiniMapEnabled,
     graphContentMode,
-    editorReadOnlyMode: editorReadOnlyMode || activePathUnavailable,
+    editorReadOnlyMode:
+      editorReadOnlyMode || activePathUnavailable || editorBuffer.pathMutationPending,
     shortcutOverrides,
     viewMode,
     workspaceView,
@@ -279,8 +274,8 @@ export const useAppLayoutState = () => {
     isMaximized,
     setIsMaximized,
     ...workspaceTabActions,
-    onEditorChange,
-    onPersistedContentChange,
+    onEditorChange: editorBuffer.onEditorChange,
+    onPersistedContentChange: editorBuffer.onPersistedContentChange,
     onOpenWorkspaceFiles,
     onSelectProject: onSelectFolder,
     onCreateWorkspace,
