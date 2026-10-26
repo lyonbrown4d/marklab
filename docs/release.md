@@ -24,6 +24,15 @@ Cargo credentials must have permission to publish both package names. Keep
 tokens out of Git, command arguments, and logs; `cargo login` prompts for one.
 Published versions cannot be overwritten, so fixes require a new version.
 
+If Cargo reports that the library was uploaded but times out waiting for its
+registry index entry, verify its version on crates.io and wait for the index to
+become available. Do not upload that library version again. Once Cargo can
+resolve it, resume only the unpublished CLI:
+
+```bash
+cargo publish -p marklab-cli --locked
+```
+
 After publishing, verify installation outside the checkout:
 
 ```bash
