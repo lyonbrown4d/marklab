@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager, menu::MenuItem};
 #[derive(Default)]
 pub struct MenuState {
-  pub(super) items: Mutex<Vec<(MenuItem<tauri::Wry>, String)>>,
+  pub(super) items: Mutex<Vec<(MenuItem<tauri::DynRuntime>, String)>>,
   pub(super) locale: Mutex<String>,
 }
 const ACTIONS: &[&str] = &[

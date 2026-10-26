@@ -15,6 +15,17 @@ export const applicationIdentifier = () =>
     return host.__TAURI_INTERNALS__.invoke('plugin:app|identifier').catch(() => null)
   })
 
+// Driver handles identify automation targets; persistent session owners use Tauri labels.
+export const currentWindowLabel = () =>
+  browser.execute(() => {
+    const host = window as unknown as {
+      __TAURI_INTERNALS__?: { metadata: { currentWindow: { label: string } } }
+    }
+    const label = host.__TAURI_INTERNALS__?.metadata.currentWindow.label
+    if (!label) throw new Error('The active Tauri window label is unavailable')
+    return label
+  })
+
 export const currentRoot = () =>
   browser.execute(async () => {
     const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
@@ -82,11 +93,17 @@ export const openEditor = async (file = 'Editor.md') => {
             ?.getAttribute('data-editor-document-path') === expected &&
           editor
             .closest('[data-editor-transition-phase]')
-            ?.getAttribute('data-editor-transition-phase') === 'idle'
+            ?.getAttribute('data-editor-transition-phase') === 'idle' &&
+          editor.contains(document.activeElement)
         )
       }, file),
     { timeout: 90_000, timeoutMsg: `The editor did not finish loading ${file}` },
   )
+  // A closing Radix drawer retains its outside-click listener through its exit
+  // animation. Wait for removal before a later action reopens that drawer.
+  await browser
+    .$('[data-app-focus-zone="sidebar"][data-state="closed"]')
+    .waitForExist({ reverse: true })
 }
 
 export const waitForWindowPresentation = async () => {

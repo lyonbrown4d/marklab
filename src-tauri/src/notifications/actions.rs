@@ -1,4 +1,5 @@
 use super::{Action, Request};
+use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
 pub(super) async fn run(app: &tauri::AppHandle, request: Request) {

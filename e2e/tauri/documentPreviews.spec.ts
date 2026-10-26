@@ -36,7 +36,11 @@ const selectFile = async (name: string) => {
     await browser
       .$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-panel-left)')
       .click({ button: 'left' })
-  const button = await browser.$(`button[data-file-tree-node]=${name}`)
+  await browser.$('[data-app-focus-zone="sidebar"][data-state="open"]').waitForDisplayed()
+  // Match the filename span, independent of the driver's button-text strategy.
+  const button = await browser.$(
+    `//button[@data-file-tree-node="true"][span[normalize-space()=${JSON.stringify(name)}]]`,
+  )
   await button.waitForExist()
   await button.scrollIntoView()
   await button.waitForDisplayed()

@@ -1,10 +1,10 @@
 # Tauri 桌面迁移
 
-默认桌面入口已切换为 Tauri 2：React 负责界面，Rust 服务负责文件、持久化、索引、Git、PTY、同步和原生窗口。Node.js 用于前端和构建工具，不随 Tauri 应用作为后端运行时分发。Electron 源码、Node 后端、preload、打包依赖和专用脚本已移除，历史测量保留在 `docs/performance/`。
+默认桌面入口使用 Tauri 3 alpha：Windows 使用 Wry/WebView2，macOS 和 Linux 使用 CEF。React 负责界面，Rust 服务负责文件、持久化、索引、Git、PTY、同步和原生窗口。Node.js 用于前端和构建工具，不随 Tauri 应用作为后端运行时分发。Electron 源码、Node 后端、preload、打包依赖和专用脚本已移除，历史测量保留在 `docs/performance/`。
 
 ## 开发和打包
 
-安装 [Tauri 官方平台依赖](https://v2.tauri.app/start/prerequisites/)、Rust 1.99.1 或更新版本、Node.js 24 LTS 和 pnpm 12.11.2，再运行：
+安装 [Tauri 平台依赖](https://v3.tauri.app/start/prerequisites/)、Rust 1.99.1 或更新版本、Node.js 24 LTS 和 pnpm 12.15.0。macOS 还需要 CMake 和 Ninja；Linux 使用 GTK 4.12 或更新版本，CI 使用 Ubuntu 24.04 的 `libgtk-4-dev`，不再使用 WebKitGTK。Linux 原生窗口使用 X11；Wayland 会话需要可用的 XWayland 和 `DISPLAY`。再运行：
 
 ```bash
 pnpm install --frozen-lockfile
@@ -14,7 +14,7 @@ pnpm dev
 | 命令                                                     | 行为                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------ |
 | `pnpm dev` / `pnpm dev:desktop` / `pnpm tauri:dev`       | 启动 Tauri 开发窗口与 Vite                             |
-| `pnpm build` / `pnpm build:desktop` / `pnpm tauri:build` | 构建前端和 Rust release 二进制，不打包                 |
+| `pnpm build` / `pnpm build:desktop` / `pnpm tauri:build` | 构建前端和 Rust release；macOS 同时生成可运行 app      |
 | `pnpm package` / `pnpm dist` / `pnpm tauri:bundle`       | 构建后为当前主机打包                                   |
 | `pnpm dist:mac`                                          | macOS ARM：`aarch64-apple-darwin`，app 和 dmg          |
 | `pnpm dist:win`                                          | Windows x64：`x86_64-pc-windows-msvc`，NSIS 和 MSI     |
@@ -22,6 +22,10 @@ pnpm dev
 | `pnpm build:renderer`                                    | 仅构建 React 与独立 HTML 入口                          |
 
 平台命令应在对应操作系统和本机工具链上执行；这些命令不提供跨平台编译环境。未指定 target 的产物位于 `src-tauri/target/release/`，指定后位于 `src-tauri/target/<target>/release/`，安装包在其 `bundle/` 下。默认 `package` 与 `dist` 使用主机可用的 Tauri bundle 类型。
+
+CEF 首次构建会下载约 1 GB 的浏览器分发包，默认缓存位于 macOS 的 `~/Library/Caches/tauri-cef` 或 Linux 的 `~/.cache/tauri-cef`。可用 `CEF_PATH` 指向已有分发包。直接运行 Cargo 时需显式设置 `CEF_PATH` 为同一缓存目录；Tauri CLI、`pnpm tauri:check` / `pnpm tauri:test`、绑定生成脚本和 CI 已设置共享路径，避免为不同 Cargo 构建目录重复下载。macOS 的 CEF 需要 app 内的 framework 和 helper，因此开发入口由 Tauri CLI 自动创建 app，构建入口也会生成 app；直接启动裸 `target/*/marklab-desktop` 无法验证图形界面。CEF 随应用分发，安装包体积和运行时内存须重新测量，历史 WebKit 测量不代表当前版本。[CEF 官方说明](https://v3.tauri.app/develop/cef/)记录了开发与打包要求。
+
+当前使用 Tauri 3 alpha 依赖，接口和打包行为仍可能变化。原生验收改为 CEF ChromeDriver（macOS/Linux）及 Tauri driver + Edge WebDriver（Windows），不会通过旧版嵌入式 WebDriver 插件运行；构建、隔离和驱动前提见 [原生测试说明](../e2e/tauri/README.md)。新运行时的跨平台验收尚须以实际运行结果为准。
 
 构建与测试默认使用仓库内 `src-tauri/target`，不把普通 target 输出重定向到临时目录。前端 Chromium 测试通过 `pnpm test:renderer:e2e` 运行，性能入口为 `pnpm test:perf`、`pnpm test:perf:software` 和 `pnpm test:perf:all`；这些测试只验证生产 renderer 与测试夹具，不替代原生窗口验收。当前打包与 Windows 验证边界见[发布说明](release.md)。
 

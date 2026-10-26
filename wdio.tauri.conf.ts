@@ -1,35 +1,42 @@
-import type { TauriCapabilities } from '@wdio/tauri-service'
+import type {} from '@wdio/types'
+import type {} from 'webdriverio'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 // eslint-disable-next-line no-restricted-imports -- Native test configuration only.
 import { fixturePaths } from './e2e/tauri/fixturePaths.js'
+// eslint-disable-next-line no-restricted-imports -- Native test configuration only.
+import { applicationBinary, usesCef } from './e2e/tauri/application.ts'
 
 const repository = fileURLToPath(new URL('./', import.meta.url))
 const fixture = fixturePaths()
-const binaryVariant =
-  process.env.MARKLAB_E2E_CANVAS_BASELINE === '1'
-    ? '-uninstrumented'
-    : process.env.MARKLAB_E2E_BASELINE === '1'
-      ? '-baseline'
-      : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
-        ? '-react-profiler'
-        : ''
-const binary = path.join(
-  repository,
-  `src-tauri/target/debug/marklab-desktop${binaryVariant}${process.platform === 'win32' ? '.exe' : ''}`,
-)
+const binary = applicationBinary()
 const driverPort = Number(process.env.MARKLAB_E2E_DRIVER_PORT)
 if (!Number.isInteger(driverPort) || driverPort < 1024 || driverPort > 65535)
   throw new Error('Native E2E requires its allocated loopback driver port')
 const artifacts = path.join(repository, 'test-results/tauri')
-const capability: TauriCapabilities = {
-  browserName: 'tauri',
-  'tauri:options': { application: binary },
-  // Splash can disappear while the driver queries its user agent. Bind the
-  // session to the durable application root using the service's native option.
-  'wdio:tauriServiceOptions': { windowLabel: 'main' },
-}
+if (usesCef && !/^\d+\.\d+\.\d+\.\d+$/.test(process.env.MARKLAB_E2E_CHROMIUM_VERSION ?? ''))
+  throw new Error('Launch CEF through the native E2E runner before loading its WDIO config')
+const capability = usesCef
+  ? {
+      browserName: 'chrome',
+      'wdio:enforceWebDriverClassic': true,
+      browserVersion: process.env.MARKLAB_E2E_CHROMIUM_VERSION,
+      // The binary and version prevent WDIO from downloading a separate Chrome.
+      'goog:chromeOptions': { binary, debuggerAddress: `127.0.0.1:${driverPort}` },
+      'wdio:chromedriverOptions': {
+        allowedIps: ['127.0.0.1'],
+        allowedOrigins: ['http://127.0.0.1'],
+        ...(process.env.MARKLAB_E2E_CHROMEDRIVER
+          ? { binary: process.env.MARKLAB_E2E_CHROMEDRIVER }
+          : {}),
+      },
+    }
+  : {
+      browserName: 'tauri',
+      'tauri:options': { application: binary },
+      'wdio:tauriServiceOptions': { windowLabel: 'main' },
+    }
 
 const selectedSpecs = (() => {
   const source = process.env.MARKLAB_E2E_SPEC_FILES
@@ -74,28 +81,29 @@ export const config: WebdriverIO.Config = {
   specs: [selectedSpecs.length > 0 ? selectedSpecs : defaultSpecs],
   maxInstances: 1,
   capabilities: [capability],
-  services: [
-    [
-      '@wdio/tauri-service',
-      {
-        driverProvider: 'embedded',
-        appBinaryPath: binary,
-        appArgs: ['--workspace', fixture.performance ?? fixture.alpha],
-        embeddedPort: driverPort,
-        autoInstallTauriDriver: false,
-        autoDownloadEdgeDriver: false,
-        captureBackendLogs: false,
-        captureFrontendLogs: false,
-        startTimeout: 90_000,
-        commandTimeout: 20_000,
-        env: {
-          MARKLAB_E2E_DATA_DIR: fixture.data,
-          MARKLAB_E2E_CACHE_DIR: fixture.cache,
-          TAURI_WEBDRIVER_PORT: String(driverPort),
-        },
-      },
-    ],
-  ],
+  services: usesCef
+    ? []
+    : [
+        [
+          '@wdio/tauri-service',
+          {
+            driverProvider: 'external',
+            appBinaryPath: binary,
+            appArgs: ['--workspace', fixture.performance ?? fixture.alpha],
+            tauriDriverPort: driverPort,
+            autoInstallTauriDriver: false,
+            autoDownloadEdgeDriver: true,
+            captureBackendLogs: false,
+            captureFrontendLogs: false,
+            startTimeout: 90_000,
+            commandTimeout: 20_000,
+            env: {
+              MARKLAB_E2E_DATA_DIR: fixture.data,
+              MARKLAB_E2E_CACHE_DIR: fixture.cache,
+            },
+          },
+        ],
+      ],
   framework: 'mocha',
   reporters: ['spec'],
   logLevel: 'warn',

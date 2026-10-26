@@ -5,13 +5,14 @@ use ::windows::{
   },
   core::BOOL,
 };
+use tauri_runtime_wry::WebviewWryExt;
 use webview2_com::{
   AcceleratorKeyPressedEventHandler, FocusChangedEventHandler, Microsoft::Web::WebView2::Win32::*,
 };
 
 pub async fn action(view: &Webview, action: &'static str) -> BackendResult<()> {
   let (sender, receiver) = tokio::sync::oneshot::channel();
-  view.with_webview(move |platform| {
+  view.with_wry_webview(move |platform| {
     let result = (|| -> ::windows::core::Result<()> {
       // SAFETY: Tauri dispatches this closure on the owning COM/UI thread.
       let webview = unsafe { platform.controller().CoreWebView2()? };
@@ -33,7 +34,7 @@ pub async fn action(view: &Webview, action: &'static str) -> BackendResult<()> {
     .map_err(|_| failure("Native web tab action was cancelled"))?
 }
 pub fn refresh(manager: WebTabs, window: TrustedWindow, id: String, view: &Webview) {
-  let _ = view.with_webview(move |platform| {
+  let _ = view.with_wry_webview(move |platform| {
     let result = (|| -> ::windows::core::Result<(bool, bool)> {
       let webview = unsafe { platform.controller().CoreWebView2()? };
       let mut back = BOOL::default();
@@ -60,7 +61,7 @@ pub async fn install_monitor(
   focused: std::sync::Arc<std::sync::atomic::AtomicBool>,
 ) -> BackendResult<Option<usize>> {
   let (sender, receiver) = tokio::sync::oneshot::channel();
-  view.with_webview(move |platform| {
+  view.with_wry_webview(move |platform| {
     let handler = AcceleratorKeyPressedEventHandler::create(Box::new(move |_, event| {
       let Some(event) = event else {
         return Ok(());
@@ -154,7 +155,7 @@ pub fn remove_monitor(view: &Webview, token: Option<usize>) {
     token
       .focused
       .store(false, std::sync::atomic::Ordering::Release);
-    let _ = view.with_webview(move |platform| {
+    let _ = view.with_wry_webview(move |platform| {
       let controller = platform.controller();
       unsafe {
         let _ = controller.remove_AcceleratorKeyPressed(token.keys);
@@ -170,7 +171,7 @@ pub async fn focused(
 ) -> BackendResult<bool> {
   let (sender, receiver) = tokio::sync::oneshot::channel();
   // The UI-thread barrier observes native GotFocus/LostFocus before answering.
-  view.with_webview(move |platform| {
+  view.with_wry_webview(move |platform| {
     let mut visible = BOOL::default();
     let result = unsafe { platform.controller().IsVisible(&mut visible) }
       .map(|_| visible.as_bool() && focused.load(std::sync::atomic::Ordering::Acquire))

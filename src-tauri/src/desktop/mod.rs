@@ -23,6 +23,7 @@ mod menus;
 mod native_edit;
 mod policy;
 mod protocol;
+mod runtime;
 mod startup;
 mod transitions;
 mod visibility;
@@ -34,7 +35,21 @@ use crate::error::BackendResult;
 pub(crate) use flush::with_flushed_windows;
 use tauri::Manager;
 pub fn run() -> BackendResult<()> {
-  let builder = tauri::Builder::default()
+  // Parse app arguments before the browser sees switches or creates windows.
+  let context = tauri::generate_context!();
+  let outcome = tauri::async_runtime::block_on(async {
+    let cwd = std::env::current_dir()?;
+    cli::prepare_arguments(std::env::args().collect(), &cwd, context.package_info()).await
+  })?;
+  let paths = match outcome {
+    cli::Outcome::Open(paths) => paths,
+    cli::Outcome::Output(output) => {
+      println!("{output}");
+      return Ok(());
+    }
+  };
+  let builder = runtime::builder()?
+    .manage(cli::LaunchArguments(paths))
     .manage(startup::StartupState::default())
     .manage(launch::LaunchState::default())
     .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -97,7 +112,6 @@ pub fn run() -> BackendResult<()> {
         log::warn!("Could not dispatch forwarded command line: {error}");
       }
     }))
-    .plugin(tauri_plugin_cli::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_clipboard_manager::init())
@@ -139,30 +153,7 @@ pub fn run() -> BackendResult<()> {
     .invoke_handler(invoke::handler());
   #[cfg(target_os = "linux")]
   let builder = builder.manage(hyprland_windows::HyprlandWindows::detect());
-  #[cfg(target_os = "macos")]
-  let builder = builder.plugin(tauri_plugin_macos_fps::init());
-  #[cfg(all(feature = "e2e-testing", debug_assertions))]
-  let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
-  let app = builder.build(tauri::generate_context!())?;
-  let arguments = std::env::args().collect();
-  let outcome = tauri::async_runtime::block_on(async {
-    let cwd = std::env::current_dir()?;
-    cli::prepare(app.handle(), arguments, &cwd).await
-  });
-  match outcome {
-    Ok(cli::Outcome::Open(paths)) => {
-      app.manage(cli::LaunchArguments(paths));
-    }
-    Ok(cli::Outcome::Output(output)) => {
-      println!("{output}");
-      tauri_plugin_single_instance::destroy(&app);
-      return Ok(());
-    }
-    Err(error) => {
-      tauri_plugin_single_instance::destroy(&app);
-      return Err(error);
-    }
-  }
+  let app = builder.build(context)?;
   app.run(lifecycle::run_event);
   Ok(())
 }

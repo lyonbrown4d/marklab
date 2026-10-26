@@ -17,7 +17,7 @@ concurrency:
 env:
   CI: 'true'
   NODE_VERSION: '24'
-  PNPM_VERSION: '12.11.2'
+  PNPM_VERSION: '12.15.0'
 
 jobs:
   software-rendering:

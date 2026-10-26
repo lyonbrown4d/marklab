@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { browser } from '@wdio/globals'
+// eslint-disable-next-line no-restricted-imports -- Real native geometry; no ChromeDriver attach extension.
+import { getNativeWindowRect, setNativeWindowRect } from './windowGeometry.ts'
 /* eslint-disable no-restricted-imports -- Native UI acceptance uses only generated documents. */
 import { fixturePaths } from './fixturePaths.js'
 import { assertWindowButtonsAligned } from './windowButtons.js'
@@ -12,7 +14,7 @@ import { openEditor, switchToWorkspace } from './nativeHarness.js'
 describe('native floating webpage tabs', () => {
   it('keeps navigation usable without a tab spacer and restores the native page after collapse', async () => {
     const fixture = fixturePaths()
-    const original = await browser.getWindowRect()
+    const original = await getNativeWindowRect()
     try {
       await fs.writeFile(
         path.join(fixture.alpha, 'NativeWeb.md'),
@@ -24,7 +26,7 @@ describe('native floating webpage tabs', () => {
       await switchToWorkspace(fixture.alpha)
       await browser.setTimeout({ script: 60_000 })
       for (const width of [900, 640]) {
-        await browser.setWindowRect(120, 140, width, 700)
+        await setNativeWindowRect(120, 140, width, 700)
         await openEditor('NativeWeb.md')
         await browser
           .$(
@@ -177,7 +179,7 @@ describe('native floating webpage tabs', () => {
       }
     } finally {
       await browser.setTimeout({ script: 20_000 })
-      await browser.setWindowRect(original.x, original.y, original.width, original.height)
+      await setNativeWindowRect(original.x, original.y, original.width, original.height)
     }
   })
 })

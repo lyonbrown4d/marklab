@@ -65,8 +65,8 @@ pub fn unregister(app: &tauri::AppHandle, label: &str) -> BackendResult<()> {
     .ok_or_else(|| BackendError::new("WINDOW_STATE", "Window registry is not initialized"))?
     .remove(label)
 }
-impl<'de> CommandArg<'de, tauri::Wry> for TrustedWindow {
-  fn from_command(command: CommandItem<'de, tauri::Wry>) -> Result<Self, InvokeError> {
+impl<'de> CommandArg<'de, tauri::DynRuntime> for TrustedWindow {
+  fn from_command(command: CommandItem<'de, tauri::DynRuntime>) -> Result<Self, InvokeError> {
     let webview = command.message.webview();
     let window = webview.window();
     if !is_trusted(&webview) {

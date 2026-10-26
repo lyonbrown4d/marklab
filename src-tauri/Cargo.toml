@@ -12,8 +12,8 @@ name = "marklab_desktop"
 crate-type = ["rlib"]
 
 [features]
-ipc-codegen = ["dep:specta-typescript", "tauri-specta/typescript"]
-e2e-testing = ["dep:tauri-plugin-wdio-webdriver", "tauri/custom-protocol"]
+ipc-codegen = ["dep:specta-typescript", "dep:specta-serde", "dep:specta-util"]
+e2e-testing = ["tauri/custom-protocol"]
 
 [[bin]]
 name = "generate-desktop-bindings"
@@ -21,26 +21,26 @@ path = "src/bin/generate_desktop_bindings.rs"
 required-features = ["ipc-codegen"]
 
 [build-dependencies]
-tauri-build = { version = "2.7.4", features = [] }
+tauri-build = { version = "=3.0.0-alpha.4", features = [] }
 
 [dependencies]
 marklab-document = { path = "../crates/marklab-document", features = ["specta"] }
-tauri = { version = "2.12.5", features = ["unstable"] }
-tauri-plugin-cli = "2.5.0"
-tauri-plugin-dialog = "2.8.3"
-tauri-plugin-opener = "2.7.2"
-tauri-plugin-clipboard-manager = "2.5.0"
-tauri-plugin-deep-link = "2.6.2"
-tauri-plugin-single-instance = { version = "2.5.4", features = ["deep-link"] }
-tauri-plugin-log = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-wdio-webdriver = { version = "=1.5.1", optional = true }
+tauri = { version = "=3.0.0-alpha.5", features = ["specta"] }
+clap = { version = "=4.6.7", features = ["derive", "string"] }
+tauri-plugin-dialog = { version = "=3.0.0-alpha.4", default-features = false, features = ["xdg-portal"] }
+tauri-plugin-opener = "=3.0.0-alpha.3"
+tauri-plugin-clipboard-manager = "=3.0.0-alpha.3"
+tauri-plugin-deep-link = "=3.0.0-alpha.3"
+tauri-plugin-single-instance = { version = "=3.0.0-alpha.3", features = ["deep-link"] }
+tauri-plugin-log = "=3.0.0-alpha.3"
+tauri-plugin-updater = "=3.0.0-alpha.3"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = "1"
-# Keep the generator on tauri-specta's exact Specta release.
+# Keep the Rust contract exporter on one exact Specta release.
 specta = { version = "=2.0.0-rc.26", features = ["derive", "function", "serde_json", "chrono", "uuid"] }
 specta-typescript = { version = "=0.0.13", optional = true }
-tauri-specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta-serde = { version = "=0.0.13", optional = true }
+specta-util = { version = "=0.0.13", optional = true }
 tokio-util = { version = "0.7", features = ["rt", "io"] }
 lsp-types = "0.97"
 thiserror = "2"
@@ -94,20 +94,20 @@ graphrs = { version = "0.12.0", default-features = false }
 rmcp = { version = "3.7.0", default-features = false, features = ["server", "macros", "transport-io"] }
 rig-core = { version = "=0.45.0", default-features = false }
 rig-reqwest = { version = "=0.45.0", default-features = false, features = ["rustls"] }
-tauri-plugin-window-state = "2"
+tauri-plugin-window-state = "=3.0.0-alpha.2"
 puml = { version = "=0.2.6", default-features = false }
 memchr = "2.8.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tauri-plugin-macos-fps = "0.1.0"
+tauri-runtime-cef = { version = "=3.0.0-alpha.6", features = ["unstable"] }
 objc2 = "0.6.5"
 block2 = "0.6.2"
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSBundle", "NSData", "NSDictionary", "NSError", "NSString", "NSValue"] }
-objc2-web-kit = { version = "0.3.2", default-features = false, features = ["std", "WKWebView", "WKSnapshotConfiguration", "WKNavigation", "objc2-app-kit", "block2"] }
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSEvent", "NSResponder", "NSView", "NSWindow", "NSButton", "NSControl", "block2"] }
 objc2-user-notifications = { version = "0.3.2", default-features = false, features = ["std", "block2", "UNUserNotificationCenter", "UNNotification", "UNNotificationContent", "UNNotificationRequest", "UNNotificationResponse", "UNNotificationSettings", "UNNotificationSound", "UNNotificationCategory", "UNNotificationAction", "UNNotificationTrigger"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+tauri-runtime-wry = { version = "=3.0.0-alpha.5", features = ["unstable"] }
 webview2-com = "0.39.1"
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Memory", "UI_Notifications", "Data_Xml_Dom", "Foundation", "Win32_UI_Notifications", "Win32_UI_Shell", "Win32_System_Registry", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Variant", "Win32_System_WinRT"] }
 
@@ -115,12 +115,8 @@ windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com"
 windows-core = "0.62.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-# tauri-plugin-deep-link 2.6.2 initializes ParseOption using its pre-0.21.2 fields.
-rust-ini = "=0.21.1"
-webkit2gtk = { version = "2.0.2", features = ["v2_40"] }
-# Match WebKitGTK/Tauri's binding family; native links cannot mix these releases.
-gtk = "0.18.2"
-cairo-rs = { version = "0.18.5", features = ["png"] }
+x11rb = "=0.13.2"
+tauri-runtime-cef = { version = "=3.0.0-alpha.6", features = ["unstable"] }
 zbus = { version = "6.1.0", default-features = false, features = ["tokio", "proxy"] }
 
 [target.'cfg(unix)'.dependencies]
@@ -128,5 +124,5 @@ libc = "0.2"
 
 [dev-dependencies]
 rmcp = { version = "3.7.0", default-features = false, features = ["client"] }
-tauri = { version = "2.12.5", features = ["test"] }
+tauri = { version = "=3.0.0-alpha.5", features = ["test", "specta"] }
 tempfile = "3.27.0"

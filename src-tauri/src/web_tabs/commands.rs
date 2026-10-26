@@ -114,16 +114,37 @@ pub async fn web_tabs_set_shortcut_bindings(
   manager: State<'_, WebTabs>,
   request: Bindings,
 ) -> BackendResult<OkResult> {
+  let _operation = manager.inner.operations.lock().await;
   owner(&window, &registry)?;
   let bindings = shortcuts::compile(request)?;
-  manager
-    .inner
-    .owners
-    .lock()
-    .map_err(|_| failure("Web tab state unavailable"))?
-    .entry(window.label().into())
-    .or_default()
-    .bindings = bindings;
+  let previous = {
+    let mut owners = manager
+      .inner
+      .owners
+      .lock()
+      .map_err(|_| failure("Web tab state unavailable"))?;
+    std::mem::replace(
+      &mut owners.entry(window.label().into()).or_default().bindings,
+      bindings,
+    )
+  };
+  if let Err(error) = native::bindings_changed(&manager, window.label()).await {
+    {
+      let mut owners = manager
+        .inner
+        .owners
+        .lock()
+        .map_err(|_| failure("Web tab state unavailable"))?;
+      owners.entry(window.label().into()).or_default().bindings = previous;
+    }
+    if let Err(rollback) = native::bindings_changed(&manager, window.label()).await {
+      log::warn!(
+        "Could not restore native web tab shortcuts: {}",
+        rollback.code
+      );
+    }
+    return Err(error);
+  }
   Ok(success())
 }
 macro_rules! action {

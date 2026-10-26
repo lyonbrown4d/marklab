@@ -1,41 +1,8 @@
 use super::*;
-use objc2_web_kit::WKWebView;
-pub async fn action(view: &Webview, action: &'static str) -> BackendResult<()> {
-  let (sender, receiver) = tokio::sync::oneshot::channel();
-  view.with_webview(move |platform| {
-    // Tauri owns this WKWebView and dispatches the closure on the native UI thread.
-    let webview = unsafe { &*(platform.inner() as *const WKWebView) };
-    unsafe {
-      match action {
-        "back" => {
-          webview.goBack();
-        }
-        "forward" => {
-          webview.goForward();
-        }
-        "reload" => {
-          webview.reload();
-        }
-        "stop" => webview.stopLoading(),
-        _ => (),
-      }
-    }
-    let _ = sender.send(());
-  })?;
-  receiver
-    .await
-    .map_err(|_| failure("Native web tab action was cancelled"))?;
-  Ok(())
-}
-pub fn refresh(manager: WebTabs, window: TrustedWindow, id: String, view: &Webview) {
-  let _ = view.with_webview(move |platform| {
-    let webview = unsafe { &*(platform.inner() as *const WKWebView) };
-    manager.change(&window, &id, |entry| {
-      entry.state.can_go_back = unsafe { webview.canGoBack() };
-      entry.state.can_go_forward = unsafe { webview.canGoForward() };
-    });
-  });
-}
+use tauri_runtime_cef::{
+  WebviewCefExt,
+  cef::{ImplBrowser, ImplBrowserHost},
+};
 pub async fn install_monitor(
   manager: WebTabs,
   window: TrustedWindow,
@@ -47,9 +14,22 @@ pub async fn install_monitor(
   use objc2_app_kit::{NSEvent, NSEventMask, NSView};
   use objc2_foundation::NSObjectProtocol;
   let (sender, receiver) = tokio::sync::oneshot::channel();
-  view.with_webview(move |platform| {
-    let webview_pointer = platform.inner() as usize;
-    let window_pointer = platform.ns_window() as usize;
+  view.with_cef_webview(move |platform| {
+    let Some(host) = platform.browser().host() else {
+      let _ = sender.send(Err(failure("Native CEF shortcut view is unavailable")));
+      return;
+    };
+    let webview_pointer = host.window_handle() as usize;
+    if webview_pointer == 0 {
+      let _ = sender.send(Err(failure("Native CEF shortcut view is unavailable")));
+      return;
+    }
+    let webview = unsafe { &*(webview_pointer as *const NSView) };
+    let Some(native_window) = webview.window() else {
+      let _ = sender.send(Err(failure("Native CEF shortcut view is unavailable")));
+      return;
+    };
+    let window_pointer = &*native_window as *const _ as usize;
     let callback = block2::RcBlock::new(move |event: std::ptr::NonNull<NSEvent>| -> *mut NSEvent {
       let pointer = event.as_ptr();
       let Some(mtm) = objc2::MainThreadMarker::new() else {
@@ -98,24 +78,33 @@ pub async fn install_monitor(
       NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &callback)
     }
     .map(|token| Retained::into_raw(token) as usize);
-    let _ = sender.send(token);
+    let result = token
+      .map(Some)
+      .ok_or_else(|| failure("Cannot install native shortcut monitor"));
+    if let Err(Ok(Some(token))) = sender.send(result) {
+      remove_token(token);
+    }
   })?;
   receiver
     .await
-    .map_err(|_| failure("Native shortcut installation was cancelled"))
+    .map_err(|_| failure("Native shortcut installation was cancelled"))?
 }
 pub fn remove_monitor(view: &Webview, token: Option<usize>) {
   if let Some(token) = token {
-    let _ = view.with_webview(move |_| {
-      use objc2::rc::Retained;
-      use objc2::runtime::AnyObject;
-      use objc2_app_kit::NSEvent;
-      if let Some(token) = unsafe { Retained::<AnyObject>::from_raw(token as *mut AnyObject) } {
-        unsafe {
-          NSEvent::removeMonitor(&token);
-        }
-      }
+    let _ = view.with_cef_webview(move |_| {
+      remove_token(token);
     });
+  }
+}
+
+fn remove_token(token: usize) {
+  use objc2::{rc::Retained, runtime::AnyObject};
+  use objc2_app_kit::NSEvent;
+  // The entry owns one retained monitor; release it once on the CEF/native UI thread.
+  if let Some(token) = unsafe { Retained::<AnyObject>::from_raw(token as *mut AnyObject) } {
+    unsafe {
+      NSEvent::removeMonitor(&token);
+    }
   }
 }
 
@@ -124,22 +113,31 @@ pub async fn focused(
   _focused: std::sync::Arc<std::sync::atomic::AtomicBool>,
 ) -> BackendResult<bool> {
   let (sender, receiver) = tokio::sync::oneshot::channel();
-  view.with_webview(move |platform| {
+  view.with_cef_webview(move |platform| {
     use objc2::ClassType;
     use objc2_app_kit::NSView;
     use objc2_foundation::NSObjectProtocol;
-    let webview = unsafe { &*(platform.inner() as *const NSView) };
-    let focused = webview
-      .window()
-      .filter(|window| window.isKeyWindow())
-      .and_then(|window| window.firstResponder())
-      .is_some_and(|responder| {
-        if !responder.isKindOfClass(NSView::class()) {
-          return false;
-        }
-        let focused = unsafe { &*(&*responder as *const _ as *const NSView) };
-        focused.isDescendantOf(webview)
-      });
+    let Some(host) = platform.browser().host() else {
+      let _ = sender.send(false);
+      return;
+    };
+    let pointer = host.window_handle().cast::<NSView>();
+    let Some(webview) = (unsafe { pointer.as_ref() }) else {
+      let _ = sender.send(false);
+      return;
+    };
+    let focused = !webview.isHiddenOrHasHiddenAncestor()
+      && webview
+        .window()
+        .filter(|window| window.isKeyWindow())
+        .and_then(|window| window.firstResponder())
+        .is_some_and(|responder| {
+          if !responder.isKindOfClass(NSView::class()) {
+            return false;
+          }
+          let focused = unsafe { &*(&*responder as *const _ as *const NSView) };
+          focused.isDescendantOf(webview)
+        });
     let _ = sender.send(focused);
   })?;
   receiver

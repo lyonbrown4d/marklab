@@ -3,7 +3,7 @@ use std::{fmt, sync::Once};
 use tauri_plugin_log::{FileOpenStrategy, RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 const MAX_RECORD_BYTES: usize = 56 * 1024;
-const MAX_FILE_BYTES: u128 = 5 * 1024 * 1024;
+const MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 
 pub(super) fn builder() -> crate::error::BackendResult<tauri_plugin_log::Builder> {
   let builder = configured(cfg!(debug_assertions));

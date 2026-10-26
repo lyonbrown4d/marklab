@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { browser } from '@wdio/globals'
+import { Key } from 'webdriverio'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
 import { fixturePaths } from './fixturePaths.js'
 import { sessionOwnerCount } from './nativeMetadata.js'
@@ -10,6 +11,7 @@ import { assertWindowButtonsAligned } from './windowButtons.js'
 import {
   closeThroughApplication,
   currentRoot,
+  currentWindowLabel,
   invokeNative,
   openEditor,
   switchToWorkspace,
@@ -33,6 +35,23 @@ describe('real Tauri desktop', () => {
     const editor = await browser.$('[data-testid="markdown-editor"]')
     assert.match(await editor.getText(), /alpha-only native workspace/)
     await typeAtEditorEnd(' native-persisted-marker')
+    const modifier = process.platform === 'darwin' ? Key.Command : Key.Control
+    await browser.keys([modifier, 'z'])
+    await browser.waitUntil(
+      async () => !(await editor.getText()).includes('native-persisted-marker'),
+    )
+    await invokeNative('menu_dispatch', { id: 'edit.redo' })
+    await browser.waitUntil(async () =>
+      (await editor.getText()).includes('native-persisted-marker'),
+    )
+    await invokeNative('menu_dispatch', { id: 'edit.undo' })
+    await browser.waitUntil(
+      async () => !(await editor.getText()).includes('native-persisted-marker'),
+    )
+    await browser.keys([modifier, Key.Shift, 'z'])
+    await browser.waitUntil(async () =>
+      (await editor.getText()).includes('native-persisted-marker'),
+    )
     // The production flush command drains actual Rust buffers, not a test handler.
     await waitForRustMarker('native-persisted-marker')
     await invokeNative('fs_flush_buffers')
@@ -60,6 +79,7 @@ describe('real Tauri desktop', () => {
     assert.equal(opened.ok, true)
     await switchToWorkspace(fixture.beta)
     const betaHandle = await browser.getWindowHandle()
+    const betaLabel = await currentWindowLabel()
     assert.notEqual(betaHandle, alphaHandle)
     await openEditor()
     await assertWindowButtonsAligned(fixture.alpha)
@@ -67,7 +87,7 @@ describe('real Tauri desktop', () => {
     assert.match(await editor.getText(), /beta-only native workspace/)
     await typeAtEditorEnd(' beta-persisted-marker')
     await waitForRustMarker('beta-persisted-marker')
-    assert.equal(sessionOwnerCount(fixture.data, betaHandle), 1)
+    assert.equal(sessionOwnerCount(fixture.data, betaLabel), 1)
     await closeThroughApplication('beta-persisted-marker')
     await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(betaHandle), {
       timeout: 40_000,
@@ -81,7 +101,7 @@ describe('real Tauri desktop', () => {
       await fs.readFile(path.join(fixture.beta, 'Editor.md'), 'utf8'),
       /beta-only native workspace/,
     )
-    assert.equal(sessionOwnerCount(fixture.data, betaHandle), 0)
+    assert.equal(sessionOwnerCount(fixture.data, betaLabel), 0)
     await browser.switchToWindow(alphaHandle)
     assert.equal(await currentRoot(), fixture.alpha)
     assert.equal(await fs.readFile(path.join(fixture.alpha, 'Editor.md'), 'utf8'), alphaBefore)

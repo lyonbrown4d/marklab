@@ -43,7 +43,7 @@ pub enum Selection {
 fn builder(
   window: &WebviewWindow,
   request: &DialogRequest,
-) -> BackendResult<FileDialogBuilder<tauri::Wry>> {
+) -> BackendResult<FileDialogBuilder<tauri::DynRuntime>> {
   let mut builder = window
     .app_handle()
     .dialog()

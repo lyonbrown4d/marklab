@@ -90,11 +90,13 @@ impl Worker {
     crate::blocking::run(move || {
       let mut worker = worker;
       super::super::ensure_generation(&worker.grants.app, &worker.owner, generation)?;
-      worker.view = Some(parent.add_child(
-        builder,
-        tauri::LogicalPosition::new(-10000., -10000.),
-        tauri::LogicalSize::new(1920., 1080.),
-      )?);
+      worker.view = Some(
+        parent.add_child(
+          builder
+            .position(tauri::LogicalPosition::new(-10000., -10000.))
+            .size(tauri::LogicalSize::new(1920., 1080.)),
+        )?,
+      );
       Ok(worker)
     })
     .await

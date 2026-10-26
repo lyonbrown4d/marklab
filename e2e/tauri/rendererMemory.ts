@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
+// eslint-disable-next-line no-restricted-imports -- Native E2E bundle selection only.
+import { applicationBinary } from './application.ts'
 import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import pLimit from 'p-limit'
 import { z } from 'zod'
 import { $ } from 'zx'
@@ -48,7 +49,7 @@ export const readRendererMemory = async (fixtureRoot: string) => {
     .split('\n')
     .map((line) => line.trim().split(/\s+/))
     .filter(([pid]) => pid && !before.has(pid))
-  const webContent = processes.filter(([, , command]) => command?.includes('WebKit.WebContent'))
+  const webContent = processes.filter((row) => row.slice(2).join(' ').includes('Helper (Renderer)'))
   const native = processes.filter((row) =>
     /^marklab-desktop(?:-uninstrumented|-baseline|-react-profiler)?$/.test(
       path.basename(row.slice(2).join(' ')),
@@ -105,20 +106,10 @@ export const readRendererMemory = async (fixtureRoot: string) => {
 // Bring the existing owner forward through production single-instance handling.
 // The secondary process exits before sampling; no native test-only focus API.
 export const presentProfileOwner = async () => {
-  const variant =
-    process.env.MARKLAB_E2E_CANVAS_BASELINE === '1'
-      ? '-uninstrumented'
-      : process.env.MARKLAB_E2E_BASELINE === '1'
-        ? '-baseline'
-        : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
-          ? '-react-profiler'
-          : ''
-  const binary = fileURLToPath(
-    new URL(`../../src-tauri/target/debug/marklab-desktop${variant}`, import.meta.url),
-  )
+  const binary = applicationBinary()
   await $({
     quiet: true,
     timeout: '15s',
-    env: { ...process.env, TAURI_WEBDRIVER_PORT: process.env.MARKLAB_E2E_DRIVER_PORT },
+    env: { ...process.env },
   })`${binary}`
 }

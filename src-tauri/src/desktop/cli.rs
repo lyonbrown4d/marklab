@@ -1,8 +1,7 @@
 use crate::error::{BackendError, BackendResult};
-use serde_json::Value;
+use clap::{CommandFactory, FromArgMatches, Parser, error::ErrorKind};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, Runtime};
-use tauri_plugin_cli::{Cli, Matches};
 
 pub(super) struct LaunchArguments(pub Vec<String>);
 
@@ -25,24 +24,59 @@ struct Target {
   kind: TargetKind,
 }
 
+#[derive(Parser)]
+#[command(
+  about = "Open a Marklab workspace or document.",
+  after_help = "Use --workspace for one directory or --file for one document. Named targets cannot be combined. Supply multiple positional paths to open them in separate windows. Relative paths use the calling process working directory. Use -- before paths beginning with a hyphen. The mcp subcommand starts the existing MCP stdio service instead of the desktop app."
+)]
+struct Arguments {
+  /// Open an existing workspace directory
+  #[arg(short, long, conflicts_with_all = ["file", "paths"])]
+  workspace: Option<String>,
+  /// Open an existing document file
+  #[arg(short, long, conflicts_with_all = ["workspace", "paths"])]
+  file: Option<String>,
+  /// Existing files or directories to open in separate windows
+  #[arg(num_args = 1..)]
+  paths: Vec<String>,
+}
+
+// Parse before initializing the desktop runtime: Chromium also consumes command
+// line flags, and terminal requests must never create a webview or splash window.
+pub(super) async fn prepare_arguments(
+  args: Vec<String>,
+  cwd: &Path,
+  package: &tauri::PackageInfo,
+) -> BackendResult<Outcome> {
+  let command = Arguments::command()
+    .name(package.name.clone())
+    .bin_name(package.name.clone())
+    .version(package.version.to_string());
+  let matches = match command.try_get_matches_from(platform_arguments(args)) {
+    Ok(matches) => matches,
+    Err(error)
+      if matches!(
+        error.kind(),
+        ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
+      ) =>
+    {
+      return Ok(Outcome::Output(
+        error.to_string().trim_end_matches('\n').into(),
+      ));
+    }
+    Err(error) => return Err(BackendError::new("CLI_ARGUMENT_ERROR", error.to_string())),
+  };
+  let arguments = Arguments::from_arg_matches(&matches)
+    .map_err(|error| BackendError::new("CLI_ARGUMENT_ERROR", error.to_string()))?;
+  resolve(targets(arguments), cwd).await.map(Outcome::Open)
+}
+
 pub(super) async fn prepare<R: Runtime>(
   app: &AppHandle<R>,
   args: Vec<String>,
   cwd: &Path,
 ) -> BackendResult<Outcome> {
-  let cli = app.try_state::<Cli<R>>().ok_or_else(|| {
-    BackendError::new(
-      "CLI_UNAVAILABLE",
-      "The command-line plugin is not initialized",
-    )
-  })?;
-  let matches = cli
-    .matches_from(platform_arguments(args))
-    .map_err(|error| BackendError::new("CLI_ARGUMENT_ERROR", error.to_string()))?;
-  if let Some(output) = terminal_output(&matches, app.package_info()) {
-    return Ok(Outcome::Output(output));
-  }
-  resolve(targets(&matches), cwd).await.map(Outcome::Open)
+  prepare_arguments(args, cwd, app.package_info()).await
 }
 
 pub(super) async fn prepare_forwarded<R: Runtime>(
@@ -50,62 +84,29 @@ pub(super) async fn prepare_forwarded<R: Runtime>(
   args: Vec<String>,
   cwd: &Path,
 ) -> BackendResult<Outcome> {
-  // A Windows WM_COPYDATA callback can reenter the main thread during build,
-  // before the following CLI plugin has installed its managed state.
-  tokio::time::timeout(std::time::Duration::from_secs(5), async {
-    while app.try_state::<Cli<R>>().is_none() {
-      tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-    }
-  })
-  .await
-  .map_err(|_| {
-    BackendError::new(
-      "CLI_UNAVAILABLE",
-      "Command-line plugin initialization timed out",
-    )
-  })?;
   prepare(app, args, cwd).await
 }
 
-fn terminal_output(matches: &Matches, package: &tauri::PackageInfo) -> Option<String> {
-  matches
-    .args
-    .get("help")
-    .and_then(|argument| argument.value.as_str())
-    .map(String::from)
-    .or_else(|| {
-      matches
-        .args
-        .contains_key("version")
-        .then(|| format!("{} {}", package.name, package.version))
-    })
-}
-
-fn targets(matches: &Matches) -> Vec<Target> {
+fn targets(arguments: Arguments) -> Vec<Target> {
   let mut targets = Vec::new();
-  for (name, kind) in [
-    ("workspace", TargetKind::Workspace),
-    ("file", TargetKind::File),
-    ("paths", TargetKind::Positional),
+  for (value, kind) in [
+    (arguments.workspace, TargetKind::Workspace),
+    (arguments.file, TargetKind::File),
   ] {
-    let Some(argument) = matches.args.get(name) else {
-      continue;
-    };
-    let values = match &argument.value {
-      Value::String(value) => vec![value.as_str()],
-      Value::Array(values) => values.iter().filter_map(Value::as_str).collect(),
-      _ => continue,
-    };
-    for value in values {
-      if matches!(kind, TargetKind::Positional) && is_deep_link_argument(value) {
-        continue;
-      }
-      targets.push(Target {
-        value: value.into(),
-        kind,
-      });
+    if let Some(value) = value {
+      targets.push(Target { value, kind });
     }
   }
+  targets.extend(
+    arguments
+      .paths
+      .into_iter()
+      .filter(|value| !is_deep_link_argument(value))
+      .map(|value| Target {
+        value,
+        kind: TargetKind::Positional,
+      }),
+  );
   targets
 }
 
@@ -244,7 +245,7 @@ pub(super) fn report_forward_error(app: &AppHandle, error: &BackendError) {
     error.message
   );
   // Initialization failure can also precede the dialog plugin's registration.
-  if let Some(dialog) = app.try_state::<tauri_plugin_dialog::Dialog<tauri::Wry>>() {
+  if let Some(dialog) = app.try_state::<tauri_plugin_dialog::Dialog<tauri::DynRuntime>>() {
     dialog
       .message(&error.message)
       .title("Marklab — Invalid command line")

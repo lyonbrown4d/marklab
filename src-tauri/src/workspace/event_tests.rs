@@ -41,9 +41,9 @@ async fn shared_workspace_events_reach_each_owner_once_and_never_another_root_or
   let raw = first.as_ref().window();
   let child = raw
     .add_child(
-      WebviewBuilder::new("untrusted-child", Default::default()),
-      tauri::LogicalPosition::new(0, 0),
-      tauri::LogicalSize::new(100, 100),
+      WebviewBuilder::new("untrusted-child", Default::default())
+        .position(tauri::LogicalPosition::new(0, 0))
+        .size(tauri::LogicalSize::new(100, 100)),
     )
     .expect("child view");
   let received = Arc::new(Mutex::new(Vec::<String>::new()));

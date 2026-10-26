@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict'
+// eslint-disable-next-line no-restricted-imports -- Native E2E bundle selection only.
+import { applicationBinary } from './application.ts'
+// eslint-disable-next-line no-restricted-imports -- Native geometry for CEF attach.
+import { getNativeWindowRect } from './windowGeometry.ts'
 import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
@@ -15,7 +19,7 @@ const measurements = z.array(
 export const assertWindowButtonsAligned = async (workspace: string) => {
   if (process.platform !== 'darwin') return
   const { stdout: processes } = await execute('/bin/ps', ['-eo', 'pid=,args='])
-  const command = `${repository}src-tauri/target/debug/marklab-desktop --workspace ${workspace}`
+  const command = `${applicationBinary()} --workspace ${workspace}`
   const owned = processes
     .split('\n')
     .map((line) => line.trim().match(/^(\d+)\s+(.+)$/))
@@ -34,7 +38,7 @@ export const assertWindowButtonsAligned = async (workspace: string) => {
     },
   )
   const windows = measurements.parse(JSON.parse(stdout))
-  const current = await browser.getWindowRect()
+  const current = await getNativeWindowRect()
   const nativeWindow = windows.find(
     ({ window }) => Math.abs(window.x - current.x) <= 1 && Math.abs(window.y - current.y) <= 1,
   )

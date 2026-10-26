@@ -18,6 +18,7 @@ use std::{
   sync::{Arc, Mutex},
   time::Duration,
 };
+use tauri::Manager;
 
 const CATEGORY: &str = "marklab.task-result";
 type Reply = Arc<Mutex<Option<tokio::sync::oneshot::Sender<BackendResult<()>>>>>;

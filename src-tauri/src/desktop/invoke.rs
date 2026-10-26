@@ -209,25 +209,22 @@ macro_rules! runtime_handler {
 }
 #[cfg(feature = "ipc-codegen")]
 macro_rules! contract_builder {
-  ($($command:tt)*) => {
-    tauri_specta::Builder::<tauri::Wry>::new()
-      .commands(tauri_specta::collect_commands![$($command)*])
-      .error_handling(tauri_specta::ErrorHandlingMode::Throw)
-      // IPC preserves JSON numbers. Rust scalar codecs reject unsafe integers
-      // before serialization or after deserialization instead of rounding them.
-      .dangerously_cast_bigints_to_number()
-      .typ::<super::event_contracts::DesktopEventPayloads>()
-  };
+  ($($command:tt)*) => {{
+    let mut types = specta::Types::default();
+    let commands = specta::function::collect_functions![$($command)*](&mut types);
+    (types, commands)
+  }};
 }
 #[cfg(feature = "ipc-codegen")]
 pub(crate) fn export(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-  desktop_commands!(contract_builder).export(super::codegen::DesktopTypescript, path)?;
+  let (types, commands) = desktop_commands!(contract_builder);
+  super::codegen::export(types, commands, path)?;
   Ok(())
 }
-pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
-  let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
+pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::DynRuntime>) -> bool + Send + Sync + 'static {
+  let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::DynRuntime>) -> bool + Send + Sync> =
     Box::new(desktop_commands!(runtime_handler));
-  move |invoke: tauri::ipc::Invoke<tauri::Wry>| {
+  move |invoke: tauri::ipc::Invoke<tauri::DynRuntime>| {
     if !crate::native_window::is_trusted(&invoke.message.webview()) {
       invoke
         .resolver

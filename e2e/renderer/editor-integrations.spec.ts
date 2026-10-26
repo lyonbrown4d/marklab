@@ -234,8 +234,27 @@ test.describe('table and animated caret', () => {
         )
         .toBeLessThan(2)
     }
-    await page.keyboard.type('abcdef', { delay: 1 })
-    await expect(caret).toHaveClass(/is-animating/)
+    // Animation is transient: layout updates can finish it before an assertion polls.
+    // Observe the actual transition during input rather than requiring it afterwards.
+    const motion = await caret.evaluateHandle((element) => {
+      const evidence = { animated: false }
+      const observer = new MutationObserver(() => {
+        if (
+          element.classList.contains('is-animating') &&
+          getComputedStyle(element).transitionProperty.includes('transform')
+        )
+          evidence.animated = true
+      })
+      observer.observe(element, { attributes: true, attributeFilter: ['class', 'style'] })
+      return { evidence, observer }
+    })
+    try {
+      await page.keyboard.type('abcdef', { delay: 1 })
+      await expect.poll(() => motion.evaluate(({ evidence }) => evidence.animated)).toBe(true)
+    } finally {
+      await motion.evaluate(({ observer }) => observer.disconnect())
+      await motion.dispose()
+    }
     await expectAligned()
     await page.keyboard.press('Enter')
     await page.keyboard.type('输入后保持对齐', { delay: 1 })

@@ -1,39 +1,35 @@
 use super::*;
-use tauri::test::{MockRuntime, mock_builder, mock_context, noop_assets};
+use tauri::test::{mock_builder, mock_context, noop_assets};
 
-fn app() -> tauri::App<MockRuntime> {
-  let config: Value = serde_json::from_str(include_str!("../../tauri.conf.json")).unwrap();
-  let mut context = mock_context(noop_assets());
-  context
-    .config_mut()
-    .plugins
-    .0
-    .insert("cli".into(), config["plugins"]["cli"].clone());
-  mock_builder()
-    .plugin(tauri_plugin_cli::init())
-    .build(context)
-    .unwrap()
+fn package() -> tauri::PackageInfo {
+  tauri::PackageInfo {
+    name: "marklab".into(),
+    version: "0.2.8".parse().unwrap(),
+    authors: "",
+    description: "",
+    crate_name: "marklab-desktop",
+  }
 }
 
 async fn request(
-  app: &tauri::App<MockRuntime>,
+  package: &tauri::PackageInfo,
   args: &[&str],
   cwd: &Path,
 ) -> BackendResult<Outcome> {
-  prepare(
-    app.handle(),
+  prepare_arguments(
     std::iter::once("marklab")
       .chain(args.iter().copied())
       .map(String::from)
       .collect(),
     cwd,
+    package,
   )
   .await
 }
 
 #[tokio::test]
 async fn explicit_and_positional_targets_use_the_sending_process_directory() {
-  let app = app();
+  let package = package();
   let sender = tempfile::tempdir().unwrap();
   let workspace = sender.path().join("space workspace");
   tokio::fs::create_dir(&workspace).await.unwrap();
@@ -44,7 +40,7 @@ async fn explicit_and_positional_targets_use_the_sending_process_directory() {
     vec!["-w", "space workspace"],
     vec!["--workspace=space workspace"],
   ] {
-    let Outcome::Open(paths) = request(&app, &args, sender.path()).await.unwrap() else {
+    let Outcome::Open(paths) = request(&package, &args, sender.path()).await.unwrap() else {
       panic!("expected workspace")
     };
     assert_eq!(paths, vec![workspace.to_string_lossy()]);
@@ -54,13 +50,13 @@ async fn explicit_and_positional_targets_use_the_sending_process_directory() {
     vec!["-f", "space note.md"],
     vec!["--file=space note.md"],
   ] {
-    let Outcome::Open(paths) = request(&app, &args, sender.path()).await.unwrap() else {
+    let Outcome::Open(paths) = request(&package, &args, sender.path()).await.unwrap() else {
       panic!("expected file")
     };
     assert_eq!(paths, vec![file.to_string_lossy()]);
   }
   let Outcome::Open(paths) = request(
-    &app,
+    &package,
     &["space note.md", "space workspace", "space note.md"],
     sender.path(),
   )
@@ -76,7 +72,7 @@ async fn explicit_and_positional_targets_use_the_sending_process_directory() {
 
 #[tokio::test]
 async fn positional_targets_accept_script_extensions_for_files_and_directories_in_order() {
-  let app = app();
+  let package = package();
   let sender = tempfile::tempdir().unwrap();
   let mut arguments = Vec::new();
   let mut expected = Vec::new();
@@ -99,7 +95,7 @@ async fn positional_targets_accept_script_extensions_for_files_and_directories_i
     if separator {
       values.insert(0, "--");
     }
-    let Outcome::Open(paths) = request(&app, &values, sender.path()).await.unwrap() else {
+    let Outcome::Open(paths) = request(&package, &values, sender.path()).await.unwrap() else {
       panic!("expected positional paths")
     };
     assert_eq!(paths, expected);
@@ -108,7 +104,7 @@ async fn positional_targets_accept_script_extensions_for_files_and_directories_i
 
 #[tokio::test]
 async fn invalid_or_ambiguous_arguments_do_not_turn_into_default_workspace_requests() {
-  let app = app();
+  let package = package();
   let sender = tempfile::tempdir().unwrap();
   let file = sender.path().join("note.md");
   tokio::fs::write(file, "note").await.unwrap();
@@ -121,7 +117,10 @@ async fn invalid_or_ambiguous_arguments_do_not_turn_into_default_workspace_reque
     vec!["--file", "note.md", "."],
   ] {
     assert_eq!(
-      request(&app, &args, sender.path()).await.unwrap_err().code,
+      request(&package, &args, sender.path())
+        .await
+        .unwrap_err()
+        .code,
       "CLI_ARGUMENT_ERROR"
     );
   }
@@ -132,7 +131,10 @@ async fn invalid_or_ambiguous_arguments_do_not_turn_into_default_workspace_reque
     vec!["missing.js"],
   ] {
     assert_eq!(
-      request(&app, &args, sender.path()).await.unwrap_err().code,
+      request(&package, &args, sender.path())
+        .await
+        .unwrap_err()
+        .code,
       "CLI_TARGET_ERROR"
     );
   }
@@ -140,9 +142,9 @@ async fn invalid_or_ambiguous_arguments_do_not_turn_into_default_workspace_reque
 
 #[tokio::test]
 async fn help_and_version_are_terminal_outputs_without_validating_or_opening_targets() {
-  let app = app();
+  let package = package();
   for flag in ["--help", "-h", "--version", "-V"] {
-    let Outcome::Output(output) = request(&app, &[flag], Path::new("/missing-cwd"))
+    let Outcome::Output(output) = request(&package, &[flag], Path::new("/missing-cwd"))
       .await
       .unwrap()
     else {
@@ -160,13 +162,13 @@ async fn help_and_version_are_terminal_outputs_without_validating_or_opening_tar
 
 #[tokio::test]
 async fn native_links_stay_out_of_filesystem_targets_and_preserve_positional_separator() {
-  let app = app();
+  let package = package();
   let sender = tempfile::tempdir().unwrap();
   tokio::fs::write(sender.path().join("-note.md"), "note")
     .await
     .unwrap();
   let Outcome::Open(paths) = request(
-    &app,
+    &package,
     &["marklab://open?path=note.md", "--", "-note.md"],
     sender.path(),
   )
@@ -178,7 +180,7 @@ async fn native_links_stay_out_of_filesystem_targets_and_preserve_positional_sep
     paths,
     vec![sender.path().join("-note.md").to_string_lossy()]
   );
-  let Outcome::Open(paths) = request(&app, &[], sender.path()).await.unwrap() else {
+  let Outcome::Open(paths) = request(&package, &[], sender.path()).await.unwrap() else {
     panic!("expected default request")
   };
   assert!(paths.is_empty());
@@ -219,34 +221,62 @@ fn finder_process_serial_number_is_ignored_only_before_the_positional_separator(
 }
 
 #[tokio::test]
-async fn missing_cli_plugin_returns_an_error_instead_of_panicking() {
+async fn app_wrappers_parse_without_waiting_for_cli_plugin_state() {
   let app = mock_builder().build(mock_context(noop_assets())).unwrap();
-  assert_eq!(
-    request(&app, &[], Path::new("/")).await.unwrap_err().code,
-    "CLI_UNAVAILABLE"
-  );
+  for outcome in [
+    prepare(app.handle(), vec!["marklab".into()], Path::new("/")).await,
+    prepare_forwarded(app.handle(), vec!["marklab".into()], Path::new("/")).await,
+  ] {
+    let Outcome::Open(paths) = outcome.unwrap() else {
+      panic!("expected default request")
+    };
+    assert!(paths.is_empty());
+  }
+}
+
+#[tokio::test]
+async fn terminal_outputs_use_package_identity_before_runtime_initialization() {
+  let mut package = package();
+  package.name = "custom-marklab".into();
+  package.version = "9.8.7".parse().unwrap();
+  for flag in ["--version", "-V"] {
+    let Outcome::Output(output) = request(&package, &[flag], Path::new("/missing-cwd"))
+      .await
+      .unwrap()
+    else {
+      panic!("expected package version")
+    };
+    assert_eq!(output, "custom-marklab 9.8.7");
+  }
+  let Outcome::Output(help) = request(&package, &["--help"], Path::new("/missing-cwd"))
+    .await
+    .unwrap()
+  else {
+    panic!("expected package help")
+  };
+  assert!(help.contains("custom-marklab"));
 }
 
 #[cfg(target_os = "linux")]
 #[tokio::test]
 async fn desktop_file_urls_decode_local_paths_without_ignoring_the_target() {
-  let app = app();
+  let package = package();
   let sender = tempfile::tempdir().unwrap();
   let file = sender.path().join("中文 note #1.md");
   tokio::fs::write(&file, "# desktop file URL").await.unwrap();
   let uri = url::Url::from_file_path(&file).unwrap().to_string();
   for args in [vec![uri.as_str()], vec!["--file", uri.as_str()]] {
-    let Outcome::Open(paths) = request(&app, &args, sender.path()).await.unwrap() else {
+    let Outcome::Open(paths) = request(&package, &args, sender.path()).await.unwrap() else {
       panic!("expected file URL target");
     };
     assert_eq!(paths, vec![file.to_string_lossy()]);
   }
   assert!(
-    request(&app, &["file://remote.invalid/note.md"], sender.path())
+    request(&package, &["file://remote.invalid/note.md"], sender.path())
       .await
       .is_err()
   );
-  let Outcome::Open(paths) = request(&app, &["marklab://open?workspace=one"], sender.path())
+  let Outcome::Open(paths) = request(&package, &["marklab://open?workspace=one"], sender.path())
     .await
     .unwrap()
   else {

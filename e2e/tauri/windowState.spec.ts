@@ -1,12 +1,15 @@
 /// <reference types="mocha" />
 import assert from 'node:assert/strict'
+// eslint-disable-next-line no-restricted-imports -- Native E2E bundle selection only.
+import { applicationBinary } from './application.ts'
 import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { browser } from '@wdio/globals'
+// eslint-disable-next-line no-restricted-imports -- Real native geometry; no ChromeDriver attach extension.
+import { getNativeWindowRect, setNativeWindowRect } from './windowGeometry.ts'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
 import { fixturePaths } from './fixturePaths.js'
 import { assertWindowButtonsAligned } from './windowButtons.js'
@@ -20,14 +23,13 @@ import {
 /* eslint-enable no-restricted-imports */
 
 const fixture = fixturePaths()
-const repository = fileURLToPath(new URL('../../', import.meta.url))
 
 const reopen = async () => {
   // Exercise real single-instance IPC. The second process must exit before
-  // binding another embedded WebDriver server, even when no windows are open.
-  await promisify(execFile)(path.join(repository, 'src-tauri/target/debug/marklab-desktop'), [], {
+  // starting another automation endpoint, even when no windows are open.
+  await promisify(execFile)(applicationBinary(), [], {
     timeout: 15_000,
-    env: { ...process.env, TAURI_WEBDRIVER_PORT: process.env.MARKLAB_E2E_DRIVER_PORT },
+    env: { ...process.env },
   })
   await switchToWorkspace(fixture.alpha)
   await openEditor()
@@ -40,13 +42,14 @@ macOS('native window state and single instance', () => {
   it('remembers main geometry without tracking temporary windows and reopens through a second launch', async () => {
     await switchToWorkspace(fixture.alpha)
     await openEditor()
-    await browser.setWindowRect(120, 140, 900, 700)
-    const before = await browser.getWindowRect()
+    await setNativeWindowRect(120, 140, 900, 700)
+    const before = await getNativeWindowRect()
     const scale = await browser.execute(() => window.devicePixelRatio)
     await typeAtEditorEnd(' window-state-marker')
     await waitForRustMarker('window-state-marker')
+    const closedOwner = await browser.getWindowHandle()
     await closeThroughApplication('window-state-marker')
-    await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes('main'))
+    await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(closedOwner))
     const defaults = JSON.parse(
       await fs.readFile(path.join(fixture.data, 'v1/window-state.json'), 'utf8'),
     ) as Record<string, { x: number; y: number }>
@@ -55,7 +58,7 @@ macOS('native window state and single instance', () => {
     assert.equal(defaults.main.y, Math.round(before.y * scale))
 
     await reopen()
-    const after = await browser.getWindowRect()
+    const after = await getNativeWindowRect()
     assert.equal(after.x, before.x)
     assert.equal(after.y, before.y)
     assert.equal(after.width, before.width)
@@ -64,8 +67,9 @@ macOS('native window state and single instance', () => {
       await browser.$('[data-testid="markdown-editor"]').getText(),
       /window-state-marker/,
     )
+    const reopenedOwner = await browser.getWindowHandle()
     await closeThroughApplication('window-state-marker')
-    await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes('main'))
+    await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(reopenedOwner))
     // Simulate missing preferences in this generated fixture only. Keep
     // documents, sessions and the real plugin's saved state untouched.
     const database = new DatabaseSync(path.join(fixture.data, 'v1/tauri-storage/marklab.sqlite'))
@@ -75,7 +79,7 @@ macOS('native window state and single instance', () => {
       database.close()
     }
     await reopen()
-    const fallback = await browser.getWindowRect()
+    const fallback = await getNativeWindowRect()
     assert.equal(fallback.x, before.x)
     assert.equal(fallback.y, before.y)
     assert.equal(fallback.width, 800, 'Missing workspace geometry should use the default size')
@@ -92,8 +96,9 @@ macOS('native window state and single instance', () => {
       await fs.mkdir(file)
       await typeAtEditorEnd(' preference-failure-marker')
       await waitForRustMarker('preference-failure-marker')
+      const closedOwner = await browser.getWindowHandle()
       await closeThroughApplication('preference-failure-marker')
-      await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes('main'))
+      await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(closedOwner))
       assert.match(
         await fs.readFile(path.join(fixture.alpha, 'Editor.md'), 'utf8'),
         /preference-failure-marker/,

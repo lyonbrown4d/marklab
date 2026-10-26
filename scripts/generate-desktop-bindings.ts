@@ -3,6 +3,8 @@ import { glob, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { $ } from 'zx'
+// eslint-disable-next-line no-restricted-imports -- Shared native workflow configuration.
+import { nativeEnvironment } from './native-environment.ts'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const directory = path.join(root, 'src/generated/desktop')
@@ -56,12 +58,16 @@ export const generateDesktopBindings = async (signal?: AbortSignal) => {
     if (await isCurrent(input)) return
     console.info('Generating desktop IPC bindings from Rust…')
     await mkdir(directory, { recursive: true })
+    const environment: NodeJS.ProcessEnv = {
+      ...nativeEnvironment(),
+      CARGO_TARGET_DIR: path.join(root, 'src-tauri/target'),
+    }
     // Keep all native outputs inside this checkout, including code generation.
     const run = $({
       cwd: root,
       stdio: 'inherit',
       signal,
-      env: { ...process.env, CARGO_TARGET_DIR: path.join(root, 'src-tauri/target') },
+      env: environment,
     })
     const pending = path.join(directory, `.bindings-${process.pid}-${randomUUID()}.ts`)
     try {

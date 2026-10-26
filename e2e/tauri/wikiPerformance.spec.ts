@@ -1,6 +1,8 @@
 /// <reference types="mocha" />
 import assert from 'node:assert/strict'
 import { browser } from '@wdio/globals'
+// eslint-disable-next-line no-restricted-imports -- Real native geometry; no ChromeDriver attach extension.
+import { setNativeWindowRect } from './windowGeometry.ts'
 import { Key } from 'webdriverio'
 /* eslint-disable no-restricted-imports -- Real native performance fixture only. */
 import { fixturePaths } from './fixturePaths.js'
@@ -141,7 +143,7 @@ describe('workspace graph performance profile', () => {
   it('measures native graph payload, interaction frames and WebContent RSS', async () => {
     await switchToWorkspace(fixturePaths().alpha)
     await presentProfileOwner()
-    await browser.setWindowRect(120, 140, 900, 700)
+    await setNativeWindowRect(120, 140, 900, 700)
     await browser.waitUntil(
       () =>
         browser.execute(

@@ -29,9 +29,6 @@ pub async fn view(
   // Interactive tabs share one persistent browser profile across windows and
   // workspaces. Capture workers retain their separate incognito data store.
   let builder = WebviewBuilder::new(instance, WebviewUrl::External(url)).incognito(false);
-  #[cfg(target_os = "macos")]
-  let builder = builder.data_store_identifier(*b"marklab-web-tabs");
-  #[cfg(any(target_os = "windows", target_os = "linux"))]
   let builder = {
     let directory = window.app_handle().path().app_data_dir()?.join("web-tabs");
     tokio::fs::create_dir_all(&directory).await?;
@@ -100,7 +97,9 @@ pub async fn view(
   let parent = window.as_ref().as_ref().window();
   let position = tauri::LogicalPosition::new(bounds.x as f64, bounds.y as f64);
   let size = tauri::LogicalSize::new(bounds.width as f64, bounds.height as f64);
-  let view = crate::blocking::run(move || Ok(parent.add_child(builder, position, size)?)).await?;
+  let view =
+    crate::blocking::run(move || Ok(parent.add_child(builder.position(position).size(size))?))
+      .await?;
   if let Err(error) = view.hide() {
     let _ = view.close();
     return Err(error.into());

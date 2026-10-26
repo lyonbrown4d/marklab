@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { browser } from '@wdio/globals'
+// eslint-disable-next-line no-restricted-imports -- Real native geometry; no ChromeDriver attach extension.
+import { getNativeWindowRect, setNativeWindowRect } from './windowGeometry.ts'
 /* eslint-disable no-restricted-imports -- Native acceptance helpers only. */
 import { fixturePaths } from './fixturePaths.js'
 import {
@@ -85,7 +87,7 @@ const waitForSavedMaximized = async (expected: boolean) => {
 }
 
 const assertControlsKeepGeometry = async (selector: string) => {
-  const before = await browser.getWindowRect()
+  const before = await getNativeWindowRect()
   await doubleClick(selector)
   // Check throughout a bounded settling interval, so a delayed native resize
   // cannot pass merely because the first isMaximized query won an IPC race.
@@ -104,7 +106,7 @@ const assertControlsKeepGeometry = async (selector: string) => {
     true,
     `An interactive titlebar target resized the window: ${selector}`,
   )
-  assert.deepEqual(await browser.getWindowRect(), before, 'Interactive titlebar geometry changed')
+  assert.deepEqual(await getNativeWindowRect(), before, 'Interactive titlebar geometry changed')
 }
 
 describe('native titlebar double click', () => {
@@ -114,7 +116,7 @@ describe('native titlebar double click', () => {
     await assertWindowButtonsAligned(fixture.alpha)
     await unmaximize()
     await waitForMaximized(false)
-    const original = await browser.getWindowRect()
+    const original = await getNativeWindowRect()
     const owner = await browser.getWindowHandle()
     let companion: string | undefined
     try {
@@ -127,14 +129,14 @@ describe('native titlebar double click', () => {
         companion = await browser.getWindowHandle()
         await browser.switchToWindow(owner)
         await browser.waitUntil(async () => {
-          const current = await browser.getWindowRect()
+          const current = await getNativeWindowRect()
           return current.width < original.width || current.height < original.height
         })
       }
       // The compositor owns tiled geometry. The driver's GTK SetWindowRect
       // performs its own unmaximize using GTK's incorrect tiled state.
-      if (!hyprland) await browser.setWindowRect(120, 140, 900, 700)
-      const restored = await browser.getWindowRect()
+      if (!hyprland) await setNativeWindowRect(120, 140, 900, 700)
+      const restored = await getNativeWindowRect()
       assert.equal(await isMaximized(), false)
       await assertWindowButtonsAligned(fixture.alpha)
 
@@ -144,7 +146,7 @@ describe('native titlebar double click', () => {
       // The compositor acknowledges state before GTK receives its configure.
       await browser.waitUntil(
         async () => {
-          const current = await browser.getWindowRect()
+          const current = await getNativeWindowRect()
           return current.width !== restored.width || current.height !== restored.height
         },
         {
@@ -152,7 +154,7 @@ describe('native titlebar double click', () => {
           timeoutMsg: 'Native maximization did not change the actual window size',
         },
       )
-      const maximized = await browser.getWindowRect()
+      const maximized = await getNativeWindowRect()
       assert.ok(
         maximized.width !== restored.width || maximized.height !== restored.height,
         'Native maximization did not change the actual window size',
@@ -163,7 +165,7 @@ describe('native titlebar double click', () => {
       await waitForSavedMaximized(false)
       await browser.waitUntil(
         async () => {
-          const current = await browser.getWindowRect()
+          const current = await getNativeWindowRect()
           return (
             Math.abs(current.width - restored.width) <= 1 &&
             Math.abs(current.height - restored.height) <= 1
@@ -192,12 +194,10 @@ describe('native titlebar double click', () => {
       await assertControlsKeepGeometry(`${sidebarButton} svg path`)
       if (process.platform === 'darwin') {
         await setFullscreen(true)
-        await browser.waitUntil(
-          async () => (await browser.getWindowRect()).height > restored.height,
-        )
+        await browser.waitUntil(async () => (await getNativeWindowRect()).height > restored.height)
         await setFullscreen(false)
         await browser.waitUntil(
-          async () => Math.abs((await browser.getWindowRect()).height - restored.height) <= 1,
+          async () => Math.abs((await getNativeWindowRect()).height - restored.height) <= 1,
         )
         await assertWindowButtonsAligned(fixture.alpha)
       }
@@ -206,7 +206,7 @@ describe('native titlebar double click', () => {
       await unmaximize()
       await waitForMaximized(false)
       if (!hyprland)
-        await browser.setWindowRect(original.x, original.y, original.width, original.height)
+        await setNativeWindowRect(original.x, original.y, original.width, original.height)
       if (companion) {
         await browser.switchToWindow(companion)
         await closeThroughApplication('beta-only native workspace')

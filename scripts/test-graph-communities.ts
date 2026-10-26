@@ -1,4 +1,6 @@
 import { Launcher } from '@wdio/cli'
+// eslint-disable-next-line no-restricted-imports -- Native E2E lifecycle remains test-only.
+import { withNativeApplication } from '../e2e/tauri/application.ts'
 import fs from 'node:fs/promises'
 import net from 'node:net'
 import os from 'node:os'
@@ -58,7 +60,10 @@ try {
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'), {
     spec: [path.join(repository, 'e2e/tauri/graphCommunities.spec.ts')],
   })
-  exitCode = (await launcher.run()) ?? 1
+  exitCode = await withNativeApplication(
+    path.join(fixture, 'alpha'),
+    async () => (await launcher.run()) ?? 1,
+  )
 } finally {
   await fs.rm(fixture, { recursive: true, force: true })
 }

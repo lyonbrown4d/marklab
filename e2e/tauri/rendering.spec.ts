@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { browser } from '@wdio/globals'
+// eslint-disable-next-line no-restricted-imports -- Real native geometry; no ChromeDriver attach extension.
+import { getNativeWindowRect, setNativeWindowRect } from './windowGeometry.ts'
 /* eslint-disable no-restricted-imports -- Native rendering checks use the isolated E2E workspace. */
 import { fixturePaths } from './fixturePaths.js'
 import { openEditor, switchToWorkspace } from './nativeHarness.js'
@@ -39,12 +41,12 @@ describe('native renderer compatibility', () => {
   it('renders editor and titlebar within the viewport at desktop and narrow sizes', async () => {
     await switchToWorkspace(fixturePaths().alpha)
     await openEditor()
-    const original = await browser.getWindowRect()
+    const original = await getNativeWindowRect()
     const artifacts = path.resolve('test-results/tauri/rendering')
     await fs.mkdir(artifacts, { recursive: true })
     try {
       for (const width of [1440, 900, 640]) {
-        await browser.setWindowRect(120, 140, width, 800)
+        await setNativeWindowRect(120, 140, width, 800)
         await browser.execute(async () => {
           await document.fonts.ready
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -102,7 +104,7 @@ describe('native renderer compatibility', () => {
         }
       }
     } finally {
-      await browser.setWindowRect(original.x, original.y, original.width, original.height)
+      await setNativeWindowRect(original.x, original.y, original.width, original.height)
     }
   })
 })

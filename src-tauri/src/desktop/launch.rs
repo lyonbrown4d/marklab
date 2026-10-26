@@ -32,7 +32,7 @@ struct Links {
 }
 #[derive(Default)]
 pub struct LaunchState(Mutex<Links>);
-fn normalize(value: &str) -> Option<String> {
+pub(super) fn normalize(value: &str) -> Option<String> {
   let value = value.trim();
   if value.is_empty() || value.encode_utf16().count() > 4096 {
     return None;

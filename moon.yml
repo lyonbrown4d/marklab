@@ -122,13 +122,13 @@ tasks:
       cache: false
       persistent: true
   build:
-    command: pnpm exec tauri build --no-bundle
+    command: node --experimental-strip-types scripts/build-desktop.ts build
     deps:
       - ~:prepare
     options:
       cache: false
   package:
-    command: pnpm exec tauri bundle
+    command: node --experimental-strip-types scripts/build-desktop.ts bundle
     deps:
       - ~:build
     options:

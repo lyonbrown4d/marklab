@@ -1,4 +1,6 @@
 import { Launcher } from '@wdio/cli'
+// eslint-disable-next-line no-restricted-imports -- Native E2E lifecycle remains test-only.
+import { applicationBinary, usesCef, withNativeApplication } from './application.ts'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
@@ -78,14 +80,13 @@ try {
   })
   process.env.MARKLAB_E2E_DRIVER_PORT = String(port)
   // Exercise cold terminal exits before the service owns a resident singleton.
-  const binary = path.join(
-    repository,
-    `src-tauri/target/debug/marklab-desktop${process.platform === 'win32' ? '.exe' : ''}`,
-  )
+  const binary = applicationBinary()
   const execute = promisify(execFile)
   const options = {
-    timeout: 15_000,
-    env: { ...process.env, TAURI_WEBDRIVER_PORT: String(port) },
+    // The first signed debug CEF launch can include a cold framework validation.
+    // This bounds CLI preflight only; editor/startup performance budgets stay unchanged.
+    timeout: usesCef ? 60_000 : 15_000,
+    env: { ...process.env },
   }
   const help = await execute(binary, ['--help'], options)
   assert.match(help.stdout, /--workspace/)
@@ -123,7 +124,10 @@ try {
   )
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'))
   process.env.MARKLAB_PERFORMANCE_LAUNCH_EPOCH_MS = String(Date.now())
-  exitCode = (await launcher.run()) ?? 1
+  exitCode = await withNativeApplication(
+    performanceSource ? path.join(fixture, 'performance') : path.join(fixture, 'alpha'),
+    async () => (await launcher.run()) ?? 1,
+  )
 } catch (error) {
   console.error(error)
 } finally {
@@ -156,7 +160,7 @@ try {
   }
   // Launcher.run settles after the service has stopped its owned app process.
   try {
-    await fs.rm(fixture, { recursive: true, force: true })
+    await fs.rm(fixture, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
   } catch (error) {
     console.error(error)
     exitCode = 1

@@ -35,8 +35,15 @@ export const launchRendererSession = async (
     const origin = new URL(url).origin
     await page.route('**/*', async (route) => {
       const request = new URL(route.request().url())
-      if (request.protocol === 'marklab-asset:') {
-        const body = await backend.assets.read(request.href).catch(() => null)
+      if (
+        request.protocol === 'marklab-asset:' ||
+        request.origin === 'http://marklab-asset.localhost'
+      ) {
+        const capability =
+          request.protocol === 'marklab-asset:'
+            ? request.href
+            : `marklab-asset://${request.pathname.slice(1)}`
+        const body = await backend.assets.read(capability).catch(() => null)
         return body
           ? route.fulfill({
               status: 200,

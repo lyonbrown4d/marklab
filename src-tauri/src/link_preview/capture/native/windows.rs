@@ -1,4 +1,5 @@
 use super::{BackendResult, failure};
+use tauri_runtime_wry::WebviewWryExt;
 use webview2_com::{
   CapturePreviewCompletedHandler,
   Microsoft::Web::WebView2::Win32::COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
@@ -15,7 +16,7 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
   super::super::image_geometry::validate_size(size.width, size.height)?;
   let (sender, receiver) = tokio::sync::oneshot::channel();
   let sender = std::sync::Arc::new(std::sync::Mutex::new(Some(sender)));
-  view.with_webview(move |platform| {
+  view.with_wry_webview(move |platform| {
     let result = (|| -> BackendResult<()> {
       // The stream remains on this COM/UI thread. Its owned HGLOBAL is
       // released automatically after the capture completion callback.

@@ -28,7 +28,10 @@ impl AppPaths {
   }
 
   #[cfg(any(test, all(debug_assertions, feature = "e2e-testing")))]
-  async fn isolated(data: Option<PathBuf>, cache: Option<PathBuf>) -> BackendResult<Self> {
+  pub(crate) async fn isolated(
+    data: Option<PathBuf>,
+    cache: Option<PathBuf>,
+  ) -> BackendResult<Self> {
     let data = test_directory("MARKLAB_E2E_DATA_DIR", data).await?;
     let cache = test_directory("MARKLAB_E2E_CACHE_DIR", cache).await?;
     if data.starts_with(&cache) || cache.starts_with(&data) {

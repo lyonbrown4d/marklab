@@ -4,6 +4,8 @@ use crate::{
   native_window::TrustedWindow,
 };
 use tauri::Manager;
+#[cfg(target_os = "windows")]
+use tauri_runtime_wry::WebviewWryExt;
 pub(super) async fn focused_child(window: &TrustedWindow) -> BackendResult<Option<tauri::Webview>> {
   let Some(tabs) = window.try_state::<crate::web_tabs::WebTabs>() else {
     return Ok(None);
@@ -36,7 +38,6 @@ pub(super) async fn dispatch_menu(window: &TrustedWindow, id: &str) -> BackendRe
     Ok(())
   }
 }
-#[cfg(any(target_os = "linux", target_os = "windows"))]
 async fn focused_view(window: &TrustedWindow) -> BackendResult<tauri::Webview> {
   Ok(
     focused_child(window)
@@ -44,52 +45,38 @@ async fn focused_view(window: &TrustedWindow) -> BackendResult<tauri::Webview> {
       .unwrap_or_else(|| AsRef::<tauri::Webview>::as_ref(window.as_ref()).clone()),
   )
 }
-#[cfg(target_os = "macos")]
+#[cfg(not(target_os = "windows"))]
 pub async fn execute(window: &TrustedWindow, action: EditAction) -> BackendResult<()> {
-  use objc2::sel;
-  use objc2_app_kit::NSWindow;
-  let selector = match action {
-    EditAction::Undo => sel!(undo:),
-    EditAction::Redo => sel!(redo:),
-    EditAction::Cut => sel!(cut:),
-    EditAction::Copy => sel!(copy:),
-    EditAction::Paste => sel!(paste:),
-    EditAction::SelectAll => sel!(selectAll:),
+  use tauri_runtime_cef::{
+    WebviewCefExt,
+    cef::{ImplBrowser, ImplFrame},
   };
-  let (sender, receiver) = tokio::sync::oneshot::channel();
-  window.with_webview(move |platform| {
-    // Tauri owns this NSWindow and dispatches with_webview on its UI thread.
-    let native = unsafe { &*(platform.ns_window() as *const NSWindow) };
-    let accepted = native
-      .firstResponder()
-      .is_some_and(|responder| unsafe { responder.tryToPerform_with(selector, None) });
-    let _ = sender.send(accepted);
-  })?;
-  let accepted = receiver
-    .await
-    .map_err(|_| BackendError::new("EDIT_CANCELLED", "Native editing action was cancelled"))?;
-  if !accepted {
-    return Err(BackendError::new(
-      "EDIT_UNAVAILABLE",
-      "The focused control does not accept this editing action",
-    ));
-  }
-  Ok(())
-}
-#[cfg(target_os = "linux")]
-pub async fn execute(window: &TrustedWindow, action: EditAction) -> BackendResult<()> {
-  use webkit2gtk::WebViewExt;
   let view = focused_view(window).await?;
-  let command = match action {
-    EditAction::Undo => "Undo",
-    EditAction::Redo => "Redo",
-    EditAction::Cut => "Cut",
-    EditAction::Copy => "Copy",
-    EditAction::Paste => "Paste",
-    EditAction::SelectAll => "SelectAll",
-  };
-  view.with_webview(move |platform| platform.inner().execute_editing_command(command))?;
-  Ok(())
+  let (sender, receiver) = tokio::sync::oneshot::channel();
+  view.with_cef_webview(move |native| {
+    let result = native
+      .browser()
+      .focused_frame()
+      .ok_or_else(|| {
+        BackendError::new(
+          "EDIT_UNAVAILABLE",
+          "The focused editing frame is unavailable",
+        )
+      })
+      .map(|frame| match action {
+        EditAction::Undo => frame.undo(),
+        EditAction::Redo => frame.redo(),
+        EditAction::Cut => frame.cut(),
+        EditAction::Copy => frame.copy(),
+        EditAction::Paste => frame.paste(),
+        EditAction::SelectAll => frame.select_all(),
+      });
+    let _ = sender.send(result);
+  })?;
+  tokio::time::timeout(std::time::Duration::from_secs(5), receiver)
+    .await
+    .map_err(|_| BackendError::new("EDIT_TIMEOUT", "Native editing action timed out"))?
+    .map_err(|_| BackendError::new("EDIT_CANCELLED", "Native editing action was cancelled"))?
 }
 #[cfg(target_os = "windows")]
 pub async fn execute(window: &TrustedWindow, action: EditAction) -> BackendResult<()> {
@@ -129,7 +116,7 @@ async fn windows_script(view: &tauri::Webview, script: String) -> BackendResult<
   use webview2_com::{CoTaskMemPWSTR, ExecuteScriptCompletedHandler};
   let (sender, receiver) = tokio::sync::oneshot::channel();
   let pending = Arc::new(Mutex::new(Some(sender)));
-  view.with_webview(move |platform| {
+  view.with_wry_webview(move |platform| {
     let callback_pending = pending.clone();
     let result = (|| -> ::windows::core::Result<()> {
       // SAFETY: Tauri dispatches on the COM/UI thread owning this controller.

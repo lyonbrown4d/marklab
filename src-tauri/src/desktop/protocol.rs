@@ -1,6 +1,6 @@
 use tauri::Manager;
 pub fn serve(
-  context: tauri::UriSchemeContext<'_, tauri::Wry>,
+  context: tauri::UriSchemeContext<'_, tauri::DynRuntime>,
   request: tauri::http::Request<Vec<u8>>,
   responder: tauri::UriSchemeResponder,
 ) {

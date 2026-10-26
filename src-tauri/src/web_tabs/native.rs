@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod cef;
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
@@ -12,10 +14,25 @@ use mac as platform;
 #[cfg(target_os = "windows")]
 use windows as platform;
 pub async fn action(view: &Webview, action: &'static str) -> BackendResult<()> {
-  platform::action(view, action).await
+  #[cfg(any(target_os = "linux", target_os = "macos"))]
+  return cef::action(view, action).await;
+  #[cfg(target_os = "windows")]
+  return platform::action(view, action).await;
 }
 pub fn refresh(manager: WebTabs, window: TrustedWindow, id: String, view: &Webview) {
+  #[cfg(any(target_os = "linux", target_os = "macos"))]
+  cef::refresh(manager, window, id, view);
+  #[cfg(target_os = "windows")]
   platform::refresh(manager, window, id, view);
+}
+pub async fn bindings_changed(manager: &WebTabs, owner: &str) -> BackendResult<()> {
+  #[cfg(target_os = "linux")]
+  return linux::bindings_changed(manager, owner).await;
+  #[cfg(not(target_os = "linux"))]
+  {
+    let _ = (manager, owner);
+    Ok(())
+  }
 }
 pub async fn install_monitor(
   manager: WebTabs,

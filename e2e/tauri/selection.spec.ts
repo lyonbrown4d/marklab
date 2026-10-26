@@ -19,7 +19,7 @@ describe('native block selection focus', () => {
     await openEditor()
     await typeAtEditorEnd(' native-selection-marker')
     await waitForRustMarker('native-selection-marker')
-    await browser.keys([process.platform === 'darwin' ? Key.Command : Key.Control, 'A'])
+    await browser.keys([process.platform === 'darwin' ? Key.Command : Key.Control, 'a'])
     await browser.waitUntil(
       () =>
         browser.execute(() => {

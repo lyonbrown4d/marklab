@@ -1,6 +1,7 @@
 # Tauri Desktop Packaging
 
-The current runtime and bundler are Tauri 2. Node.js and pnpm are build tools;
+The runtime and bundler use Tauri 3 alpha. Windows uses Wry/WebView2; macOS
+and Linux ship CEF. Node.js and pnpm are build tools;
 Electron, its Node backend, and its packaging commands have been removed.
 See [Tauri configuration and credentials](tauri-migration.md) for the complete
 platform and updater configuration.
@@ -8,17 +9,33 @@ platform and updater configuration.
 ## Build and artifact paths
 
 ```bash
-pnpm build:desktop # host release executable, without installers
+pnpm build:desktop # host release; runnable app on macOS, no installers
 pnpm package       # build, then bundle for the host
 pnpm dist:mac      # macOS ARM app/dmg
 pnpm dist:win      # Windows x64 NSIS/MSI
 pnpm dist:linux    # Linux x64 AppImage/deb
 ```
 
-Install the Tauri platform prerequisites and build on the target OS. Host builds
+Build on the target OS. macOS needs CMake and Ninja. Linux needs GTK 4.12 or
+newer; native CI uses Ubuntu 24.04 and GTK4 instead of WebKitGTK. CEF downloads
+about 1 GB on its first build into the shared user cache (`CEF_PATH` can select
+an existing distribution). For direct Cargo checks/tests, set `CEF_PATH` to the
+same cache directory; the Tauri CLI, `pnpm tauri:check` / `pnpm tauri:test`, binding generator and CI
+use that shared path. Linux native windows use X11; Wayland sessions require
+XWayland and a valid `DISPLAY`.
+See the [CEF requirements](https://v3.tauri.app/develop/cef/). Host builds
 use `src-tauri/target/release/`; target-specific builds use
 `src-tauri/target/<target>/release/`. Installers live below `bundle/`. The native
-executable is `marklab-desktop` (`marklab-desktop.exe` on Windows).
+executable is `marklab-desktop` (`marklab-desktop.exe` on Windows). On macOS,
+launch `bundle/macos/Marklab.app/Contents/MacOS/marklab-desktop`; CEF needs the
+framework and helper apps in that bundle. Both the build helper and Tauri dev
+create the required app. macOS signing covers the CEF framework/helpers and
+uses the Chromium entitlements supplied by the Tauri bundler. Windows keeps
+WebView2 installation; CEF is included only on macOS/Linux.
+
+The runtime migration requires fresh startup, memory, native E2E, installer,
+code-signature and updater acceptance on each platform. Earlier Tauri 2/WebKit
+results are historical evidence, not Tauri 3 acceptance.
 
 ## Release workflow
 

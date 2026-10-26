@@ -12,8 +12,8 @@ pub fn install(app: &AppHandle, locale: &str) -> BackendResult<super::policy::Me
   let text = |english: &'static str, chinese: &'static str| if zh { chinese } else { english };
   let build = |label: &str,
                values: &[(&str, &str, Option<&str>)],
-               shortcuts: &mut Vec<(MenuItem<tauri::Wry>, String)>|
-   -> BackendResult<Submenu<tauri::Wry>> {
+               shortcuts: &mut Vec<(MenuItem<tauri::DynRuntime>, String)>|
+   -> BackendResult<Submenu<tauri::DynRuntime>> {
     let section = Submenu::new(app, label, true)?;
     for (id, label, accelerator) in values {
       if *id == "separator" {

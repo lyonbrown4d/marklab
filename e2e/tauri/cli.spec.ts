@@ -1,9 +1,10 @@
 /// <reference types="mocha" />
 import assert from 'node:assert/strict'
+// eslint-disable-next-line no-restricted-imports -- Native E2E bundle selection only.
+import { applicationBinary } from './application.ts'
 import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { browser } from '@wdio/globals'
 /* eslint-disable no-restricted-imports -- Native E2E helpers never enter production bundles. */
@@ -12,11 +13,7 @@ import { currentRoot, invokeNative, openEditor, switchToWorkspace } from './nati
 /* eslint-enable no-restricted-imports */
 
 const fixture = fixturePaths()
-const repository = fileURLToPath(new URL('../../', import.meta.url))
-const binary = path.join(
-  repository,
-  `src-tauri/target/debug/marklab-desktop${process.platform === 'win32' ? '.exe' : ''}`,
-)
+const binary = applicationBinary()
 const senderDirectory = path.join(fixture.root, 'cli sender cwd')
 const workspaceName = 'requested workspace with spaces'
 const documentName = 'requested note with spaces.md'
@@ -26,7 +23,7 @@ const document = path.join(senderDirectory, documentName)
 const closeCreatedOwners = async (originalHandles: ReadonlySet<string>) => {
   // Window operations change the driver's selected owner, so close them in order.
   const created = (await browser.getWindowHandles()).filter(
-    (handle) => !originalHandles.has(handle) && handle.startsWith('workspace-'),
+    (handle) => !originalHandles.has(handle),
   )
   for (const handle of created) {
     await browser.switchToWindow(handle)
@@ -69,7 +66,7 @@ const assertForwardedTarget = async ({
     await promisify(execFile)(binary, args, {
       cwd: senderDirectory,
       timeout: 15_000,
-      env: { ...process.env, TAURI_WEBDRIVER_PORT: process.env.MARKLAB_E2E_DRIVER_PORT },
+      env: { ...process.env },
     })
     await switchToWorkspace(target)
     assert.notEqual(await browser.getWindowHandle(), alphaHandle)

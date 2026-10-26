@@ -1,13 +1,14 @@
 # Native Tauri acceptance
 
-This suite launches the real `src-tauri/target/debug/marklab-desktop` binary through
-WebdriverIO's official Tauri service and embedded WebDriver plugin. It uses the
-production frontend, runtime adapter and Rust commands. It does not use SDK mocks,
-intercept IPC, or load the optional backend execute/mock plugin.
+This suite runs the production frontend, runtime adapter and Rust commands in a
+separate debug E2E application. macOS/Linux use CEF with ChromeDriver attached to
+the test-only loopback debugging port. Windows uses the official Tauri driver
+and matching Edge WebDriver for Wry/WebView2. No paid driver or account is required.
+Tests do not mock the SDK or intercept IPC.
 
-The project runs this integration suite on macOS ARM and Linux. The upstream
-embedded driver also supports Windows; Windows integration is not being run in
-the current migration validation. Native Windows compilation remains a CI gate.
+These are Tauri 3 alpha harness changes; the earlier macOS/Linux embedded-driver
+results below describe the Tauri 2 baseline. Fresh CEF and Windows execution is
+required before claiming native acceptance.
 
 WebdriverIO 10 requires Node.js 22.19 or later; the repository's Node requirement
 is stricter. The latest official Tauri service 1.5.1 still declares a WebdriverIO
@@ -21,11 +22,14 @@ temporary patches when upstream supports 10 and native acceptance passes.
 Use the normal repository target directory and an explicit test configuration:
 
 ```sh
-pnpm exec tauri build --debug --no-bundle --features e2e-testing --config e2e/tauri/tauri.e2e.conf.json
+pnpm build:tauri:e2e
 node --experimental-strip-types e2e/tauri/run.ts
 ```
 
-The build's normal `beforeBuildCommand` creates the production renderer in `dist`.
+The build helper creates `Marklab E2E.app` on macOS because CEF needs its bundled
+framework and helpers. It uses a bare executable with adjacent CEF resources on
+Linux, and the Wry executable on Windows. The normal `beforeBuildCommand` creates
+the production renderer in `dist`.
 The `e2e-testing` feature embeds that renderer using `tauri/custom-protocol`.
 The feature is optional and off by default, and compiling it in release mode is
 rejected. The test configuration uses the distinct identifier
@@ -44,15 +48,30 @@ Before starting the resident app, the launcher checks cold `--help` and
 exit with code `1` and a startup error. Each preflight has a 15-second process timeout and
 uses the same isolated fixture environment.
 
-The service owns the spawned application and stops it during teardown. Its
-embedded driver binds to `127.0.0.1` on a fresh OS-allocated port, with one application and one worker at a time.
-The separate spec files run as one ordered group against that resident app;
-window-state runs first, before another journey selects a second workspace;
-`cli.spec.ts` runs last.
-The launcher passes that port explicitly to the service and app. Before any
-mutation, tests verify the real application identifier and generated workspace
-root; an unrelated listener cannot be accepted as the test application. The launcher removes its temporary files after service teardown.
-A graphical desktop session is required; on Linux, use the CI display/Xvfb setup.
+On macOS/Linux the launcher owns and stops the application. It waits for CEF's
+`/json/version` on a fresh loopback port and supplies the reported Chromium version
+to WebdriverIO's driver manager. An unavailable compatible ChromeDriver fails the
+run; set `MARKLAB_E2E_CHROMEDRIVER` to an existing matching ChromeDriver if needed.
+The debugging endpoint exists only in debug builds with `e2e-testing`; production
+builds do not expose it. ChromeDriver attach does not load its window extension,
+so the harness reads and changes native bounds through Tauri's window IPC using
+permissions added only by the E2E config. This validates app geometry, not
+ChromeDriver's window-management implementation.
+
+On Windows, install the official `tauri-driver` in PATH before running. The Tauri
+service starts that driver and obtains a matching Edge WebDriver. It owns the
+application lifecycle. No WebKit driver is used on Linux.
+
+The separate spec files run as one ordered group against one resident app;
+window-state runs first and `cli.spec.ts` runs last. Window handles remain opaque;
+tests identify the application through the real identifier and workspace root
+before mutation. An unrelated listener cannot be accepted as the application.
+The launcher removes temporary files after app and driver teardown.
+A graphical desktop session is required; on Linux, provide an X11 desktop/Xvfb
+display. Wayland sessions require XWayland and a valid `DISPLAY`.
+CEF requires a working Chromium sandbox (user namespaces or a configured sandbox
+helper); do not disable it to make a test pass. The native-check CI job compiles
+and tests Rust without a GUI; it does not run this suite.
 On macOS, unlock the desktop and keep the test window visible during input and
 presentation checks.
 
@@ -73,26 +92,28 @@ directories and removes the copy after service teardown; it does not edit the
 source workspace. Keep the graphical session unlocked and the graph window
 visible while sampling.
 
-For comparison, preserve an E2E-enabled baseline executable at
-`src-tauri/target/debug/marklab-desktop-baseline` before rebuilding the current
-binary. `--baseline` sets the test-only `MARKLAB_E2E_BASELINE=1` selector for that
-fixed filename; the normal run selects `marklab-desktop`. The profiler runs only
+For comparison, preserve an E2E-enabled CEF baseline app at
+`src-tauri/target/debug/bundle/macos/Marklab E2E-baseline.app` before rebuilding
+the current app. Preserve the complete app, including its CEF framework/helpers. `--baseline` sets the test-only `MARKLAB_E2E_BASELINE=1` selector for that
+fixed app name; the normal run selects `Marklab E2E.app`. The profiler runs only
 `wikiPerformance.spec.ts`, rather than the full acceptance group.
-`--canvas-baseline` selects the separately preserved `marklab-desktop-uninstrumented`
-binary from the Canvas renderer before native layout/community tabs. The normal
+`--canvas-baseline` selects the separately preserved `Marklab E2E-uninstrumented.app`
+bundle. Both baseline selectors require an app built with the same CEF automation
+contract. Historical Tauri 2/WebKit binaries require their original harness and
+cannot be attached through ChromeDriver. The normal
 run opens the default community; `--all` explicitly selects the whole workspace.
 Keep both baselines unchanged while rebuilding the current executable.
 
 The `WIKI_GRAPH_PROFILE` console record includes graph payload timing and size,
 graph opening time, animation-frame intervals during scripted pan/zoom, rendered
 DOM counts, and initial, first-layout, active, and settled memory samples. The RSS
-field retains the aggregate RSS of newly observed `WebKit.WebContent` processes.
+field retains the aggregate RSS of newly observed CEF `Helper (Renderer)` processes.
 On macOS, physical footprint is sampled for that same PID set with Apple's
 `footprint` tool (two-second timeout per PID, at most two concurrent reads).
 Any failed read makes the physical aggregate `null`; the record includes a failure
 count and availability reason. The same sampling includes the newly launched native
-app process and their combined physical footprint. This sum excludes shared GPU
-and network services. These are separate snapshots, not a continuous peak or total
+app process and their combined physical footprint. This sum excludes CEF GPU,
+network and other helper services. These are separate snapshots, not a continuous peak or total
 system memory measurement.
 Compare runs under the same conditions;
 these measurements do not establish native OS input correctness. Failure
@@ -109,7 +130,7 @@ Rust partition command, bounded community tabs, All, cross-community search,
 one mounted Canvas, and Plate undo/redo and autosave after a tab round trip.
 The original workspace and production application data are not used.
 
-### 2026-10-19 macOS comparison
+### 2026-10-19 macOS comparison (Tauri 2/WebKit)
 
 These single-run samples used the same copied workspace (274 nodes, 1,032 edges),
 900 × 700 outer window, device scale 2, production renderer and debug E2E native
@@ -194,7 +215,7 @@ captures overlay webview bounds but restores the content rectangle. Neither the
 plugin's visibility nor decoration/fullscreen restoration is enabled; production
 editor readiness and custom titlebar code continue to own those behaviors.
 
-The pinned embedded driver's Actions keyboard endpoint dispatches JavaScript
+The historical embedded driver's Actions keyboard endpoint dispatches JavaScript
 keyboard events without inserting text into a contenteditable element. These
 manual Radix tab tests focus a tab and press Enter; the click endpoint alone does
 not emit the mouse-down event needed to activate a manual tab. Graph search
@@ -217,6 +238,6 @@ coverage threshold, performance budgets, platform compilation, or OS clipboard,
 notifications, export and updater acceptance. Chromium renderer/performance tests
 remain separately documented in `e2e/renderer` and `e2e/performance`.
 
-References: [Tauri testing](https://v2.tauri.app/develop/tests/),
-[Tauri WebDriver guidance](https://v2.tauri.app/develop/tests/webdriver/),
+References: [Tauri testing](https://v3.tauri.app/develop/tests/),
+[Tauri WebDriver guidance](https://v3.tauri.app/develop/tests/webdriver/),
 [official service](https://github.com/webdriverio/desktop-mobile/tree/main/packages/tauri-service).
