@@ -343,8 +343,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       i18next:
-        specifier: 26.5.10
-        version: 26.5.10(@typescript/typescript6@6.0.2)
+        specifier: 26.5.11
+        version: 26.5.11(@typescript/typescript6@6.0.2)
       immer:
         specifier: ^11.2.9
         version: 11.2.9
@@ -409,8 +409,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1(react-dnd-html5-backend@16.0.1)(react-dnd@16.0.1(@types/node@26.6.5)(@types/react@19.3.0)(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-data-grid:
-        specifier: 7.0.0-beta.62
-        version: 7.0.0-beta.62(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 7.0.0-beta.63
+        version: 7.0.0-beta.63(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-day-picker:
         specifier: ^10.0.2
         version: 10.0.2(@types/react@19.3.0)(react@19.3.1)
@@ -433,8 +433,8 @@ importers:
         specifier: ^7.91.0
         version: 7.91.0(@types/react@19.3.0)(react@19.3.1)
       react-i18next:
-        specifier: ^17.1.8
-        version: 17.1.8(@typescript/typescript6@6.0.2)(i18next@26.5.10(@typescript/typescript6@6.0.2))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^17.1.9
+        version: 17.1.9(@typescript/typescript6@6.0.2)(i18next@26.5.11(@typescript/typescript6@6.0.2))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-pdf:
         specifier: 11.0.0
         version: 11.0.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -7335,8 +7335,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  i18next@26.5.10:
-    resolution: {integrity: sha512-YS4EiLQhhk0wGThm4Zy+BL2c9rBNIK+kAbksi4l/B+D6kVRQLIFZgu2b/MU2LibJJHwWNTYoOYR52T+jfV8kPQ==}
+  i18next@26.5.11:
+    resolution: {integrity: sha512-Wc0klBPKxqZ2tL2qdAnF8xvvnWgr1IMGSY2ikTiAvaFVbz7xiFARtkoU4RidBDw1SyziGROp0qxu6qnJ7l2Wug==}
     peerDependencies:
       typescript: ^5 || ^6 || ^7
     peerDependenciesMeta:
@@ -8948,8 +8948,8 @@ packages:
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
-  react-data-grid@7.0.0-beta.62:
-    resolution: {integrity: sha512-PL9JTsO58t4eIDSdYiYuQxdtU1VasstRXgxDqf76Q5dVGk1Ji+eowMCrZGjZF7wtdn7KmM3eU0W8A09G/yX0Vg==}
+  react-data-grid@7.0.0-beta.63:
+    resolution: {integrity: sha512-AJh9ow+rvey+Wu3yAjIZ2gzfCImWYYw/AbndSTQ4I5aV4UDkQLYKiEZcJ60tRQWN6HthiK6a8xCkHgu0hOsaTQ==}
     peerDependencies:
       react: ^19.2
       react-dom: ^19.2
@@ -9040,8 +9040,8 @@ packages:
       '@types/react':
         optional: true
 
-  react-i18next@17.1.8:
-    resolution: {integrity: sha512-vGH+Tbhqbv5LdN9KvC9GEmQ6ATxJAjyxPEK0zSCSRlkeDqCPNxVtEOvDNRAz+51HTxc6QPwhnHaFD7ICu6pD1A==}
+  react-i18next@17.1.9:
+    resolution: {integrity: sha512-OgYqIH13XHPlWTaaI795Dz+k2AdKnXcOxNQVnf750T8Ij0TYWp1nYvXRpoJBulPqlyk2OAbn1PM4tFKiIj/byA==}
     peerDependencies:
       i18next: '>= 26.2.0'
       react: '>= 16.8.0'
@@ -11040,7 +11040,7 @@ snapshots:
       hast-util-to-html: 9.0.5
       hast-util-to-string: 3.0.1
       hastscript: 9.0.1
-      i18next: 26.5.10(@typescript/typescript6@6.0.2)
+      i18next: 26.5.11(@typescript/typescript6@6.0.2)
       js-yaml: 4.3.2
       klona: 2.0.6
       magic-string: 1.4.3
@@ -18093,7 +18093,7 @@ snapshots:
 
   husky@9.1.7: {}
 
-  i18next@26.5.10(@typescript/typescript6@6.0.2):
+  i18next@26.5.11(@typescript/typescript6@6.0.2):
     optionalDependencies:
       typescript: '@typescript/typescript6@6.0.2'
 
@@ -20150,7 +20150,7 @@ snapshots:
     dependencies:
       react: 19.3.1
 
-  react-data-grid@7.0.0-beta.62(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  react-data-grid@7.0.0-beta.63(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
@@ -20264,11 +20264,11 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react-i18next@17.1.8(@typescript/typescript6@6.0.2)(i18next@26.5.10(@typescript/typescript6@6.0.2))(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  react-i18next@17.1.9(@typescript/typescript6@6.0.2)(i18next@26.5.11(@typescript/typescript6@6.0.2))(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       '@babel/runtime': 7.29.10
       html-parse-stringify: 4.0.1
-      i18next: 26.5.10(@typescript/typescript6@6.0.2)
+      i18next: 26.5.11(@typescript/typescript6@6.0.2)
       react: 19.3.1
       use-sync-external-store: 1.7.0(react@19.3.1)
     optionalDependencies:

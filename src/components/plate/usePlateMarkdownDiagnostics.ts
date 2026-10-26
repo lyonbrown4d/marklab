@@ -8,6 +8,7 @@ import {
   createPlateDiagnosticRanges,
   diagnosticRangesForEntry,
   focusPlateDiagnostic,
+  type PlateDiagnosticRange,
 } from '@/components/plate/plateDiagnosticRanges'
 import {
   clearPlateDiagnostics,
@@ -21,6 +22,7 @@ import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 import { markdownLanguageApi } from '@/services/markdownLanguageApi'
 
 const DIAGNOSTIC_DELAY_MS = 120
+const EMPTY_RANGES: PlateDiagnosticRange[] = []
 let sessionSequence = 0
 
 type DiagnosticSnapshot = {
@@ -73,6 +75,8 @@ export const usePlateMarkdownDiagnostics = ({
   workspaceKey = '',
 }: UsePlateMarkdownDiagnosticsOptions) => {
   const desktopRuntime = isDesktopRuntime()
+  const diagnosticsEnabled =
+    enabled && markdownEditorPerformancePolicy(value.length).diagnostics === 'full'
   const [controllerKey] = useState(() => `plate-diagnostics:${++sessionSequence}`)
   const sessionRef = useRef<ReturnType<typeof createPlateMarkdownDiagnosticsSession> | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -84,7 +88,7 @@ export const usePlateMarkdownDiagnostics = ({
   })
 
   useEffect(() => {
-    if (!enabled || !desktopRuntime || !activePath) {
+    if (!diagnosticsEnabled || !desktopRuntime || !activePath) {
       sessionRef.current = null
       return
     }
@@ -110,12 +114,12 @@ export const usePlateMarkdownDiagnostics = ({
       sessionRef.current = null
       void session.close().catch(() => undefined)
     }
-  }, [activePath, controllerKey, desktopRuntime, enabled])
+  }, [activePath, controllerKey, desktopRuntime, diagnosticsEnabled])
 
   const schedule = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     const request = ++requestRef.current
-    if (!enabled || !desktopRuntime || !activePath) return
+    if (!diagnosticsEnabled || !desktopRuntime || !activePath) return
     timerRef.current = setTimeout(() => {
       timerRef.current = null
       void getMarkdown()
@@ -129,7 +133,7 @@ export const usePlateMarkdownDiagnostics = ({
         })
         .catch((error) => console.error('Rich editor diagnostics snapshot failed', error))
     }, DIAGNOSTIC_DELAY_MS)
-  }, [activePath, desktopRuntime, enabled, getMarkdown])
+  }, [activePath, desktopRuntime, diagnosticsEnabled, getMarkdown])
 
   useEffect(() => {
     schedule()
@@ -142,17 +146,17 @@ export const usePlateMarkdownDiagnostics = ({
 
   const currentSnapshot = useMemo<DiagnosticSnapshot | null>(
     () =>
-      enabled && desktopRuntime && activePath && snapshot.path === activePath ? snapshot : null,
-    [activePath, desktopRuntime, enabled, snapshot],
+      diagnosticsEnabled && desktopRuntime && activePath && snapshot.path === activePath
+        ? snapshot
+        : null,
+    [activePath, desktopRuntime, diagnosticsEnabled, snapshot],
   )
   const ranges = useMemo(
     () =>
-      createPlateDiagnosticRanges(
-        editor,
-        currentSnapshot?.content ?? value,
-        currentSnapshot?.diagnostics ?? [],
-      ),
-    [currentSnapshot, editor, value],
+      currentSnapshot?.diagnostics.length
+        ? createPlateDiagnosticRanges(editor, currentSnapshot.content, currentSnapshot.diagnostics)
+        : EMPTY_RANGES,
+    [currentSnapshot, editor],
   )
   useEffect(() => editor.api.redecorate(), [editor, ranges])
 

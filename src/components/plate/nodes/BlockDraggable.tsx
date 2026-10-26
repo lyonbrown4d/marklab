@@ -8,7 +8,7 @@ import {
   type PlateElementProps,
   type RenderNodeWrapper,
 } from 'platejs/react'
-import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useCallback, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -81,6 +81,13 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
     element,
     orientation: 'vertical',
   })
+  const setHandleElement = useCallback(
+    (handle: HTMLButtonElement | null) => {
+      handleElementRef.current = handle
+      handleRef(handle)
+    },
+    [handleRef],
+  )
   const availability = getBlockActionAvailability(editor, element)
 
   const openMenu = (event: MouseEvent<HTMLButtonElement>) => {
@@ -194,10 +201,7 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
           draggedRef.current = false
           selectBlockFromHandle(editor, id, event)
         }}
-        ref={(handle) => {
-          handleElementRef.current = handle
-          handleRef(handle)
-        }}
+        ref={setHandleElement}
         size="icon"
         tabIndex={initialTabIndex}
         title={i18n.t('plate.blockDrag.instructions')}

@@ -119,6 +119,26 @@ beforeEach(() => {
 })
 
 describe('BlockDraggable', () => {
+  it('keeps the drag connector attached when block content rerenders', () => {
+    const props = {
+      children: <p>Before</p>,
+      element: { children: [{ text: 'Before' }], id: 'block-1', type: 'p' },
+    } as unknown as PlateElementProps
+    const view = render(<BlockDraggable {...props} />)
+    const handle = screen.getByRole('button', { name: 'Move block' })
+    dndMocks.handleRef.mockClear()
+    view.rerender(
+      <BlockDraggable {...props}>
+        <p>After</p>
+      </BlockDraggable>,
+    )
+    expect(screen.getByText('After')).toBeInTheDocument()
+    expect(dndMocks.handleRef).not.toHaveBeenCalled()
+    view.unmount()
+    expect(dndMocks.handleRef).toHaveBeenCalledWith(null)
+    expect(handle.isConnected).toBe(false)
+  })
+
   it('opens the block action menu on click', async () => {
     renderBlock()
 

@@ -41,6 +41,17 @@ for (const gate of gates)
     baseURL,
   }, info) => {
     if (!baseURL) throw new Error('Production renderer baseURL is required')
+    const graphics = await browser.newBrowserCDPSession()
+    try {
+      const { gpu } = await graphics.send('SystemInfo.getInfo')
+      await attach(info, 'renderer-graphics.json', {
+        devices: gpu.devices,
+        featureStatus: gpu.featureStatus,
+        displayType: gpu.auxAttributes?.displayType,
+      })
+    } finally {
+      await graphics.detach()
+    }
     const budget = performanceBudgetForProject(info.project.name)
     let collection:
       | Awaited<

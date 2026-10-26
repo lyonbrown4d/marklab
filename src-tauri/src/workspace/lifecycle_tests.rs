@@ -125,13 +125,13 @@ async fn native_watcher_observes_external_changes_and_stops_when_dropped() {
   })
   .await
   .unwrap();
-  while receiver.try_recv().is_ok() {}
-  assert!(
-    tokio::time::timeout(Duration::from_secs(2), receiver.recv())
-      .await
-      .unwrap()
-      .is_none()
-  );
+  // A callback already in flight can enqueue its last event during drop.
+  // Drain that backlog, but still require every sender to close promptly.
+  tokio::time::timeout(Duration::from_secs(2), async {
+    while receiver.recv().await.is_some() {}
+  })
+  .await
+  .expect("native watcher must close its event channel after being dropped");
 }
 #[tokio::test]
 async fn guide_install_preserves_edits_and_does_not_recreate_deleted_user_guides() {
