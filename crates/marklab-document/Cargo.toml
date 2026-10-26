@@ -4,6 +4,14 @@ version = "0.2.8"
 description = "Shared local document rendering for Marklab"
 edition = "2024"
 rust-version = "1.99.1"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lyonbrown4d/marklab"
+homepage = "https://lyonbrown4d.github.io/marklab/"
+readme = "README.md"
+keywords = ["markdown", "pdf", "epub", "docx", "documents"]
+categories = ["text-processing", "parser-implementations"]
+publish = ["crates-io"]
+include = ["src/**", "README.md", "LICENSE-MIT", "LICENSE-APACHE"]
 
 [features]
 default = []

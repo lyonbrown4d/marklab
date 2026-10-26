@@ -1,4 +1,42 @@
-# Tauri Desktop Packaging
+# Desktop and CLI releases
+
+## Standalone CLI on crates.io
+
+The standalone `marklab-cli` package installs the `marklab` command. Its shared
+`marklab-document` dependency is published separately; neither package requires
+the desktop runtime. Both crates are licensed under `MIT OR Apache-2.0`.
+
+Use Rust 1.99.1 or newer. From a clean repository checkout, keep both crate
+versions and the CLI's exact `marklab-document` dependency version aligned, then:
+
+```bash
+pnpm cli:test
+pnpm cli:publish:check
+cargo login
+pnpm cli:publish
+```
+
+`cli:publish:check` packages and builds both crates without uploading. The CLI
+workflow runs this check on Linux after the existing tests. `cli:publish` uploads
+the library before the CLI using Cargo's workspace publication ordering. It
+selects only these two crates; do not publish the entire desktop workspace.
+Cargo credentials must have permission to publish both package names. Keep
+tokens out of Git, command arguments, and logs; `cargo login` prompts for one.
+Published versions cannot be overwritten, so fixes require a new version.
+
+After publishing, verify installation outside the checkout:
+
+```bash
+cargo install marklab-cli --version 0.2.8 --locked
+marklab --version
+marklab --help
+```
+
+The separate `cli-v<version>` tag still creates draft GitHub releases with
+prebuilt binaries and checksums. It does not upload to crates.io; registry
+publication is an explicit maintainer action.
+
+## Desktop runtime
 
 The runtime and bundler use Tauri 3 alpha. Windows uses Wry/WebView2; macOS
 and Linux ship CEF. Node.js and pnpm are build tools;

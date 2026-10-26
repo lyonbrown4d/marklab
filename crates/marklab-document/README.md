@@ -4,6 +4,13 @@ Host-independent Rust document processing used directly by Marklab desktop and
 the standalone CLI. It does not depend on Tauri, a window, IPC, a database, or a
 running application.
 
+```sh
+cargo add marklab-document
+```
+
+Requires Rust 1.99.1 or newer. The default dependency set includes the Typst
+rendering engine; first builds can take several minutes.
+
 Public APIs:
 
 - `markdown::parse(&str)` returns owned `Node` / `Kind` trees. Both support Serde.
@@ -53,3 +60,9 @@ version also includes the native rendering dependencies.
 ```sh
 cargo test -p marklab-document --locked
 ```
+
+## License
+
+This crate is available under either the [MIT license](LICENSE-MIT) or the
+[Apache License 2.0](LICENSE-APACHE), at your option. This declaration applies to
+this crate; dependencies retain their own licenses.

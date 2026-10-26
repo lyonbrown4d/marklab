@@ -5,9 +5,29 @@ starting the desktop application. It uses the same `marklab-document` rendering
 and analysis library as the desktop application. It does not open a workspace
 database, scan unrelated workspaces, start a server, or invoke external converters.
 
+## Installation
+
+Install Rust 1.99.1 or newer, then install the CLI from crates.io:
+
+```sh
+cargo install marklab-cli --locked
+marklab --help
+```
+
+The package is named `marklab-cli`; the installed command is `marklab`. Cargo
+compiles the document engine locally, so the first installation can take several
+minutes. Node.js, the desktop app, CEF, and WebView2 are not required.
+
+To build from a repository checkout instead:
+
 ```sh
 cargo build --release -p marklab-cli
 ./src-tauri/target/release/marklab --help
+```
+
+## Usage
+
+```sh
 marklab export notes.md --format pdf --output notes.pdf
 marklab export notes.md --format html --output notes.html
 marklab export notes --recursive --format txt --output exported
@@ -19,6 +39,12 @@ marklab inspect notes.md > analysis.json
 cat notes.md | marklab inspect - --ast > ast.json
 marklab completions zsh > _marklab
 ```
+
+## License
+
+This crate is available under either the [MIT license](LICENSE-MIT) or the
+[Apache License 2.0](LICENSE-APACHE), at your option. This declaration applies to
+this crate; dependencies retain their own licenses.
 
 ## PDF export
 

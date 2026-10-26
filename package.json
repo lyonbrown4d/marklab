@@ -14,6 +14,8 @@
     "cli:build": "node --experimental-strip-types scripts/cli.ts build",
     "cli:test": "node --experimental-strip-types scripts/cli.ts test",
     "cli:package": "node --experimental-strip-types scripts/cli.ts package",
+    "cli:publish:check": "cargo publish -p marklab-document -p marklab-cli --dry-run --locked",
+    "cli:publish": "cargo publish -p marklab-document -p marklab-cli --locked",
     "dev": "moon run desktop:tauri-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",

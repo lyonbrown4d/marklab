@@ -17,8 +17,7 @@ mod serving;
 mod tests;
 
 pub fn resource_url(value: &str) -> String {
-  if let Some(path) = value.strip_prefix("marklab-asset://")
-  {
+  if let Some(path) = value.strip_prefix("marklab-asset://") {
     return format!("http://marklab-asset.localhost/{path}");
   }
   value.into()

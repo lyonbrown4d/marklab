@@ -18,6 +18,15 @@ HTML, EPUB, PDF, and DOCX output without Tauri or a running desktop.
 See the [CLI guide](crates/marklab-cli/README.md) for directory conversion, ordered
 publications, JSON inspection, and terminal progress.
 
+Install the standalone command from crates.io with Rust 1.99.1 or newer:
+
+```bash
+cargo install marklab-cli --locked
+marklab --help
+```
+
+From a repository checkout:
+
 ```bash
 cargo run -p marklab-cli -- export ./notes --recursive --format txt --output ./output
 cargo run -p marklab-cli -- publish ./book --format epub --output ./book.epub
