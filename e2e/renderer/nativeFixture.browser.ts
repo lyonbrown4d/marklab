@@ -9,6 +9,7 @@ type Host = {
   __marklabRendererFixture: { emit: typeof emit }
   __TAURI_INTERNALS__: { invoke: (command: string, args?: Payload) => Promise<unknown> }
 }
+let maximized = false
 const host = window as unknown as Host
 host.isTauri = true
 mockWindows('renderer-fixture')
@@ -16,7 +17,14 @@ mockIPC(
   async (command, args) => {
     if (command === 'plugin:window|scale_factor') return window.devicePixelRatio
     if (command === 'plugin:window|is_visible') return document.visibilityState === 'visible'
-    if (command === 'plugin:window|is_maximized') return false
+    if (command === 'plugin:window|is_maximized' || command === 'window_get_maximized')
+      return maximized
+    if (command === 'window_set_maximized') {
+      const request = (args as DesktopCommandArgs['window_set_maximized']).request
+      if (typeof request.maximized !== 'boolean') throw new Error('Invalid maximized state')
+      maximized = request.maximized
+      return
+    }
     if (
       args &&
       (typeof args !== 'object' || args instanceof ArrayBuffer || ArrayBuffer.isView(args))

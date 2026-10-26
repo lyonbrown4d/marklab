@@ -97,6 +97,15 @@ const renderPreview = (
 }
 
 describe('SpreadsheetPreviewSurface', () => {
+  it('explains how to download a workbook that is still a Git LFS pointer', async () => {
+    vi.mocked(spreadsheetApi.readPage).mockRejectedValueOnce(
+      Object.assign(new Error('Pointer content missing'), { code: 'GIT_LFS_CONTENT_MISSING' }),
+    )
+    renderPreview()
+    expect(await screen.findByRole('alert')).toHaveTextContent('preview.gitLfsContentMissing')
+    expect(screen.getByRole('button', { name: 'preview.spreadsheetRetry' })).toBeEnabled()
+  })
+
   it('retains resized columns across pages and calculation modes, isolating sheets and files', async () => {
     vi.mocked(spreadsheetApi.readPage).mockImplementation(async (request) => ({
       ...page,

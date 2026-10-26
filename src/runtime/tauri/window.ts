@@ -2,6 +2,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import type { DesktopFileDropEvent, DesktopRuntimeApi } from '@/runtime/desktop'
 import { request, type TauriEventHub } from '@/runtime/tauri/transport'
+import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
 // Keep visibility native and current across attempts that hide/reuse a renderer.
@@ -53,6 +54,8 @@ const watchNativeMaximized = async (
 
 export const createWindowApis = (events: TauriEventHub) => {
   const nativeWindow = getCurrentWindow()
+  const linux = inferPlatformFromUserAgent() === 'linux'
+  const isMaximized = () => (linux ? request('window_get_maximized') : nativeWindow.isMaximized())
   const closeHandlers = new Set<CloseHandler>()
   const dropHandlers = new Set<(event: DesktopFileDropEvent) => void>()
   const unlisten: Array<() => void> = []
@@ -109,14 +112,23 @@ export const createWindowApis = (events: TauriEventHub) => {
     setVimKeyboardOwnership: (active) => request('window_set_vim_keyboard_ownership', { active }),
     onPresented: (handler) => events.on('window-presented', handler),
     minimize: () => nativeWindow.minimize(),
-    maximize: () => nativeWindow.maximize(),
-    unmaximize: () => nativeWindow.unmaximize(),
-    isMaximized: () => nativeWindow.isMaximized(),
+    maximize: async () => {
+      if (linux) await request('window_set_maximized', { maximized: true })
+      else await nativeWindow.maximize()
+    },
+    unmaximize: async () => {
+      if (linux) await request('window_set_maximized', { maximized: false })
+      else await nativeWindow.unmaximize()
+    },
+    isMaximized,
     onMaximizedChanged: async (handler) => {
       if (disposed) return () => {}
-      const stop = await watchNativeMaximized(nativeWindow, (maximized) => {
-        if (!disposed) handler(maximized)
-      })
+      const stop = await watchNativeMaximized(
+        { isMaximized, onResized: nativeWindow.onResized.bind(nativeWindow) },
+        (maximized) => {
+          if (!disposed) handler(maximized)
+        },
+      )
       if (disposed) {
         stop()
         return () => {}

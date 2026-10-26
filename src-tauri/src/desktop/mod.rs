@@ -9,6 +9,10 @@ pub(crate) mod event_contracts;
 mod events;
 mod flush;
 mod geometry;
+#[cfg(target_os = "linux")]
+mod hyprland_ipc;
+#[cfg(target_os = "linux")]
+mod hyprland_windows;
 mod invoke;
 mod launch;
 mod lifecycle;
@@ -24,6 +28,7 @@ mod transitions;
 mod visibility;
 mod window_chrome;
 mod window_state;
+mod window_state_commands;
 pub mod windows;
 use crate::error::BackendResult;
 pub(crate) use flush::with_flushed_windows;
@@ -132,6 +137,8 @@ pub fn run() -> BackendResult<()> {
       }
     })
     .invoke_handler(invoke::handler());
+  #[cfg(target_os = "linux")]
+  let builder = builder.manage(hyprland_windows::HyprlandWindows::detect());
   #[cfg(target_os = "macos")]
   let builder = builder.plugin(tauri_plugin_macos_fps::init());
   #[cfg(all(feature = "e2e-testing", debug_assertions))]

@@ -129,8 +129,8 @@ pub async fn activate(window: &WebviewWindow, root: &RootInfo) -> BackendResult<
     .get_window_state(&key)
     .await?
   {
-    if window.is_maximized()? {
-      window.unmaximize()?;
+    if super::window_state_commands::read_maximized(window).await? {
+      super::window_state_commands::set_maximized(window, false).await?;
     }
     window.set_size(LogicalSize::new(
       state.width.max(640),
@@ -158,7 +158,7 @@ pub async fn activate(window: &WebviewWindow, root: &RootInfo) -> BackendResult<
       }
     }
     if state.is_maximized {
-      window.maximize()?;
+      super::window_state_commands::set_maximized(window, true).await?;
     }
     window
       .state::<GeometryState>()
@@ -186,7 +186,7 @@ pub async fn activate(window: &WebviewWindow, root: &RootInfo) -> BackendResult<
   Ok(())
 }
 pub async fn persist(window: &WebviewWindow) -> BackendResult<()> {
-  let maximized = window.is_maximized()?;
+  let maximized = super::window_state_commands::read_maximized(window).await?;
   let fullscreen = window.is_fullscreen()?;
   let mut cached = {
     window

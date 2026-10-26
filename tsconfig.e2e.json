@@ -13,7 +13,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": ["e2e/**/*.ts", "wdio.tauri.conf.ts"]
 }

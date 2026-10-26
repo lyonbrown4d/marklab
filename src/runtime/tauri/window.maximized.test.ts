@@ -29,7 +29,10 @@ const windowFixture = (initial: boolean) => {
     },
   }
 }
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Windows NT 10.0)')
+})
 afterEach(() => vi.restoreAllMocks())
 
 describe('current-window maximized subscriptions', () => {

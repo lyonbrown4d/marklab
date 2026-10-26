@@ -42,6 +42,10 @@ pub fn window_event(window: &Window, event: &WindowEvent) {
       let owner = window.label().to_string();
       let _ = crate::native_window::unregister(&app, &owner);
       super::geometry::remove(&app, &owner);
+      #[cfg(target_os = "linux")]
+      app
+        .state::<super::hyprland_windows::HyprlandWindows>()
+        .forget(&owner);
       if let Some(registry) = app.try_state::<WorkspaceRegistry>() {
         let _ = registry.close(&owner);
       }

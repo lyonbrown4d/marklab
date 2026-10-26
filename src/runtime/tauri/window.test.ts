@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEventHub } from '@/runtime/tauri/transport'
 import { createWindowApis } from '@/runtime/tauri/window'
 
@@ -47,7 +47,44 @@ beforeEach(() => {
   })
 })
 
+afterEach(() => vi.restoreAllMocks())
+
 describe('Tauri window lifecycle', () => {
+  it.each(['Windows NT 10.0', 'Macintosh; Intel Mac OS X'])(
+    'preserves native maximization on %s',
+    async (platform) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(platform)
+      native.window.isMaximized.mockResolvedValue(true)
+      const api = createWindowApis(createEventHub())
+      expect(await api.window.isMaximized()).toBe(true)
+      await api.window.maximize()
+      await api.window.unmaximize()
+      expect(native.window.maximize).toHaveBeenCalledOnce()
+      expect(native.window.unmaximize).toHaveBeenCalledOnce()
+      expect(native.invoke).not.toHaveBeenCalled()
+      api.dispose()
+    },
+  )
+
+  it('uses the Linux owner-scoped state commands and preserves failures', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('X11; Linux x86_64')
+    const api = createWindowApis(createEventHub())
+    native.invoke.mockResolvedValueOnce(false)
+    expect(await api.window.isMaximized()).toBe(false)
+    await api.window.maximize()
+    await api.window.unmaximize()
+    expect(native.invoke.mock.calls).toEqual([
+      ['window_get_maximized', { request: {} }],
+      ['window_set_maximized', { request: { maximized: true } }],
+      ['window_set_maximized', { request: { maximized: false } }],
+    ])
+    expect(native.window.maximize).not.toHaveBeenCalled()
+    expect(native.window.unmaximize).not.toHaveBeenCalled()
+    native.invoke.mockRejectedValueOnce(new Error('Compositor unavailable'))
+    await expect(api.window.maximize()).rejects.toThrow('Compositor unavailable')
+    api.dispose()
+  })
+
   it('reports dirty flush failures through the native save-failed dialog', async () => {
     const api = createWindowApis(createEventHub())
     await api.install()

@@ -19,5 +19,13 @@ export const fixturePaths = () => {
   const cache = path.join(root, 'cache')
   if (process.env.MARKLAB_E2E_DATA_DIR !== data || process.env.MARKLAB_E2E_CACHE_DIR !== cache)
     throw new Error('Native E2E data/cache isolation is required')
-  return { root, data, cache, alpha: path.join(root, 'alpha'), beta: path.join(root, 'beta') }
+  const performance = path.join(root, 'performance')
+  return {
+    root,
+    data,
+    cache,
+    alpha: path.join(root, 'alpha'),
+    beta: path.join(root, 'beta'),
+    performance: fs.existsSync(performance) ? performance : undefined,
+  }
 }

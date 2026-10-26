@@ -3,6 +3,48 @@ use crate::spreadsheet::{fixtures, limits};
 use std::io::{Cursor, Write};
 
 #[test]
+fn lfs_pointers_report_missing_content_for_files_snapshots_and_calculation() {
+  let fixture = Fixture::new();
+  let pointer = format!(
+    "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize 28801\n",
+    "a".repeat(64)
+  );
+  let name = "研发工程师评分规则.xlsx";
+  std::fs::write(fixture.root.path().join(name), &pointer).unwrap();
+  let capability = fixture
+    .assets
+    .issue_bytes(
+      "main",
+      pointer.as_bytes(),
+      name,
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    .unwrap();
+  for recalculate in [false, true] {
+    for snapshot in [false, true] {
+      let mut input = request(name);
+      input.recalculate = recalculate;
+      if snapshot {
+        input.asset_url = Some(capability.url.clone());
+      }
+      assert_eq!(
+        fixture.read(input).unwrap_err().code,
+        "GIT_LFS_CONTENT_MISSING"
+      );
+    }
+  }
+  std::fs::write(
+    fixture.root.path().join(name),
+    b"version https://git-lfs.github.com/spec/v1\nnot a valid pointer\n",
+  )
+  .unwrap();
+  assert_eq!(
+    fixture.read(request(name)).unwrap_err().code,
+    "INVALID_SPREADSHEET"
+  );
+}
+
+#[test]
 fn zip_expansion_and_entry_counts_are_bounded_before_workbook_parsing() {
   let fixture = Fixture::new();
   for (name, entries, entry_bytes) in [

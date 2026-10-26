@@ -1566,6 +1566,7 @@
   "preview.spreadsheetLoading": "正在读取表格…",
   "preview.spreadsheetFailed": "无法预览表格",
   "preview.spreadsheetLabel": "{{name}} 表格预览",
+  "preview.gitLfsContentMissing": "此文件是 Git LFS 指针，实际表格内容尚未下载。请在仓库中运行 git lfs pull 后重试。",
   "preview.spreadsheetSheet": "工作表",
   "preview.spreadsheetRows": "第 {{start}}–{{end}} 行，共 {{total}} 行",
   "preview.spreadsheetTruncated": "内容超出预览限制，已截断。",

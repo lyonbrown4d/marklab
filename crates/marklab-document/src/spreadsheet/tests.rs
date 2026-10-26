@@ -1,6 +1,18 @@
 use super::*;
 use std::io::{Cursor, Write};
 
+#[test]
+fn shared_import_reports_unmaterialized_lfs_content() {
+  let pointer = format!(
+    "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize 28801\n",
+    "a".repeat(64)
+  );
+  let error = read(pointer.into_bytes(), "xlsx", &CancellationToken::new())
+    .err()
+    .expect("missing LFS workbook");
+  assert_eq!(error.code, "GIT_LFS_CONTENT_MISSING");
+}
+
 fn archive(name: &str, content: &str) -> Vec<u8> {
   let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
   writer

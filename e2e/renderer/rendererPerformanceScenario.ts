@@ -78,20 +78,29 @@ export const runRendererPerformanceSample = async ({
       .click({ position: { x: 2, y: 2 } })
     await expect(editor).toBeFocused()
     await page.keyboard.press('ControlOrMeta+A')
-    await expect
-      .poll(async () => {
-        const selection = await selectionState(page)
-        const blocks = selection.blockSelection
-        return (
-          (selection.insideEditor && selection.textLength > 0) ||
-          (blocks?.shadowInputFocused &&
-            blocks.blockCount > 0 &&
-            blocks.selectedBlockCount === blocks.blockCount)
-        )
+    try {
+      await expect
+        .poll(async () => {
+          const selection = await selectionState(page)
+          const blocks = selection.blockSelection
+          return (
+            (selection.insideEditor && selection.textLength > 0) ||
+            (blocks?.shadowInputFocused &&
+              blocks.blockCount > 0 &&
+              blocks.selectedBlockCount === blocks.blockCount)
+          )
+        })
+        .toBe(true)
+    } catch (error) {
+      await testInfo.attach(`select-all-failure-${runIndex}.json`, {
+        body: JSON.stringify(await selectionState(page, true)),
+        contentType: 'application/json',
       })
-      .toBe(true)
+      throw error
+    }
     const selection = await selectionState(page)
-    const mode: 'text' | 'blocks' = selection.insideEditor ? 'text' : 'blocks'
+    const mode: 'text' | 'blocks' =
+      selection.insideEditor && selection.textLength > 0 ? 'text' : 'blocks'
     const selectAll = { ...selection, mode }
     await page.keyboard.press('Escape')
     await expect

@@ -1,4 +1,5 @@
 pub use super::controls::*;
+pub use super::window_state_commands::*;
 use crate::{
   error::{BackendError, BackendResult},
   native_window::TrustedWindow as WebviewWindow,

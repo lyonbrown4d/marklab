@@ -53,6 +53,7 @@ export const openEditor = async (file = 'Editor.md') => {
   const root = await currentRoot()
   if (typeof root !== 'string') throw new Error('No native workspace is bound')
   await browser.$('[data-app-focus-zone="titlebar"]').waitForDisplayed({ timeout: 30_000 })
+  await waitForWindowPresentation()
   const pinned = await browser
     .$('[data-app-focus-zone="editor"]')
     .getAttribute('data-sidebar-pinned')
@@ -69,6 +70,26 @@ export const openEditor = async (file = 'Editor.md') => {
   await browser
     .$('[data-testid="markdown-editor"][data-state="ready"]')
     .waitForDisplayed({ timeout: 90_000 })
+  // Loading deliberately keeps the previous ready editor visible. Wait for
+  // this document's committed surface instead of accepting the retained one.
+  await browser.waitUntil(
+    () =>
+      browser.execute((expected) => {
+        const editor = document.querySelector('[data-testid="markdown-editor"][data-state="ready"]')
+        return (
+          editor
+            ?.closest('[data-editor-document-path]')
+            ?.getAttribute('data-editor-document-path') === expected &&
+          editor
+            .closest('[data-editor-transition-phase]')
+            ?.getAttribute('data-editor-transition-phase') === 'idle'
+        )
+      }, file),
+    { timeout: 90_000, timeoutMsg: `The editor did not finish loading ${file}` },
+  )
+}
+
+export const waitForWindowPresentation = async () => {
   await browser.waitUntil(
     () =>
       browser.execute(async () => {

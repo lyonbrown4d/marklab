@@ -74,9 +74,11 @@ export const selectionState = (page: Page, inspectBlocks = false) =>
       const insideEditor =
         Boolean(selection?.anchorNode && editor?.contains(selection.anchorNode)) &&
         Boolean(selection?.focusNode && editor?.contains(selection.focusNode))
+      const shadowInputFocused =
+        document.activeElement?.matches('input.slate-shadow-input') ?? false
       // Plate focuses a body-level shadow input for block selection, outside the DOM text range.
       const wrappers =
-        !insideEditor || selector.inspectBlocks
+        !insideEditor || shadowInputFocused || selector.inspectBlocks
           ? [...(editor?.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]') ?? [])]
           : null
       const selected = wrappers?.filter((block) => block.dataset.blockSelected === 'true')
@@ -85,8 +87,7 @@ export const selectionState = (page: Page, inspectBlocks = false) =>
         textLength: selection?.toString().length ?? 0,
         blockSelection: wrappers
           ? {
-              shadowInputFocused:
-                document.activeElement?.matches('input.slate-shadow-input') ?? false,
+              shadowInputFocused,
               blockCount: wrappers.length,
               selectedBlockCount: selected?.length ?? 0,
               selectedTextLength:

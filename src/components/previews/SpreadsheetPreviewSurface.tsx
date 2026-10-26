@@ -157,7 +157,9 @@ const SpreadsheetPageSurface = ({
               title={t('preview.spreadsheetFailed')}
               descriptionClassName="break-words"
             >
-              {query.error.message}
+              {'code' in query.error && query.error.code === 'GIT_LFS_CONTENT_MISSING'
+                ? t('preview.gitLfsContentMissing')
+                : query.error.message}
             </AppAlert>
             <Button
               className="mt-3"

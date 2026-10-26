@@ -1566,6 +1566,7 @@
   "preview.spreadsheetLoading": "Loading spreadsheet…",
   "preview.spreadsheetFailed": "Unable to preview spreadsheet",
   "preview.spreadsheetLabel": "{{name}} spreadsheet preview",
+  "preview.gitLfsContentMissing": "This file is a Git LFS pointer. Run git lfs pull in its repository to download the workbook, then retry.",
   "preview.spreadsheetSheet": "Worksheet",
   "preview.spreadsheetRows": "Rows {{start}}–{{end}} of {{total}}",
   "preview.spreadsheetTruncated": "Content exceeds the preview limits and has been truncated.",

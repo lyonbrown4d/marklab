@@ -30,6 +30,25 @@ pub fn check<R: Read + Seek>(reader: &mut R) -> BackendResult<()> {
     break;
   }
   if !found {
+    if length <= 1024
+      && let Ok(pointer) = std::str::from_utf8(&tail)
+      && pointer.lines().next() == Some("version https://git-lfs.github.com/spec/v1")
+      && pointer.lines().any(|line| {
+        line
+          .strip_prefix("oid sha256:")
+          .is_some_and(|oid| oid.len() == 64 && oid.bytes().all(|byte| byte.is_ascii_hexdigit()))
+      })
+      && pointer.lines().any(|line| {
+        line
+          .strip_prefix("size ")
+          .is_some_and(|size| size.parse::<u64>().is_ok())
+      })
+    {
+      return Err(crate::error::BackendError::new(
+        "GIT_LFS_CONTENT_MISSING",
+        "This file is a Git LFS pointer. Download its content with git lfs pull, then retry",
+      ));
+    }
     return Err(limits::invalid("Excel archive has no valid directory"));
   }
   check_fallbacks(reader, length)?;

@@ -1,5 +1,6 @@
 import { isVimKeyboardTarget } from '@/components/vim/vimKeyboardScope'
 import type { PlateEditor } from 'platejs/react'
+import { BlockSelectionPlugin } from '@platejs/selection/react'
 import { useEffect, type RefObject } from 'react'
 import type { PlateSurfaceCompletionBindings } from '@/components/plate/usePlateSurfaceCompletions'
 import { handlePlateEditorShortcut } from '@/components/plate/plateEditorShortcuts'
@@ -83,7 +84,16 @@ export const usePlateEditorDomEvents = ({
         if (isReady() && !applyPendingExternal()) queueSnapshot()
       })
     }
-    const handleBlur = () => {
+    const handleBlur = (event: FocusEvent) => {
+      if (editor.plugins[BlockSelectionPlugin.key]) {
+        const { selectedIds, shadowInputRef } = editor.getOptions(BlockSelectionPlugin)
+        const shadowInput = shadowInputRef?.current
+        if ((selectedIds?.size ?? 0) > 0 && shadowInput && event.relatedTarget === shadowInput) {
+          // Slate flushes its deferred DOM selection during blur. The previous
+          // text caret must not overwrite the block selection taking focus.
+          editable.ownerDocument.getSelection()?.removeAllRanges()
+        }
+      }
       completion.onBlur()
       if (compositionEndTimer !== undefined) return
       if (!applyPendingExternal()) flushSnapshot()

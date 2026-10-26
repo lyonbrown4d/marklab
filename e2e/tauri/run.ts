@@ -7,11 +7,18 @@ import path from 'node:path'
 import net from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+// eslint-disable-next-line no-restricted-imports -- Opt-in real-corpus measurements remain test-only.
+import {
+  copyPerformanceWorkspace,
+  snapshotWorkspace,
+  type RealWorkspace,
+} from '../performance/realWorkspaceFixture.ts'
 
 // Node runs short CLI preflights; the official service owns the resident app.
 const repository = fileURLToPath(new URL('../../', import.meta.url))
 const fixture = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-tauri-e2e-')))
 let exitCode = 1
+let performanceSource: RealWorkspace | undefined
 try {
   for (const name of ['data', 'cache', 'alpha', 'beta']) await fs.mkdir(path.join(fixture, name))
   for (const name of ['alpha', 'beta']) {
@@ -100,6 +107,14 @@ try {
       return true
     })
   }
+  const performancePath = process.env.MARKLAB_PERFORMANCE_WORKSPACE
+  if (performancePath) {
+    performanceSource = await copyPerformanceWorkspace(
+      performancePath,
+      path.join(fixture, 'performance'),
+    )
+    await fs.writeFile(path.join(fixture, 'performance.json'), JSON.stringify(performanceSource))
+  }
   const selectedSpecs = process.argv.slice(2)
   // Keep positional selections in the same ordered worker as the default suite.
   // CLI `spec` overrides flatten groups and restart the resident native service.
@@ -107,10 +122,38 @@ try {
     selectedSpecs.map((spec) => path.resolve(repository, spec)),
   )
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'))
+  process.env.MARKLAB_PERFORMANCE_LAUNCH_EPOCH_MS = String(Date.now())
   exitCode = (await launcher.run()) ?? 1
 } catch (error) {
   console.error(error)
 } finally {
+  if (performanceSource) {
+    try {
+      const after = await snapshotWorkspace(performanceSource.source)
+      assert.deepEqual(
+        after,
+        performanceSource,
+        'The performance source changed during measurement',
+      )
+      await fs.mkdir(path.join(repository, 'test-results/tauri/performance'), { recursive: true })
+      await fs.writeFile(
+        path.join(repository, 'test-results/tauri/performance/source-integrity.json'),
+        JSON.stringify(
+          {
+            source: performanceSource.source,
+            files: after.files.length,
+            bytes: after.bytes,
+            unchanged: true,
+          },
+          null,
+          2,
+        ),
+      )
+    } catch (error) {
+      console.error(error)
+      exitCode = 1
+    }
+  }
   // Launcher.run settles after the service has stopped its owned app process.
   try {
     await fs.rm(fixture, { recursive: true, force: true })

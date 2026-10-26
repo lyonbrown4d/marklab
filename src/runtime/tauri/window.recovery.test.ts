@@ -34,6 +34,7 @@ vi.mock('@tauri-apps/api/webview', () => ({ getCurrentWebview: () => native.webv
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Windows NT 10.0)')
   native.invoke.mockReset().mockResolvedValue(undefined)
   native.window.isVisible.mockResolvedValue(true)
   native.window.scaleFactor.mockResolvedValue(2)
