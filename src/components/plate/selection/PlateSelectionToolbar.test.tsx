@@ -31,6 +31,7 @@ const createController = (
   activeMarks: { bold: true, code: false, italic: false, link: false, strike: false },
   anchor: { left: 160, top: 90 },
   captureSelection: vi.fn(() => true),
+  restoreSelection: vi.fn(),
   open: true,
   runAction: vi.fn(() => true),
   runMoreAction: vi.fn(() => true),
@@ -39,6 +40,16 @@ const createController = (
 })
 
 describe('PlateSelectionToolbar', () => {
+  it('opens AI explicitly while preserving the native text selection on pointer down', () => {
+    const onAi = vi.fn()
+    render(<PlateSelectionToolbar {...createController()} labels={labels} onAi={onAi} />)
+    const trigger = screen.getByRole('button', { name: 'AI' })
+    expect(fireEvent.mouseDown(trigger)).toBe(false)
+    expect(onAi).not.toHaveBeenCalled()
+    fireEvent.click(trigger)
+    expect(onAi).toHaveBeenCalledOnce()
+  })
+
   it('exposes accessible formatting controls and their pressed state', () => {
     const controller = createController()
     render(<PlateSelectionToolbar {...controller} labels={labels} />)

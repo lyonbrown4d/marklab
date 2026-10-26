@@ -29,6 +29,7 @@ export const publicAiProviderSchema = z
     baseUrl: z.string().optional(),
     hasApiKey: z.boolean(),
     apiKeySource: z.enum(['stored', 'environment', 'none']),
+    configurationSource: z.literal('environment').optional(),
     maskedApiKey: z.literal('••••••••').nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),

@@ -40,6 +40,9 @@ vi.mock('@/components/plate/usePlateFocusHeading', () => ({ usePlateFocusHeading
 vi.mock('@/components/plate/usePlateInlineAiComposer', () => ({
   usePlateInlineAiComposer: () => ({ isOpen: false }),
 }))
+vi.mock('@/components/ai/aiProviderQuery', () => ({
+  useAiProvidersQuery: () => ({ data: [] }),
+}))
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
     t: (key: string) =>

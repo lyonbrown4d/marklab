@@ -43,6 +43,14 @@ describe('aiApi', () => {
     expect(invoke).toHaveBeenCalledWith('ai_list_providers')
   })
 
+  it('accepts the environment configuration marker and rejects unknown sources', async () => {
+    const environmentProvider = { ...publicProvider, configurationSource: 'environment' }
+    nativeIpc.invoke.mockResolvedValue([environmentProvider])
+    await expect(aiApi.listProviders()).resolves.toEqual([environmentProvider])
+    nativeIpc.invoke.mockResolvedValue([{ ...publicProvider, configurationSource: 'unknown' }])
+    await expect(aiApi.listProviders()).rejects.toThrow()
+  })
+
   it('sends bounded generation requests and validates the result', async () => {
     nativeIpc.invoke.mockResolvedValue({
       text: 'Hello',

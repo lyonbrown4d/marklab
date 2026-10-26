@@ -59,6 +59,7 @@ describe('PlateSelectionToolbar value synchronization', () => {
         open
         runAction={runAction}
         runMoreAction={vi.fn(() => true)}
+        restoreSelection={vi.fn()}
         setToolbarElement={vi.fn()}
       />,
     )

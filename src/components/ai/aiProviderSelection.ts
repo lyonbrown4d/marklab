@@ -1,4 +1,5 @@
 import type { PublicAiProvider } from '@/services/aiApi'
+import type { InlineAiComposerMessages } from '@/components/ai/inlineAiComposerPrompt'
 
 export type InlineAiProvider = {
   id: string
@@ -28,4 +29,30 @@ export const resolveInlineAiProvider = (
 
   const firstConfigured = providers.find((provider) => provider.available)
   return firstConfigured ? toInlineAiProvider(firstConfigured) : null
+}
+
+export const loadInlineAiProviders = async (
+  defaultProviderId: string | null,
+  load: () => Promise<PublicAiProvider[]>,
+  messages: Pick<InlineAiComposerMessages, 'noProvider' | 'defaultProviderUnavailable'>,
+) => {
+  try {
+    const providers = await load()
+    const provider = resolveInlineAiProvider(defaultProviderId, providers)
+    return {
+      provider,
+      providers: listInlineAiProviders(providers),
+      error: provider
+        ? null
+        : defaultProviderId === null
+          ? messages.noProvider
+          : messages.defaultProviderUnavailable,
+    }
+  } catch (error) {
+    return {
+      provider: null,
+      providers: [],
+      error: error instanceof Error ? error.message : messages.noProvider,
+    }
+  }
 }

@@ -39,6 +39,7 @@ const inlineAiMock = vi.hoisted(() => ({
   error: null,
   instruction: '',
   isOpen: false,
+  open: vi.fn(),
   modelLabel: 'OpenAI · gpt-5-mini',
   outputKind: 'replacement' as const,
   providerId: 'openai-main',
@@ -48,10 +49,16 @@ const inlineAiMock = vi.hoisted(() => ({
   quickAction: vi.fn(),
   retry: vi.fn(),
   setInstruction: vi.fn(),
+  setOutputKind: vi.fn(),
   setProviderId: vi.fn(),
   sourceText: 'Original',
   stop: vi.fn(),
   submit: vi.fn(),
+}))
+
+const aiAvailabilityMock = vi.hoisted(() => ({ available: true }))
+vi.mock('@/components/ai/aiProviderQuery', () => ({
+  useAiProvidersQuery: () => ({ data: aiAvailabilityMock.available ? [{ available: true }] : [] }),
 }))
 
 vi.mock('@/components/plate/usePlateInlineAiComposer', () => ({
@@ -147,10 +154,11 @@ export const slashLabels: MarkdownEditorSlashLabels = {
 
 export const inlineAiComposerHookMock = vi.mocked(usePlateInlineAiComposer)
 
-export { controllerMock, inlineAiMock }
+export { aiAvailabilityMock, controllerMock, inlineAiMock }
 
 export const resetMarkdownEditorMocks = () => {
   inlineAiMock.isOpen = false
+  aiAvailabilityMock.available = true
   controllerMock.getContextMenuCapabilities.mockClear()
   controllerMock.runContextMenuAction.mockClear()
 }

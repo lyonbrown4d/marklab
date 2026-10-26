@@ -54,7 +54,6 @@ export const AiComposerConfiguration = ({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-[11px] leading-4 text-muted-foreground">{labels.privacy}</p>
     </PopoverContent>
   </Popover>
 )

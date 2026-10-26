@@ -53,6 +53,7 @@ export const AiProviderRow = ({
   const defaultId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const setDefaultId = usePreferencesStore((state) => state.setAiDefaultProviderId)
   const usable = isAiProviderUsable(provider)
+  const environmentManaged = provider.configurationSource === 'environment'
 
   const handleSave = async (input: AiProviderUpdate) => {
     try {
@@ -78,6 +79,11 @@ export const AiProviderRow = ({
             {provider.apiKeySource === 'environment' && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {t('settings.aiCredentialEnvironment')}
+              </p>
+            )}
+            {environmentManaged && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('settings.aiEnvironmentManaged')}
               </p>
             )}
             {!usable && (
@@ -110,29 +116,33 @@ export const AiProviderRow = ({
             >
               {t('settings.aiTest')}
             </SettingsActionButton>
-            <SettingsActionButton
-              aria-label={`${t('settings.edit')} ${provider.label}`}
-              variant="ghost"
-              onClick={() => {
-                onStartEdit()
-                setEditing(true)
-              }}
-              disabled={savePending}
-            >
-              {t('settings.edit')}
-            </SettingsActionButton>
-            <SettingsActionButton
-              ref={deleteTriggerRef}
-              aria-label={`${t('settings.delete')} ${provider.label}`}
-              variant="ghost"
-              onClick={() => {
-                onStartDelete()
-                setDestructiveAction('delete')
-              }}
-              disabled={deletePending}
-            >
-              {t('settings.delete')}
-            </SettingsActionButton>
+            {!environmentManaged && (
+              <>
+                <SettingsActionButton
+                  aria-label={`${t('settings.edit')} ${provider.label}`}
+                  variant="ghost"
+                  onClick={() => {
+                    onStartEdit()
+                    setEditing(true)
+                  }}
+                  disabled={savePending}
+                >
+                  {t('settings.edit')}
+                </SettingsActionButton>
+                <SettingsActionButton
+                  ref={deleteTriggerRef}
+                  aria-label={`${t('settings.delete')} ${provider.label}`}
+                  variant="ghost"
+                  onClick={() => {
+                    onStartDelete()
+                    setDestructiveAction('delete')
+                  }}
+                  disabled={deletePending}
+                >
+                  {t('settings.delete')}
+                </SettingsActionButton>
+              </>
+            )}
             {provider.apiKeySource === 'stored' && (
               <SettingsActionButton
                 ref={credentialTriggerRef}

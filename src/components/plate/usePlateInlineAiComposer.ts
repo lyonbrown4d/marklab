@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { useLatest } from 'ahooks'
 import type { PlateEditor } from 'platejs/react'
 import type { AiComposerPhase, AiQuickAction } from '@/components/ai/AiInlineComposer'
-import {
-  listInlineAiProviders,
-  resolveInlineAiProvider,
-  type InlineAiProvider,
-} from '@/components/ai/aiProviderSelection'
+import { loadInlineAiProviders, type InlineAiProvider } from '@/components/ai/aiProviderSelection'
 import { useAiGenerationEvents } from '@/components/ai/useAiGenerationEvents'
 import {
   buildAiReplacementPrompt,
@@ -88,24 +84,16 @@ export const usePlateInlineAiComposer = ({
     if (requestId) void aiApi.cancelGeneration(requestId).catch(() => undefined)
   }, [clearBufferedDeltas, requestIdRef])
 
-  const focusEditor = useCallback(() => {
-    rootRef.current?.querySelector<HTMLElement>('[data-testid="markdown-editor"]')?.focus()
-  }, [rootRef])
-
-  const reset = useCallback(
-    (restoreFocus: boolean) => {
-      cancelCurrentRequest()
-      setCapture(null)
-      setError(null)
-      setInstruction('')
-      setOutputKind('replacement')
-      setProposal('')
-      setProvider(null)
-      setPhase('prompt')
-      if (restoreFocus) focusEditor()
-    },
-    [cancelCurrentRequest, focusEditor],
-  )
+  const reset = useCallback(() => {
+    cancelCurrentRequest()
+    setCapture(null)
+    setError(null)
+    setInstruction('')
+    setOutputKind('replacement')
+    setProposal('')
+    setProvider(null)
+    setPhase('prompt')
+  }, [cancelCurrentRequest])
 
   useEffect(() => {
     if (!capture) return
@@ -115,54 +103,41 @@ export const usePlateInlineAiComposer = ({
       !ready ||
       !isPlateAiSelectionCaptureUsable(getEditor(), capture)
     ) {
-      queueMicrotask(() => reset(false))
+      queueMicrotask(reset)
     }
   }, [activePath, capture, getEditor, readOnly, ready, reset])
   useEffect(() => () => cancelCurrentRequest(), [cancelCurrentRequest])
 
   const open = useCallback(async () => {
+    if (availabilityRef.current.readOnly || !availabilityRef.current.ready) return
     const editor = getEditor()
     const root = rootRef.current
     if (!editor || !root) return
     const nextCapture = capturePlateAiSelection(editor, activePathRef.current, root)
     if (!nextCapture) return
-    cancelCurrentRequest()
+    reset()
     setCapture(nextCapture)
-    setError(null)
-    setInstruction('')
-    setOutputKind('replacement')
-    setProposal('')
-    setProvider(null)
     setPhase('loading-provider')
     const openingVersion = requestVersionRef.current
-    const providers = await aiApi.listProviders().catch(() => [])
+    const loaded = await loadInlineAiProviders(defaultProviderId, aiApi.listProviders, messages)
     if (!mountedRef.current || openingVersion !== requestVersionRef.current) return
-    if (readOnly || !ready || !isPlateAiSelectionCaptureUsable(getEditor(), nextCapture)) {
-      reset(false)
+    if (
+      availabilityRef.current.readOnly ||
+      !availabilityRef.current.ready ||
+      !isPlateAiSelectionCaptureUsable(getEditor(), nextCapture)
+    ) {
+      reset()
       return
     }
-    const nextProvider = resolveInlineAiProvider(defaultProviderId, providers)
-    setProviders(listInlineAiProviders(providers))
-    setProvider(nextProvider)
-    if (!nextProvider) {
-      setError(
-        defaultProviderId === null ? messages.noProvider : messages.defaultProviderUnavailable,
-      )
+    setProviders(loaded.providers)
+    setProvider(loaded.provider)
+    if (!loaded.provider) {
+      setError(loaded.error)
       setPhase('error')
       return
     }
     setPhase('prompt')
-  }, [
-    activePathRef,
-    cancelCurrentRequest,
-    defaultProviderId,
-    getEditor,
-    messages,
-    readOnly,
-    ready,
-    reset,
-    rootRef,
-  ])
+  }, [activePathRef, availabilityRef, defaultProviderId, getEditor, messages, reset, rootRef])
 
   useEffect(() => {
     const root = rootRef.current
@@ -189,7 +164,7 @@ export const usePlateInlineAiComposer = ({
       const currentCapture = captureRef.current
       if (!currentCapture || !provider || requestIdRef.current || !nextInstruction.trim()) return
       if (!isPlateAiSelectionCaptureUsable(getEditor(), currentCapture)) {
-        reset(false)
+        reset()
         return
       }
       if (!beginRequest()) return
@@ -261,7 +236,7 @@ export const usePlateInlineAiComposer = ({
       setPhase('error')
       return
     }
-    reset(false)
+    reset()
   }, [
     activePathRef,
     captureRef,
@@ -285,7 +260,7 @@ export const usePlateInlineAiComposer = ({
   return {
     accept,
     anchor: capture?.anchor ?? { left: 8, top: 8 },
-    dismiss: () => reset(true),
+    dismiss: reset,
     error,
     instruction,
     isOpen: capture !== null,
@@ -299,8 +274,14 @@ export const usePlateInlineAiComposer = ({
     quickAction,
     retry: () => void submit(instruction, outputKind),
     setInstruction,
-    setProviderId: (providerId: string) =>
-      setProvider(providers.find((candidate) => candidate.id === providerId) ?? null),
+    setOutputKind,
+    setProviderId: (providerId: string) => {
+      const nextProvider = providers.find((candidate) => candidate.id === providerId)
+      if (!nextProvider) return
+      setProvider(nextProvider)
+      setError(null)
+      setPhase('prompt')
+    },
     sourceText: capture?.sourceText ?? '',
     stop: () => {
       cancelCurrentRequest()

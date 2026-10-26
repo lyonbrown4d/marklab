@@ -1,4 +1,7 @@
 mod commands;
+mod environment;
+#[cfg(test)]
+mod environment_tests;
 mod generation;
 #[cfg(test)]
 mod generation_tests;
@@ -31,6 +34,7 @@ pub struct AiService {
 struct Inner {
   pool: SqlitePool,
   client: reqwest::Client,
+  environment_providers: Vec<environment::EnvironmentProvider>,
   mutation: Mutex<()>,
   jobs: Mutex<HashMap<String, Job>>,
   attempts: Mutex<HashMap<(String, String), String>>,
@@ -45,6 +49,13 @@ struct Job {
 }
 impl AiService {
   pub async fn new(pool: SqlitePool) -> BackendResult<Self> {
+    Self::with_environment(pool, environment::capture()?).await
+  }
+
+  async fn with_environment(
+    pool: SqlitePool,
+    environment_providers: Vec<environment::EnvironmentProvider>,
+  ) -> BackendResult<Self> {
     sqlx::query("CREATE TABLE IF NOT EXISTS ai_providers(id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,secret_ref TEXT)").execute(&pool).await?;
     let client = reqwest::Client::builder()
       .redirect(reqwest::redirect::Policy::none())
@@ -61,6 +72,7 @@ impl AiService {
       inner: Arc::new(Inner {
         pool,
         client,
+        environment_providers,
         mutation: Mutex::new(()),
         jobs: Mutex::new(HashMap::new()),
         attempts: Mutex::new(HashMap::new()),

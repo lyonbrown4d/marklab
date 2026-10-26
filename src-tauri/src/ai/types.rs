@@ -64,6 +64,11 @@ pub enum ApiKeySource {
   Environment,
   None,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum ProviderConfigurationSource {
+  Environment,
+}
 #[derive(Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicProvider {
@@ -77,6 +82,8 @@ pub struct PublicProvider {
   pub has_api_key: bool,
   pub api_key_source: ApiKeySource,
   pub masked_api_key: Option<&'static str>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub configuration_source: Option<ProviderConfigurationSource>,
 }
 #[derive(Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

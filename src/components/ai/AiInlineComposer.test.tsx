@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiInlineComposer } from '@/components/ai/AiInlineComposer'
 import {
@@ -8,6 +9,8 @@ import {
 
 const labels = {
   accept: 'Accept',
+  ask: 'Ask AI',
+  askPlaceholder: 'Ask about the selected text…',
   abandon: 'Abandon',
   concise: 'Make concise',
   configuration: 'Model and privacy',
@@ -16,9 +19,11 @@ const labels = {
   done: 'Done',
   explain: 'Explain',
   explanation: 'AI explanation',
+  editSelection: 'Edit selection',
   findingModel: 'Finding model…',
   generate: 'Generate',
   instruction: 'AI instruction',
+  mode: 'AI action',
   privacy: 'Only the selected context is sent to the selected provider.',
   placeholder: 'Tell AI what to change…',
   provider: 'Model',
@@ -37,8 +42,10 @@ const baseProps = {
   onAccept: vi.fn(),
   onDismiss: vi.fn(),
   onInstructionChange: vi.fn(),
+  onOutputKindChange: vi.fn(),
   onQuickAction: vi.fn(),
   onRetry: vi.fn(),
+  onRestoreFocus: vi.fn(),
   onStop: vi.fn(),
   onSubmit: vi.fn(),
   outputKind: 'replacement' as const,
@@ -53,6 +60,61 @@ const baseProps = {
 }
 
 describe('AiInlineComposer', () => {
+  it('closes once with Escape even while the close-button tooltip is open', async () => {
+    const user = userEvent.setup()
+    const onDismiss = vi.fn()
+    render(<AiInlineComposer {...baseProps} onDismiss={onDismiss} />)
+    await user.hover(screen.getByRole('button', { name: `${labels.abandon} (Esc)` }))
+    expect(await screen.findByRole('tooltip')).toBeVisible()
+    fireEvent.keyDown(screen.getByRole('textbox', { name: labels.instruction }), { key: 'Escape' })
+    expect(onDismiss).toHaveBeenCalledOnce()
+  })
+
+  it('lets questions produce an explanation rather than a document replacement', () => {
+    const onSubmit = vi.fn()
+    const onOutputKindChange = vi.fn()
+    const view = render(<AiInlineComposer {...baseProps} onOutputKindChange={onOutputKindChange} />)
+    fireEvent.click(screen.getByRole('radio', { name: labels.ask }))
+    expect(onOutputKindChange).toHaveBeenCalledWith('explanation')
+    view.rerender(
+      <AiInlineComposer
+        {...baseProps}
+        instruction="What does this mean?"
+        onSubmit={onSubmit}
+        outputKind="explanation"
+      />,
+    )
+    fireEvent.keyDown(screen.getByRole('textbox', { name: labels.instruction }), { key: 'Enter' })
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith('What does this mean?', 'explanation')
+    view.rerender(
+      <AiInlineComposer
+        {...baseProps}
+        outputKind="explanation"
+        phase="proposal"
+        proposal="An explanation"
+      />,
+    )
+    expect(screen.queryByRole('button', { name: labels.accept })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: labels.explanation })).toHaveTextContent(
+      'An explanation',
+    )
+  })
+
+  it('shows selected context and disables generation when no model is configured', () => {
+    render(
+      <AiInlineComposer
+        {...baseProps}
+        instruction="Rewrite"
+        modelLabel=""
+        providerId=""
+        providers={[]}
+      />,
+    )
+    expect(screen.getByRole('dialog', { name: labels.dialog })).toBeVisible()
+    expect(screen.getByText(baseProps.sourceText)).toBeVisible()
+    expect(screen.getByRole('button', { name: labels.generate })).toBeDisabled()
+  })
+
   beforeEach(() => {
     useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
   })

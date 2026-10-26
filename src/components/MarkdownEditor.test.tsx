@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
 import {
   controllerMock,
+  aiAvailabilityMock,
   inlineAiComposerHookMock,
   inlineAiMock,
   renderAutoFocusEmbeddedEditor,
@@ -35,6 +36,17 @@ vi.mock('@/components/plate/PlateEditorOverlays', () => ({
 }))
 
 describe('MarkdownEditor playground baseline', () => {
+  it('disables the assistant and hides stale dialogs when no model is available', () => {
+    resetMarkdownEditorMocks()
+    aiAvailabilityMock.available = false
+    inlineAiMock.isOpen = true
+    renderEditor()
+    expect(inlineAiComposerHookMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ready: false }),
+    )
+    expect(screen.queryByRole('dialog', { name: 'ai.composer.label' })).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     resetMarkdownEditorMocks()
     preferencesMock.immersiveFocusIntensity = 'standard'
@@ -131,7 +143,10 @@ describe('MarkdownEditor playground baseline', () => {
       }),
     )
     expect(screen.getByRole('dialog', { name: 'ai.composer.label' })).toBeInTheDocument()
-    expect(screen.getByRole('toolbar', { name: 'Formatting notes/example.md' })).toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { hidden: true })).toHaveAttribute(
+      'aria-label',
+      'Formatting notes/example.md',
+    )
   })
 
   it('suspends overlays and the AI composer when its KeepAlive route becomes inactive', () => {

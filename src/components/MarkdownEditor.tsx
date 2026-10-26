@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useKeepAliveContext } from 'keepalive-for-react'
 import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
+import { useAiProvidersQuery } from '@/components/ai/aiProviderQuery'
 import { EditorContextMenu } from '@/components/EditorContextMenu'
 import MarkdownEditorStatusOverlay from '@/components/MarkdownEditorStatusOverlay'
 import type { InlineAiComposerMessages } from '@/components/ai/inlineAiComposerPrompt'
@@ -65,6 +66,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     [activePath, onStatusChange],
   )
   const getEditor = useCallback(() => surfaceRef.current?.getEditor() ?? null, [])
+  const { data: aiProviders } = useAiProvidersQuery(interactionActive && !props.readOnly)
+  const aiAvailable = aiProviders?.some((provider) => provider.available) ?? false
+  const restoreEditorFocus = useCallback(() => surfaceRef.current?.focus(), [])
   usePlateFocusHeading(props.activePath, getEditor, props.workspaceKey)
   const openLinkInput = useCallback(() => surfaceRef.current?.openLinkInput(), [])
   const contextMenu = usePlateEditorContextMenu({
@@ -78,6 +82,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const aiLabels = useMemo<AiComposerLabels>(
     () => ({
       accept: t('ai.composer.accept'),
+      ask: t('ai.composer.ask'),
+      askPlaceholder: t('ai.composer.askPlaceholder'),
       abandon: t('ai.composer.abandon'),
       concise: t('ai.composer.actionConcise'),
       configuration: t('ai.composer.configuration'),
@@ -86,9 +92,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
       done: t('ai.composer.done'),
       explain: t('ai.composer.actionExplain'),
       explanation: t('ai.composer.explanationLabel'),
+      editSelection: t('ai.composer.editSelection'),
       findingModel: t('ai.composer.findingModel'),
       generate: t('ai.composer.generate'),
       instruction: t('ai.composer.instructionLabel'),
+      mode: t('ai.composer.mode'),
       privacy: t('ai.composer.privacySelection'),
       placeholder: t('ai.composer.placeholder'),
       provider: t('ai.composer.provider'),
@@ -117,12 +125,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     getEditor,
     messages: aiMessages,
     readOnly: props.readOnly ?? false,
-    ready: status.phase === 'ready',
+    ready: aiAvailable && interactionActive && status.phase === 'ready',
     rootRef,
     shortcutOverrides,
   })
   const selectionToolbarLabels = useMemo<PlateSelectionToolbarLabels>(
     () => ({
+      ai: t('ai.composer.label'),
       blockStyle: t('editor.selectionBlockStyle'),
       bold: t('slash.bold'),
       bulletList: t('slash.bulletList'),
@@ -181,6 +190,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           contentVisible={status.phase === 'ready'}
           completionEnabled={!contextMenuOpen}
           interactionActive={interactionActive}
+          onAi={aiAvailable ? aiComposer.open : undefined}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
           onWorkspaceLink={props.onWorkspaceLink}
@@ -201,9 +211,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           loadingLabel={t('editor.loading')}
           status={status}
         />
-        {interactionActive && aiComposer.isOpen && (
+        {interactionActive && aiAvailable && aiComposer.isOpen && (
           <AiInlineComposer
-            anchor={aiComposer.anchor}
             error={aiComposer.error}
             instruction={aiComposer.instruction}
             labels={aiLabels}
@@ -212,8 +221,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             onAccept={aiComposer.accept}
             onDismiss={aiComposer.dismiss}
             onInstructionChange={aiComposer.setInstruction}
+            onOutputKindChange={aiComposer.setOutputKind}
             onQuickAction={aiComposer.quickAction}
             onRetry={aiComposer.retry}
+            onRestoreFocus={restoreEditorFocus}
             onStop={aiComposer.stop}
             onSubmit={aiComposer.submit}
             outputKind={aiComposer.outputKind}

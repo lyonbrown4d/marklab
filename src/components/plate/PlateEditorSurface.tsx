@@ -46,6 +46,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       completionEnabled = true,
       contentVisible = true,
       interactionActive = true,
+      onAi,
       onCalendarFileCreate,
       onChange,
       onImageImport,
@@ -270,6 +271,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               editor={editor}
               interactionActive={interactionActive}
               labels={slashLabels}
+              onAi={onAi}
               onLink={openLinkInput}
               readOnly={readOnly}
               selectionLabels={selectionToolbarLabels}

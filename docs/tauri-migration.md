@@ -41,7 +41,28 @@ Markdown 语言能力由 Rust 内部服务直接提供，不启动 LSP 服务，
 
 ## AI 与只读 MCP
 
-AI 请求与响应由 Rig 0.44.0 的供应商客户端及 completion 模型处理；应用保留配置、系统凭据库、明确的云端上下文授权、队列、取消和现有 DTO 适配。供应商类型是闭合枚举，支持 OpenAI Responses、Anthropic Messages、Google GenerateContent、DeepSeek、OpenAI-compatible Chat 和本地 Ollama。模型名称仍由用户配置，不新增远端模型目录或聊天业务层。
+AI 请求与响应由 Rig 的供应商客户端及 completion 模型处理；应用保留配置、系统凭据库、明确的云端上下文授权、队列、取消和现有 DTO 适配。供应商类型是闭合枚举，支持 OpenAI Responses、Anthropic Messages、Google GenerateContent、DeepSeek、OpenAI-compatible Chat 和本地 Ollama。
+
+在 Markdown 编辑器中选中文本，点击浮动工具栏的 **AI**，即可打开写作助手。没有可用模型时，选区 AI 入口隐藏，对应快捷键停用；配置可用后自动启用。选择「修改选区」生成可预览、确认的替换内容；选择「向 AI 提问」只显示回答，不修改文档。关闭对话框会取消请求，切换文档或选区内容失效后不能应用旧结果。
+
+原生服务启动时通过项目现有的 [Clap 环境变量支持](https://docs.rs/clap/latest/clap/struct.Arg.html#method.env)读取应用进程的环境变量；不新增配置框架。有有效密钥时，对应供应商自动可选；环境变量密钥优先，系统凭据库中的手动密钥作为回退。检测本身不会发送 AI 请求。手动配置的模型保留；没有手动配置时使用下表默认模型，可通过模型变量覆盖。
+
+| 供应商    | 密钥变量                                                           | 可选模型变量                                 | 默认模型                |
+| --------- | ------------------------------------------------------------------ | -------------------------------------------- | ----------------------- |
+| OpenAI    | `OPENAI_API_KEY`                                                   | `OPENAI_MODEL`                               | `gpt-5-mini`            |
+| Anthropic | `ANTHROPIC_API_KEY`                                                | `ANTHROPIC_MODEL`                            | `claude-sonnet-4-6`     |
+| Gemini    | `GOOGLE_GENERATIVE_AI_API_KEY`、`GEMINI_API_KEY`、`GOOGLE_API_KEY` | `GOOGLE_GENERATIVE_AI_MODEL`、`GEMINI_MODEL` | `gemini-3.5-flash-lite` |
+| DeepSeek  | `DEEPSEEK_API_KEY`                                                 | `DEEPSEEK_MODEL`                             | `deepseek-flash`        |
+
+同一行的别名按从左到右选择第一个有效值。空密钥或超过 8192 字节的密钥不生效；空模型名或超过 160 个 UTF-16 单元的模型名回退到默认值。默认模型名称依据 [OpenAI](https://developers.openai.com/api/docs/models/gpt-5-mini)、[Anthropic](https://platform.claude.com/docs/en/models/sonnet-4-6/overview)、[Gemini](https://ai.google.dev/gemini-api/docs/models) 和 [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing/) 的模型文档配置。任意 OpenAI-compatible 地址及本地 Ollama 继续在设置中明确配置。
+
+环境密钥只留在原生服务内存中，不写入工作区数据库；界面仅接收模型信息、来源和固定掩码。环境配置在设置中只读，仍可测试连接、设为默认。修改环境变量后需退出并重新启动应用。
+
+`pnpm dev` 会加载项目的 `.env` / `.env.local`，进程环境变量优先。安装后的应用不扫描项目环境文件，也不读取终端配置脚本。从 Dock 启动通常无法继承终端里临时 `export` 的变量。在已配置变量的终端中，先退出正在运行的 Marklab，再启动：
+
+```sh
+/Applications/Marklab.app/Contents/MacOS/marklab-desktop
+```
 
 内联补全继续沿用生成完成后发布结果的原行为，单条结果按前端 UTF-16 长度限制为 512。模型不支持的采样参数会省略并返回解释警告；Anthropic 旧模型的 temperature 上限为 1。探测供应商不重试，普通生成最多重试一次，总超时为 120 秒，所有状态的响应均限制为 4 MiB。凭据不进入前端 DTO 或错误正文。
 

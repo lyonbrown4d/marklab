@@ -21,6 +21,7 @@ export type PlateEditorSurfaceProps = {
   contentVisible?: boolean
   interactionActive?: boolean
   onChange: (value: string) => void
+  onAi?: () => void
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>
   onStatusChange?: (status: MarkdownEditorStatus) => void

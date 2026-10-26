@@ -26,7 +26,7 @@ tauri-build = { version = "=3.0.0-alpha.4", features = [] }
 [dependencies]
 marklab-document = { path = "../crates/marklab-document", features = ["specta"] }
 tauri = { version = "=3.0.0-alpha.5", features = ["specta"] }
-clap = { version = "=4.6.7", features = ["derive", "string"] }
+clap = { version = "=4.6.7", features = ["derive", "string", "env"] }
 tauri-plugin-dialog = { version = "=3.0.0-alpha.4", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-opener = "=3.0.0-alpha.3"
 tauri-plugin-clipboard-manager = "=3.0.0-alpha.3"

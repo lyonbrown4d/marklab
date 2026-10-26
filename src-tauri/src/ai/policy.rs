@@ -110,29 +110,17 @@ pub fn local(provider: &ProviderMetadata) -> bool {
         .and_then(|url| Url::parse(url).ok())
         .is_some_and(|url| loopback(&url)))
 }
-pub fn environment_key(kind: ProviderKind) -> Option<String> {
-  let name = match kind {
-    ProviderKind::Openai => "OPENAI_API_KEY",
-    ProviderKind::Anthropic => "ANTHROPIC_API_KEY",
-    ProviderKind::Google => "GOOGLE_GENERATIVE_AI_API_KEY",
-    ProviderKind::Deepseek => "DEEPSEEK_API_KEY",
-    ProviderKind::Ollama | ProviderKind::OpenaiCompatible => return None,
-  };
-  std::env::var(name)
-    .ok()
-    .filter(|value| !value.trim().is_empty())
-}
-pub fn public(provider: StoredProvider) -> PublicProvider {
+pub fn public(provider: StoredProvider, environment_available: bool) -> PublicProvider {
   let locality = if local(&provider.metadata) {
     ProviderLocality::Local
   } else {
     ProviderLocality::Remote
   };
   let requires_api_key = locality != ProviderLocality::Local;
-  let source = if provider.secret_ref.is_some() {
-    ApiKeySource::Stored
-  } else if environment_key(provider.metadata.kind).is_some() {
+  let source = if environment_available {
     ApiKeySource::Environment
+  } else if provider.secret_ref.is_some() {
+    ApiKeySource::Stored
   } else {
     ApiKeySource::None
   };
@@ -145,6 +133,7 @@ pub fn public(provider: StoredProvider) -> PublicProvider {
     requires_api_key,
     has_api_key: source != ApiKeySource::None,
     api_key_source: source,
+    configuration_source: None,
     masked_api_key: if source == ApiKeySource::None {
       None
     } else {

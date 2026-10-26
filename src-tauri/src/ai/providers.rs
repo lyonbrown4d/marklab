@@ -1,6 +1,6 @@
 use super::{
-  AiService, ProviderKind, ProviderMetadata, ProviderUpdate, PublicProvider, StoredProvider,
-  policy, secrets,
+  AiService, ProviderConfigurationSource, ProviderKind, ProviderMetadata, ProviderUpdate,
+  PublicProvider, StoredProvider, environment, policy, secrets,
 };
 use crate::error::{BackendError, BackendResult};
 use sqlx::types::Json;
@@ -15,6 +15,15 @@ struct ProviderRow {
 impl AiService {
   pub async fn stored_provider(&self, id: &str) -> BackendResult<StoredProvider> {
     policy::validate_id(id)?;
+    if environment::reserved(id) {
+      return self
+        .inner
+        .environment_providers
+        .iter()
+        .find(|provider| provider.metadata.metadata.id == id)
+        .map(|provider| provider.metadata.clone())
+        .ok_or_else(|| BackendError::new("AI_PROVIDER_NOT_FOUND", "AI provider was not found"));
+    }
     let row = sqlx::query_as::<_, ProviderRow>(
       "SELECT metadata_json,created_at,updated_at,secret_ref FROM ai_providers WHERE id=?",
     )
@@ -47,14 +56,36 @@ impl AiService {
     .await?;
     let mut providers = Vec::with_capacity(ids.len());
     for id in ids {
-      providers.push(policy::public(self.stored_provider(&id).await?));
+      providers.push(self.public_provider(self.stored_provider(&id).await?));
+    }
+    for environment in &self.inner.environment_providers {
+      if !providers
+        .iter()
+        .any(|provider| provider.metadata.kind == environment.metadata.metadata.kind)
+      {
+        providers.push(self.public_provider(environment.metadata.clone()));
+      }
     }
     Ok(providers)
   }
   pub async fn get_provider(&self, id: &str) -> BackendResult<PublicProvider> {
-    Ok(policy::public(self.stored_provider(id).await?))
+    Ok(self.public_provider(self.stored_provider(id).await?))
+  }
+  fn public_provider(&self, provider: StoredProvider) -> PublicProvider {
+    let virtual_provider = environment::reserved(&provider.metadata.id);
+    let environment_available = self
+      .inner
+      .environment_providers
+      .iter()
+      .any(|environment| environment.metadata.metadata.kind == provider.metadata.kind);
+    let mut public = policy::public(provider, environment_available);
+    if virtual_provider {
+      public.configuration_source = Some(ProviderConfigurationSource::Environment);
+    }
+    public
   }
   pub async fn update_provider(&self, mut input: ProviderUpdate) -> BackendResult<PublicProvider> {
+    environment::ensure_mutable(&input.id)?;
     policy::normalize_update(&mut input)?;
     let _mutation = self.inner.mutation.lock().await;
     let current = match self.stored_provider(&input.id).await {
@@ -103,9 +134,10 @@ impl AiService {
     {
       log::warn!("Superseded AI credential cleanup failed: {}", error.code);
     }
-    Ok(policy::public(provider))
+    Ok(self.public_provider(provider))
   }
   pub async fn delete_provider(&self, id: &str) -> BackendResult<()> {
+    environment::ensure_mutable(id)?;
     policy::validate_id(id)?;
     let _mutation = self.inner.mutation.lock().await;
     let current = match self.stored_provider(id).await {
@@ -130,14 +162,19 @@ impl AiService {
     Ok(())
   }
   pub(crate) async fn provider_key(&self, provider: &StoredProvider) -> BackendResult<String> {
+    if let Some(environment) = self
+      .inner
+      .environment_providers
+      .iter()
+      .find(|environment| environment.metadata.metadata.kind == provider.metadata.kind)
+    {
+      return Ok(environment.key().to_owned());
+    }
     if provider.metadata.kind == ProviderKind::Ollama {
       return Ok(String::new());
     }
     if let Some(reference) = &provider.secret_ref {
       return secrets::read(reference).await;
-    }
-    if let Some(key) = policy::environment_key(provider.metadata.kind) {
-      return Ok(key);
     }
     if policy::local(&provider.metadata) {
       return Ok("ollama".into());

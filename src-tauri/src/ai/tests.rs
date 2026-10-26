@@ -6,7 +6,7 @@ async fn provider_metadata_is_durable_redacted_and_url_policies_are_enforced() -
 {
   let directory = tempfile::tempdir()?;
   let database = Database::open(directory.path()).await?;
-  let service = AiService::new(database.pool.clone()).await?;
+  let service = AiService::with_environment(database.pool.clone(), vec![]).await?;
   let input = serde_json::from_value(
     json!({"id":"local","label":"Local","kind":"ollama","model":"model","baseUrl":"http://127.0.0.1:11434/v1/"}),
   )?;
@@ -59,7 +59,7 @@ async fn stored_provider_tampering_is_rejected_and_sql_delete_failure_retains_cr
 -> BackendResult<()> {
   let directory = tempfile::tempdir()?;
   let database = Database::open(directory.path()).await?;
-  let service = AiService::new(database.pool.clone()).await?;
+  let service = AiService::with_environment(database.pool.clone(), vec![]).await?;
   service.update_provider(serde_json::from_value(json!({"id":"local","label":"Local","kind":"ollama","model":"m","baseUrl":"http://127.0.0.1:11434/v1"}))?).await?;
   let reference = format!("ai:{}", uuid::Uuid::new_v4());
   sqlx::query("UPDATE ai_providers SET secret_ref=? WHERE id='local'")
@@ -95,7 +95,7 @@ async fn inline_consent_is_explicit_and_owner_cleanup_preserves_other_window_job
 -> BackendResult<()> {
   let directory = tempfile::tempdir()?;
   let database = Database::open(directory.path()).await?;
-  let service = AiService::new(database.pool.clone()).await?;
+  let service = AiService::with_environment(database.pool.clone(), vec![]).await?;
   let remote = ProviderMetadata {
     id: "p".into(),
     label: "Remote".into(),
@@ -222,7 +222,7 @@ async fn provider_probe_does_not_retry_and_public_generation_retries_once() -> B
   use std::sync::atomic::Ordering;
   let directory = tempfile::tempdir()?;
   let database = Database::open(directory.path()).await?;
-  let service = AiService::new(database.pool.clone()).await?;
+  let service = AiService::with_environment(database.pool.clone(), vec![]).await?;
   for probe in [true, false] {
     let mut failure = Reply::json(json!({"error":{"message":"do-not-expose-secret"}}));
     failure.status = 429;

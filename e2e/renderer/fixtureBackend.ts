@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { rendererReadyPhases, type RendererReadySignal } from '@/types/rendererReady'
+import type { AiGenerateTextRequest, PublicAiProvider } from '@/services/aiApi'
 // eslint-disable-next-line no-restricted-imports -- Node-run test fixtures remain outside production.
 import { createFixtureBuffers } from './fixtureBuffers.js'
 // eslint-disable-next-line no-restricted-imports -- Test-only capability store serves only generated fixture files.
@@ -33,6 +34,8 @@ export const createFixtureBackend = async (
   let treeRevision = 0
   const phases: RendererReadySignal[] = []
   const diagnostics: Payload[] = []
+  const aiProviders: PublicAiProvider[] = []
+  const aiRequests: AiGenerateTextRequest[] = []
   const settings = new Map<string, unknown>()
   const buffers = createFixtureBuffers(
     () => root,
@@ -244,7 +247,16 @@ export const createFixtureBackend = async (
       case 'language_diagnostics':
         return []
       case 'ai_list_providers':
-        return []
+        return aiProviders
+      case 'ai_start_generation':
+        aiRequests.push({
+          providerId: text(request.providerId),
+          prompt: text(request.prompt),
+          system: text(request.system),
+        })
+        return { requestId: `fixture-ai-${aiRequests.length}` }
+      case 'ai_cancel_generation':
+        return { ok: true }
       case 'web_tabs_hide':
       case 'web_tabs_set_shortcut_bindings':
         return
@@ -255,7 +267,7 @@ export const createFixtureBackend = async (
         throw new Error(`Unimplemented renderer fixture command: ${command}`)
     }
   }
-  return { assets, bind, buffers, diagnostics, invoke, phases, seed }
+  return { aiProviders, aiRequests, assets, bind, buffers, diagnostics, invoke, phases, seed }
 }
 
 export type FixtureBackend = Awaited<ReturnType<typeof createFixtureBackend>>

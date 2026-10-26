@@ -37,6 +37,7 @@ export default defineConfig({
         '**/layout.spec.ts',
         '**/publication-layout.spec.ts',
         '**/editor-integrations.spec.ts',
+        '**/ai-composer.spec.ts',
         '**/spreadsheet-links.spec.ts',
         '**/markdown-navigation.spec.ts',
         '**/workspace-isolation.spec.ts',

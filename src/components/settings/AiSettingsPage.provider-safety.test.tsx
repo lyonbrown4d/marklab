@@ -192,6 +192,40 @@ describe('AiSettingsPage provider safety', () => {
     expect(usePreferencesStore.getState().aiCompletionProviderId).toBeNull()
   })
 
+  it('keeps environment-managed profiles usable while hiding configuration mutations', async () => {
+    api.listProviders.mockResolvedValue([
+      provider({
+        id: 'environment.deepseek',
+        label: 'DeepSeek',
+        kind: 'deepseek',
+        model: 'deepseek-flash',
+        locality: 'remote',
+        requiresApiKey: true,
+        available: true,
+        hasApiKey: true,
+        apiKeySource: 'environment',
+        configurationSource: 'environment',
+      }),
+    ])
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByText('settings.aiEnvironmentManaged')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'settings.edit DeepSeek' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'settings.delete DeepSeek' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'settings.aiClearCredential DeepSeek' }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'settings.aiMakeDefault DeepSeek' }))
+    expect(usePreferencesStore.getState().aiDefaultProviderId).toBe('environment.deepseek')
+    await user.click(screen.getByRole('button', { name: 'settings.aiTest DeepSeek' }))
+    await waitFor(() => expect(api.testProvider).toHaveBeenCalledWith('environment.deepseek'))
+    expect(api.updateProvider).not.toHaveBeenCalled()
+    expect(api.deleteProvider).not.toHaveBeenCalled()
+  })
+
   it('serializes provider deletes across rows and clears the deleted default in the hook', async () => {
     let resolveDelete!: () => void
     api.listProviders.mockResolvedValue([

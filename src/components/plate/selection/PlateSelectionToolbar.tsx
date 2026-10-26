@@ -5,6 +5,7 @@ import {
   Italic,
   Link,
   RemoveFormatting,
+  Sparkles,
   Strikethrough,
   type LucideIcon,
 } from 'lucide-react'
@@ -17,6 +18,7 @@ import type { PlateSelectionToolbarController } from '@/components/plate/usePlat
 import type { PlateSelectionToolbarAction } from '@/components/plate/selection/selectionToolbarActions'
 
 export type PlateSelectionToolbarLabels = {
+  ai?: string
   blockStyle: string
   bold: string
   bulletList: string
@@ -39,6 +41,7 @@ export type PlateSelectionToolbarLabels = {
 
 type PlateSelectionToolbarProps = PlateSelectionToolbarController & {
   labels: PlateSelectionToolbarLabels
+  onAi?: () => void
 }
 
 const markItems: readonly {
@@ -60,6 +63,7 @@ export const PlateSelectionToolbar = ({
   floatingStyle,
   labels,
   open,
+  onAi,
   runAction,
   runMoreAction,
   setToolbarElement,
@@ -125,6 +129,18 @@ export const PlateSelectionToolbar = ({
               <TooltipContent>{labels.clear}</TooltipContent>
             </Tooltip>
             <PlateSelectionToolbarMoreMenu labels={labels} onAction={runMoreAction} />
+            {onAi && (
+              <Button
+                aria-label={labels.ai ?? 'AI'}
+                onClick={onAi}
+                onMouseDown={(event) => event.preventDefault()}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <Sparkles aria-hidden="true" /> AI
+              </Button>
+            )}
           </div>
         </TooltipProvider>
       </div>

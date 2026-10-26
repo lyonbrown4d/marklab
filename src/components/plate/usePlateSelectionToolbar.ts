@@ -47,6 +47,7 @@ export type PlateSelectionToolbarController = ToolbarState & {
   anchor: { left: number; top: number }
   captureSelection: () => boolean
   floatingStyle?: CSSProperties
+  restoreSelection: () => void
   runAction: (action: PlateSelectionToolbarAction) => boolean
   runMoreAction: (action: PlateSelectionToolbarMoreAction) => boolean
   setToolbarElement: (element: HTMLElement | null) => void
@@ -303,6 +304,7 @@ export const usePlateSelectionToolbar = ({
     anchor: { left: x ?? 0, top: y ?? 0 },
     captureSelection,
     floatingStyle,
+    restoreSelection: restoreActionSelection,
     runAction,
     runMoreAction,
     setToolbarElement,

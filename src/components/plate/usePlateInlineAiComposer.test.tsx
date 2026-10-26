@@ -34,13 +34,13 @@ const messages = {
   staleSelection: 'Selection changed',
 }
 const initialProps = { activePath: 'a.md', readOnly: false, ready: true }
-const renderComposer = () => {
+const renderComposer = (defaultProviderId: string | null = null) => {
   const rootRef = { current: document.createElement('div') }
   return renderHook(
     (props: typeof initialProps) =>
       usePlateInlineAiComposer({
         ...props,
-        defaultProviderId: null,
+        defaultProviderId,
         getEditor,
         messages,
         rootRef,
@@ -65,6 +65,36 @@ const deferredStart = () => {
 }
 
 describe('usePlateInlineAiComposer startup event ordering', () => {
+  it('recovers from an unavailable default when a usable provider is selected', async () => {
+    const { result } = renderComposer('missing-provider')
+    await act(async () => result.current.open())
+    expect(result.current.error).toBe(messages.defaultProviderUnavailable)
+    act(() => result.current.setProviderId('provider-1'))
+    expect(result.current.providerId).toBe('provider-1')
+    expect(result.current.phase).toBe('prompt')
+    expect(result.current.error).toBeNull()
+  })
+
+  it('shows provider-loading failures instead of reporting an empty configuration', async () => {
+    aiMock.listProviders.mockRejectedValueOnce(new Error('Provider storage unavailable'))
+    const { result } = renderComposer()
+    await act(async () => result.current.open())
+    expect(result.current.phase).toBe('error')
+    expect(result.current.error).toBe('Provider storage unavailable')
+    expect(aiMock.startGeneration).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { readOnly: true, ready: true },
+    { readOnly: false, ready: false },
+  ])('does not open or load providers for an unavailable editor: %j', async (availability) => {
+    const { result, rerender } = renderComposer()
+    rerender({ activePath: 'a.md', ...availability })
+    await act(async () => result.current.open())
+    expect(result.current.isOpen).toBe(false)
+    expect(aiMock.listProviders).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.resetAllMocks()
     aiMock.handler = null
