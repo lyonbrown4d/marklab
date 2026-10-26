@@ -1,4 +1,5 @@
 import { executeFocusedCodeEditorCommand, isCodeEditorElement } from '@/lib/focusedCodeEditor'
+import { executeFocusedPlateHistory } from '@/lib/focusedPlateHistory'
 import { queueFocusedEditCommand } from '@/runtime/editCommands'
 import type { FocusedEditAction } from '@/types/editCommand'
 
@@ -29,6 +30,8 @@ export const executeFocusedEditCommand = (
   if (!target) {
     return isDocumentShellFocus(doc.activeElement) ? executeFocusedCodeEditorCommand(action) : false
   }
+
+  if (executeFocusedPlateHistory(target, action)) return true
 
   if (action === 'edit.select_all') {
     return selectEditableTarget(target, doc)

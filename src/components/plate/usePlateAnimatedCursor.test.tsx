@@ -114,7 +114,7 @@ describe('usePlateAnimatedCursor', () => {
     expect(frames.size).toBe(0)
   })
 
-  it('snaps to typing and line changes, and animates only same-line arrow navigation', () => {
+  it('animates same-line typing and arrow navigation, and snaps to line changes', () => {
     const { caret, editable, flush, move } = setupCursor()
     expect(caret).not.toHaveClass('is-animating')
     fireEvent.keyDown(editable, { key: 'ArrowRight' })
@@ -122,11 +122,17 @@ describe('usePlateAnimatedCursor', () => {
     document.dispatchEvent(new Event('selectionchange'))
     flush()
     expect(caret).toHaveClass('is-animating')
+    // Slate can handle beforeinput itself, so typing need not emit a native input.
+    fireEvent.keyDown(editable, { key: 'A', shiftKey: true })
+    move({ left: 72 })
+    document.dispatchEvent(new Event('selectionchange'))
+    flush()
+    expect(caret).toHaveClass('is-animating')
     fireEvent.input(editable)
     move({ left: 96 })
     flush()
     expect(caret.style.getPropertyValue('--marklab-caret-x')).toBe('95px')
-    expect(caret).not.toHaveClass('is-animating')
+    expect(caret).toHaveClass('is-animating')
     fireEvent.keyDown(editable, { key: 'ArrowRight' })
     move({ left: 20, top: 50 })
     flush()

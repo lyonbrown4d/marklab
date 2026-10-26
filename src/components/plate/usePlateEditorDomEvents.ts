@@ -1,3 +1,4 @@
+import { registerPlateHistory } from '@/lib/focusedPlateHistory'
 import { isVimKeyboardTarget } from '@/components/vim/vimKeyboardScope'
 import type { PlateEditor } from 'platejs/react'
 import { BlockSelectionPlugin } from '@platejs/selection/react'
@@ -49,6 +50,11 @@ export const usePlateEditorDomEvents = ({
   useEffect(() => {
     const editable = editableRef.current
     if (!editable) return
+    // Desktop menu accelerators bypass Slate's keyboard handler. Use its own
+    // history rather than the webview's native contenteditable undo stack.
+    const releaseHistory = registerPlateHistory(editable, (action) => {
+      if (!readOnly && isReady() && !composingRef.current) editor.tf[action]()
+    })
     let compositionEndTimer: number | undefined
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isVimKeyboardTarget(event.target)) return
@@ -115,6 +121,7 @@ export const usePlateEditorDomEvents = ({
     editable.addEventListener('compositionend', handleCompositionEnd, { capture: true })
     editable.addEventListener('blur', handleBlur)
     return () => {
+      releaseHistory()
       if (compositionEndTimer !== undefined) window.clearTimeout(compositionEndTimer)
       editable.removeEventListener('beforeinput', handleBeforeInput, { capture: true })
       editable.removeEventListener('cut', handleBlockedMutation, { capture: true })

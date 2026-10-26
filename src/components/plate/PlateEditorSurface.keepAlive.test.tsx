@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { executeFocusedEditCommand } from '@/app/focusedEditCommand'
 import { createRef, type RefObject } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -93,6 +94,53 @@ describe('PlateEditorSurface cached route lifecycle', () => {
       expect((await secondRef.current?.getMarkdown())?.trim()).toBe('Second'),
     )
     expect((await firstRef.current?.getMarkdown())?.trim()).toBe('First unsaved')
+  })
+
+  it('routes desktop undo and redo to the active editor and blocks inactive or read-only edits', async () => {
+    const firstRef = createRef<PlateEditorSurfaceHandle>()
+    const secondRef = createRef<PlateEditorSurfaceHandle>()
+    const view = render(<SurfacePair active="first" firstRef={firstRef} secondRef={secondRef} />)
+    const firstEditor = firstRef.current!.getEditor()
+    const native = vi.fn(() => true)
+    act(() => {
+      firstEditor.tf.select(firstEditor.api.end([]))
+      firstEditor.tf.insertText(' edit')
+    })
+    act(() => expect(executeFocusedEditCommand('edit.undo', document, native)).toBe(true))
+    expect((await firstRef.current!.getMarkdown()).trim()).toBe('First')
+    act(() => expect(executeFocusedEditCommand('edit.redo', document, native)).toBe(true))
+    expect((await firstRef.current!.getMarkdown()).trim()).toBe('First edit')
+
+    view.rerender(<SurfacePair active="second" firstRef={firstRef} secondRef={secondRef} />)
+    act(() => executeFocusedEditCommand('edit.undo', document, native))
+    expect((await firstRef.current!.getMarkdown()).trim()).toBe('First edit')
+    expect((await secondRef.current!.getMarkdown()).trim()).toBe('Second')
+    screen.getByLabelText('First editor').focus()
+    act(() => executeFocusedEditCommand('edit.undo', document, native))
+    expect((await firstRef.current!.getMarkdown()).trim()).toBe('First edit')
+    expect(native).not.toHaveBeenCalled()
+
+    view.unmount()
+    const readOnlyRef = createRef<PlateEditorSurfaceHandle>()
+    render(
+      <PlateEditorSurface
+        activePath="readonly.md"
+        placeholder="Read only"
+        onChange={vi.fn()}
+        readOnly
+        ref={readOnlyRef}
+        value="Read only"
+      />,
+    )
+    const editor = readOnlyRef.current!.getEditor()
+    act(() => {
+      editor.tf.select(editor.api.end([]))
+      editor.tf.insertText(' edit')
+    })
+    screen.getByTestId('markdown-editor').focus()
+    act(() => executeFocusedEditCommand('edit.undo', document, native))
+    expect((await readOnlyRef.current!.getMarkdown()).trim()).toBe('Read only edit')
+    expect(native).not.toHaveBeenCalled()
   })
 
   it('does not publish snapshots from an inactive cached editor', async () => {

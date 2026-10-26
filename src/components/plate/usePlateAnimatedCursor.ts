@@ -157,11 +157,15 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     const handleKeyDown = (event: KeyboardEvent) => {
       animateNextUpdate =
         !event.isComposing &&
-        !event.shiftKey &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
-        (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+        (event.key.length === 1 ||
+          ['ArrowLeft', 'ArrowRight', 'Backspace', 'Delete'].includes(event.key))
+      scheduleUpdate()
+    }
+    const handleInput = () => {
+      animateNextUpdate = !composing
       scheduleUpdate()
     }
     const handleCompositionStart = () => {
@@ -183,7 +187,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     root.addEventListener('focus', updateWithoutAnimation)
     root.addEventListener('blur', updateWithoutAnimation)
     root.addEventListener('keydown', handleKeyDown)
-    root.addEventListener('input', updateWithoutAnimation)
+    root.addEventListener('input', handleInput)
     root.addEventListener('pointerdown', updateWithoutAnimation)
     root.addEventListener('compositionstart', handleCompositionStart)
     root.addEventListener('compositionend', handleCompositionEnd)
@@ -203,7 +207,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
       root.removeEventListener('focus', updateWithoutAnimation)
       root.removeEventListener('blur', updateWithoutAnimation)
       root.removeEventListener('keydown', handleKeyDown)
-      root.removeEventListener('input', updateWithoutAnimation)
+      root.removeEventListener('input', handleInput)
       root.removeEventListener('pointerdown', updateWithoutAnimation)
       root.removeEventListener('compositionstart', handleCompositionStart)
       root.removeEventListener('compositionend', handleCompositionEnd)

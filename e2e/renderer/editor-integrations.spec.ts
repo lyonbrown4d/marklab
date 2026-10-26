@@ -216,22 +216,26 @@ test.describe('table and animated caret', () => {
     await page.keyboard.press('End')
     const caret = page.locator('body > [data-marklab-plate-overlay="animated-cursor"]')
     await expect(caret).toBeVisible()
+    await expect(editor).toHaveCSS('caret-color', 'rgba(0, 0, 0, 0)')
     const expectAligned = async () => {
-      const difference = await caret.evaluate(async (element) => {
-        await new Promise<void>((done) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => done())),
+      await expect
+        .poll(() =>
+          caret.evaluate(async (element) => {
+            await new Promise<void>((done) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => done())),
+            )
+            const range = getSelection()!.getRangeAt(0).getBoundingClientRect()
+            const overlay = element.getBoundingClientRect()
+            return Math.max(
+              Math.abs(overlay.left + overlay.width / 2 - range.left),
+              Math.abs(overlay.top - range.top),
+            )
+          }),
         )
-        const range = getSelection()!.getRangeAt(0).getBoundingClientRect()
-        const overlay = element.getBoundingClientRect()
-        return {
-          x: Math.abs(overlay.left + overlay.width / 2 - range.left),
-          y: Math.abs(overlay.top - range.top),
-        }
-      })
-      expect(difference.x).toBeLessThan(2)
-      expect(difference.y).toBeLessThan(2)
+        .toBeLessThan(2)
     }
     await page.keyboard.type('abcdef', { delay: 1 })
+    await expect(caret).toHaveClass(/is-animating/)
     await expectAligned()
     await page.keyboard.press('Enter')
     await page.keyboard.type('输入后保持对齐', { delay: 1 })
