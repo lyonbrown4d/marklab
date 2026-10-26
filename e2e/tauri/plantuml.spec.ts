@@ -26,7 +26,7 @@ const expectNativeImage = async () => {
     return { loaded: Boolean(image?.complete && image.naturalWidth > 0), src: image?.src }
   }, preview)
   assert.equal(image.loaded, true, 'The native SVG resource did not decode')
-  assert.match(image.src ?? '', /^marklab-asset:\/\/local\/v1\//)
+  assert.match(image.src ?? '', /^http:\/\/marklab-asset\.localhost\/local\/v1\/[A-Za-z0-9_-]{43}$/)
 }
 
 describe('native PlantUML previews', () => {
