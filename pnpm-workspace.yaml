@@ -2,21 +2,26 @@ packages:
   - website
 minimumReleaseAge: 0
 overrides:
-  'react-devtools>electron': 45.0.0
+  'react-devtools>electron': 45.1.0
   'react-devtools>cross-spawn': 7.0.6
-  '@excalidraw/excalidraw>sass': 1.106.1
+  '@excalidraw/excalidraw>sass': 1.107.0
   '@excalidraw/excalidraw>nanoid': 3.3.20
   '@excalidraw/mermaid-to-excalidraw>nanoid': 5.1.16
   '@codemirror/view': 6.43.15
   # React Scan's OpenTelemetry SDK currently requires API <1.10.
   '@opentelemetry/api': 1.9.1
   esbuild: 0.28.2
-  katex: 0.19.0
+  katex: 0.19.1
   monaco-editor>dompurify: 3.4.17
   react-pdf>pdfjs-dist: 6.4.299
   postcss-nested>postcss-selector-parser: 7.1.7
-  rollup: 4.65.0
+  rollup: 4.66.0
   lodash-es: 4.18.1
+peerDependencyRules:
+  # plugin-react's compiler preset is compatible with plugin-babel 0.3;
+  # its optional peer range has not caught up. Verified by build:compiler.
+  allowedVersions:
+    '@vitejs/plugin-react@6.1.2>@rolldown/plugin-babel': '0.3.0'
 allowBuilds:
   '@parcel/watcher': true
   canvas: true

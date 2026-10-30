@@ -24,7 +24,7 @@ fn resolves_each_owner_and_does_not_follow_focus_after_binding() {
   let mut owners = HashMap::new();
   resolve(
     &mut owners,
-    &[first.clone()],
+    std::slice::from_ref(&first),
     "main",
     "Marklab",
     [900, 700],

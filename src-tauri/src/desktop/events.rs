@@ -60,18 +60,16 @@ pub fn run_event(app: &AppHandle, event: RunEvent) {
   match event {
     RunEvent::Exit => log::logger().flush(),
     RunEvent::MainEventsCleared => super::visibility::refresh(app),
-    RunEvent::ExitRequested { api, code, .. } => {
-      if code.is_none() {
-        api.prevent_exit();
-        if cfg!(target_os = "macos")
-          && app
-            .try_state::<WorkspaceRegistry>()
-            .is_some_and(|registry| registry.labels().is_ok_and(|labels| labels.is_empty()))
-        {
-          return;
-        }
-        let _ = request_quit(app);
+    RunEvent::ExitRequested { api, code, .. } if code.is_none() => {
+      api.prevent_exit();
+      if cfg!(target_os = "macos")
+        && app
+          .try_state::<WorkspaceRegistry>()
+          .is_some_and(|registry| registry.labels().is_ok_and(|labels| labels.is_empty()))
+      {
+        return;
       }
+      let _ = request_quit(app);
     }
     #[cfg(target_os = "macos")]
     RunEvent::Opened { urls } => {

@@ -35,42 +35,42 @@ tauri-plugin-single-instance = { version = "=3.0.0-alpha.3", features = ["deep-l
 tauri-plugin-log = "=3.0.0-alpha.3"
 tauri-plugin-updater = "=3.0.0-alpha.3"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = "1"
+serde_json = "1.0.154"
 # Keep the Rust contract exporter on one exact Specta release.
-specta = { version = "=2.0.0-rc.26", features = ["derive", "function", "serde_json", "chrono", "uuid"] }
-specta-typescript = { version = "=0.0.13", optional = true }
-specta-serde = { version = "=0.0.13", optional = true }
-specta-util = { version = "=0.0.13", optional = true }
-tokio-util = { version = "0.7", features = ["rt", "io"] }
-lsp-types = "0.97"
-thiserror = "2"
+specta = { version = "=2.0.0-rc.27", features = ["derive", "function", "serde_json", "chrono", "uuid"] }
+specta-typescript = { version = "=0.0.14", optional = true }
+specta-serde = { version = "=0.0.14", optional = true }
+specta-util = { version = "=0.0.14", optional = true }
+tokio-util = { version = "0.7.20", features = ["rt", "io"] }
+lsp-types = "0.97.0"
+thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono", "json"] }
-portable-pty = "0.9"
+portable-pty = "0.9.0"
 sha2 = "0.11.1"
 hex = "0.4.3"
 uuid = { version = "1.29.0", features = ["v4", "serde"] }
 chrono = { version = "0.4.45", features = ["serde"] }
-notify = "8.2.0"
-ignore = "0.4.33"
+notify = "8.2.1"
+ignore = "0.4.34"
 pulldown-cmark = "0.13.5"
-regex = "1"
+regex = "1.13.1"
 strsim = "0.11.1"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream", "form"] }
 url = "2.5.8"
 base64 = "0.23.1"
-bytes = "1"
+bytes = "1.12.1"
 mime_guess = "2.0.5"
-pathdiff = "0.2"
-percent-encoding = "2"
-git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl"] }
-futures-util = "0.3"
+pathdiff = "0.2.3"
+percent-encoding = "2.3.2"
+git2 = { version = "0.21.0", features = ["vendored-libgit2", "vendored-openssl"] }
+futures-util = "0.3.34"
 fluxdi = { version = "=2.0.0", default-features = false, features = ["macros", "thread-safe", "async-factory"] }
 moka = { version = "0.12.16", default-features = false, features = ["future", "sync"] }
 deadpool = { version = "0.13.1", default-features = false, features = ["managed"] }
 clipboard-rs = { version = "0.3.5", default-features = false, features = ["wayland"] }
-cssparser = "0.38"
-log = "0.4"
+cssparser = "0.38.0"
+log = "0.4.34"
 keyring = "4.2.0"
 tempfile = "3.27.0"
 quick-xml = { version = "0.42.0", features = ["serialize"] }
@@ -78,20 +78,20 @@ calamine = { version = "0.37.0", default-features = false }
 csv = "1.4.0"
 csv-core = "0.1.13"
 ironcalc_base = { version = "0.9.1", default-features = false }
-zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
+zip = { version = "9.1.3", default-features = false, features = ["deflate"] }
 # Diagram parsers are opt-in since 0.9; retain the complete native language catalog.
-merman-core = { version = "0.9.2", features = ["all-diagrams"] }
-same-file = "1"
-trash = "5"
-unicode-normalization = "0.1"
-image = { version = "0.25", default-features = false, features = ["png"] }
-scraper = "0.29"
+merman-core = { version = "0.9.3", features = ["all-diagrams"] }
+same-file = "1.0.6"
+trash = "5.2.9"
+unicode-normalization = "0.1.26"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+scraper = "0.29.0"
 ammonia = "4.2.4"
-imagesize = "0.15"
+imagesize = "0.15.0"
 layout-rs = "0.1.3"
 rectangle-pack = { version = "0.4.2", default-features = false }
 graphrs = { version = "0.12.0", default-features = false }
-rmcp = { version = "3.7.0", default-features = false, features = ["server", "macros", "transport-io"] }
+rmcp = { version = "3.8.0", default-features = false, features = ["server", "macros", "transport-io"] }
 rig-core = { version = "=0.45.0", default-features = false }
 rig-reqwest = { version = "=0.45.0", default-features = false, features = ["rustls"] }
 tauri-plugin-window-state = "=3.0.0-alpha.2"
@@ -109,20 +109,20 @@ objc2-user-notifications = { version = "0.3.2", default-features = false, featur
 [target.'cfg(target_os = "windows")'.dependencies]
 tauri-runtime-wry = { version = "=3.0.0-alpha.5", features = ["unstable"] }
 webview2-com = "0.39.1"
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Memory", "UI_Notifications", "Data_Xml_Dom", "Foundation", "Win32_UI_Notifications", "Win32_UI_Shell", "Win32_System_Registry", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Variant", "Win32_System_WinRT"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Memory", "UI_Notifications", "Data_Xml_Dom", "Foundation", "Win32_UI_Notifications", "Win32_UI_Shell", "Win32_System_Registry", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Variant", "Win32_System_WinRT"] }
 
 # Match the generated COM traits and implement macro used by windows 0.62.
 windows-core = "0.62.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-x11rb = "=0.13.2"
+x11rb = "=0.14.0"
 tauri-runtime-cef = { version = "=3.0.0-alpha.6", features = ["unstable"] }
-zbus = { version = "6.1.0", default-features = false, features = ["tokio", "proxy"] }
+zbus = { version = "6.2.0", default-features = false, features = ["tokio", "proxy"] }
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2"
+libc = "0.2.191"
 
 [dev-dependencies]
-rmcp = { version = "3.7.0", default-features = false, features = ["client"] }
+rmcp = { version = "3.8.0", default-features = false, features = ["client"] }
 tauri = { version = "=3.0.0-alpha.5", features = ["test", "specta"] }
 tempfile = "3.27.0"

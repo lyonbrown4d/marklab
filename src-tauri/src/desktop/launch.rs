@@ -7,6 +7,8 @@ use tauri::{AppHandle, Manager};
 pub enum Source {
   Startup,
   SecondInstance,
+  // AppKit constructs this variant; preserve the same IPC enum on every OS.
+  #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   OpenUrl,
 }
 #[derive(Clone, Serialize, specta::Type)]

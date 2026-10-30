@@ -54,7 +54,7 @@ test('keeps workspace publication selection, preview and export reachable at des
     const compact = width < 1024
     const chaptersTab = dialog.getByRole('tab', { name: 'Chapters', exact: true })
     const previewTab = dialog.getByRole('tab', { name: 'Document preview', exact: true })
-    const settingsTab = dialog.getByRole('tab', { name: 'Print settings', exact: true })
+    const settingsTab = dialog.getByRole('tab', { name: 'Export settings', exact: true })
     if (compact) await chaptersTab.click()
     const introduction = dialog.getByRole('checkbox', { name: 'Introduction', exact: true })
     const details = dialog.getByRole('checkbox', { name: 'Details', exact: true })

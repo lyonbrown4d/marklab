@@ -8,6 +8,8 @@ use x11rb::{
   },
 };
 
+// Thread entry transfers ownership of the tab, bindings and channel endpoints.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn run(
   xid: u32,
   manager: WebTabs,

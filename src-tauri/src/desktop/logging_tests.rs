@@ -42,7 +42,7 @@ fn native_file_logging_rotates_five_mib_and_retains_one_archive() {
   assert!(directory.path().join("main.log").is_file());
   assert_eq!(files.len(), 2, "one current file and one archive");
   for file in files {
-    assert!(file.metadata().expect("log length").len() <= MAX_FILE_BYTES as u64);
+    assert!(file.metadata().expect("log length").len() <= MAX_FILE_BYTES);
   }
   assert_eq!(
     std::fs::read_to_string(unrelated).expect("unrelated log"),

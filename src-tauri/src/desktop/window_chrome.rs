@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use tauri::Manager;
 /// Align AppKit controls and keep GTK's native menu out of custom window chrome.
 pub(super) fn align(window: &tauri::Window) {
