@@ -1617,5 +1617,19 @@
   "knowledgeGraph.inGraph": "关系图谱",
   "knowledgeGraph.resultLimit": "显示前 {{count}} 个节点（共 {{total}} 个）。可缩小搜索范围查找其他节点。",
   "knowledgeGraph.targetUnavailable": "当前图谱中没有这个目标。它可能已移除，或超出了本次显示范围。",
-  "knowledgeGraph.arrange": "重新布局"
+  "knowledgeGraph.arrange": "重新布局",
+  "workbench.loadingLayout": "正在恢复工作区布局…",
+  "workbench.loadLayoutFailed": "无法恢复工作区布局，本次打开期间的布局更改不会保存。",
+  "workbench.saveLayoutFailed": "无法保存工作区布局，请在关闭前重试。",
+  "workbench.splitRight": "向右拆分",
+  "workbench.splitDown": "向下拆分",
+  "workbench.moveToGroup": "移到分组",
+  "workbench.group": "分组 {{index}}",
+  "workbench.closeOthers": "关闭其他标签",
+  "workbench.closeRight": "关闭右侧标签",
+  "workbench.closeAll": "关闭分组内全部标签",
+  "workbench.recoveredDraft": "另一分栏已更新此文档，视图已同步。刚才的编辑可复制保留。",
+  "workbench.copyDraft": "复制暂存编辑",
+  "workbench.copyDraftFailed": "复制失败，请重试",
+  "knowledgeGraph.gestures": "双指滑动平移 · 捏合或 Alt + 滚轮缩放"
 }

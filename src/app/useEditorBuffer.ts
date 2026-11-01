@@ -15,11 +15,7 @@ import { editorLoadGenerationFromState } from '@/app/editorLoadRouteState'
 import { useEditorBufferStatus } from '@/app/useEditorBufferStatus'
 import { useEditorBufferInvalidation } from '@/app/useEditorBufferInvalidation'
 import { usePersistedEditorBufferContent } from '@/app/usePersistedEditorBufferContent'
-import {
-  createEditorBufferPersistence,
-  editorBufferIdentity,
-  useEditorBufferState,
-} from '@/app/useEditorBufferState'
+import { createEditorBufferPersistence, useEditorBufferState } from '@/app/useEditorBufferState'
 import { createEditorBufferSync } from '@/app/editorBufferSync'
 export type { SaveState } from '@/app/useEditorBufferState'
 export { editorLoadGenerationFromState, nextEditorLoadRouteState } from '@/app/editorLoadRouteState'
@@ -30,9 +26,15 @@ type UseEditorBufferArgs = {
   activePath: string | null
   workspaceKey: string
   openPaths?: readonly string[]
+  visiblePaths?: readonly string[]
 }
 
-export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEditorBufferArgs) => {
+export const useEditorBuffer = ({
+  activePath,
+  workspaceKey,
+  openPaths,
+  visiblePaths,
+}: UseEditorBufferArgs) => {
   const { t } = useI18n()
   const location = useLocation()
   const loadGeneration = editorLoadGenerationFromState(location.state)
@@ -74,14 +76,21 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   const latestContentsRef = useRef<Record<string, string>>({})
   const changeVersionRef = useRef<Record<string, number>>({})
   const loadedVersionsRef = useLatest(loadedVersions)
+  const writersRef = useRef<Record<string, { ownerId: string; version: number }>>({})
   const loadTokenRef = useRef(0)
-  const activeLoadRef = useRef<{ path: string; token: number; workspace: string } | null>(null)
-  const workspaceSessionRef = useRef(workspaceKey)
-  const externalGeneration = useEditorBufferInvalidation(
-    workspaceKey,
-    syncedContentsRef,
-    activePath,
+  const activeLoadsRef = useRef(
+    new Map<string, { path: string; token: number; workspace: string }>(),
   )
+  const visibleKey = JSON.stringify([
+    ...new Set(
+      [activePath, ...(visiblePaths ?? [])].filter((path): path is string => Boolean(path)),
+    ),
+  ])
+  const loadPaths = useMemo<string[]>(() => JSON.parse(visibleKey), [visibleKey])
+  const retainedKey = JSON.stringify([...new Set([...(openPaths ?? []), ...loadPaths])])
+  const retainedPaths = useMemo<string[]>(() => JSON.parse(retainedKey), [retainedKey])
+  const workspaceSessionRef = useRef(workspaceKey)
+  const externalGeneration = useEditorBufferInvalidation(workspaceKey, syncedContentsRef, loadPaths)
 
   const { markPathClean, markPathDirty } = useEditorBufferMarkers({
     workspaceKeyRef,
@@ -138,6 +147,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     syncedContentsRef.current = {}
     latestContentsRef.current = {}
     changeVersionRef.current = {}
+    writersRef.current = {}
     persistence.clearRevisions()
     void flushNow().then(
       () => bufferSync.clearWorkspace(previousWorkspace),
@@ -146,10 +156,18 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   }, [bufferSync, flushNow, persistence, reportFlushError, workspaceKey])
 
   const { beginPathMutation, pathMutationPending, mutationGeneration, isPathBlocked } =
-    useEditorBufferPathMutation({ activePath, workspaceKey, state, loadTokenRef, activeLoadRef })
+    useEditorBufferPathMutation({
+      activePath,
+      visiblePaths: loadPaths,
+      workspaceKey,
+      state,
+      loadTokenRef,
+      activeLoadsRef,
+    })
 
   useEditorBufferLoad({
     activePath,
+    visiblePaths: loadPaths,
     workspaceKey,
     loadGeneration,
     externalGeneration,
@@ -158,8 +176,9 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     state,
     bufferSync,
     persistence,
+    loadedVersionsRef,
     loadTokenRef,
-    activeLoadRef,
+    activeLoadsRef,
     dirtyPathsRef,
     fileContentsRef,
     latestContentsRef,
@@ -170,14 +189,16 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
 
   useUnmount(() => {
     loadTokenRef.current += 1
-    activeLoadRef.current = null
+    activeLoadsRef.current.clear()
     void flushNow().catch(reportFlushError)
   })
 
   useEditorBufferCache({
     activePath,
     workspaceKey,
-    openPaths,
+    openPaths: openPaths === undefined ? undefined : retainedPaths,
+    visiblePaths: loadPaths,
+    writersRef,
     settledUpdates,
     state,
     persistence,
@@ -188,15 +209,11 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   })
 
   const updateErrorMessage = useCallback(() => tRef.current('editor.updateFileFailed'), [tRef])
-  const onEditorChange = useEditorBufferChanges({
+  const { onEditorChange, bindDocument } = useEditorBufferChanges({
     activePath,
-    loadedContent: activePath ? fileContents[activePath] : undefined,
-    loadedRevision: activePath
-      ? bufferSync.revisionFor(editorBufferIdentity(workspaceKey, activePath))
-      : undefined,
-    loadedVersion: activePath
-      ? loadedVersions[editorBufferIdentity(workspaceKey, activePath)]
-      : undefined,
+    fileContents,
+    loadedVersions,
+    writersRef,
     loadedVersionsRef,
     binding,
     currentBindingRef,
@@ -231,6 +248,8 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     loadingPaths,
     saveStates,
     onEditorChange,
+    bindDocument,
+    flushBuffers: flushNow,
     onPersistedContentChange,
     beginPathMutation,
     pathMutationPending,

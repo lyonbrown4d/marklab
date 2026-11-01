@@ -17,8 +17,15 @@ const boundaryContractTests = [
   './shortcutBoundary.test.ts',
   './settingsPersistBoundary.test.ts',
   '../styles/graph-interactions.test.ts',
-  '../app/AppCachedOutlet.render.test.tsx',
-  '../app/AppCachedOutlet.policy.test.tsx',
+  '../features/workbench/WorkspaceDock.test.tsx',
+  '../features/workbench/dockController.test.ts',
+  '../features/workbench/dockPersistence.test.ts',
+  '../app/useEditorBuffer.panes.test.tsx',
+  '../app/editorBufferCachePolicy.test.ts',
+  '../app/EditorFocusHandoff.panes.test.tsx',
+  '../components/source-code/useWorkbenchSourceModel.test.tsx',
+  '../features/knowledge-graph/graphNodeIcons.test.ts',
+  '../features/knowledge-graph/graphWheelController.test.ts',
   '../app/scheduleEditorRuntimePreload.test.ts',
   '../services/boundedWorkerPool.test.ts',
   '../components/markdownSourceCompletion.isolation.test.ts',
@@ -29,6 +36,8 @@ const boundaryContractTests = [
   '../components/previews/ExcalidrawEditorSurface.test.tsx',
   '../../e2e/renderer/workspace-isolation.spec.ts',
   '../../e2e/renderer/editor-integrations.spec.ts',
+  '../../e2e/renderer/workbench.spec.ts',
+  '../../e2e/renderer/knowledge-graph.spec.ts',
   '../../src-tauri/src/settings/tests.rs',
   '../../src-tauri/src/analysis/cache_tests.rs',
   '../../crates/marklab-document/src/analysis/document_positions_tests.rs',
@@ -186,6 +195,8 @@ describe('quality gates', () => {
     const config = fileText('../../playwright.renderer.config.ts')
     const nativeWorkflow = fileText('../../.github/workflows/native.yml')
     expect(config).toMatch(/forbidOnly:\s*(Boolean\(process.env.CI\)|!!process.env.CI)/)
+    expect(config).toContain('**/workbench.spec.ts')
+    expect(config).toContain('**/knowledge-graph.spec.ts')
     expect(config).toContain('retries: 0')
     expect(config).toContain('workers: 1')
     expect(config).toContain("screenshot: 'only-on-failure'")

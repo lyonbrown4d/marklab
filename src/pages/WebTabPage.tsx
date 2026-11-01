@@ -1,10 +1,12 @@
-import { Navigate, useParams } from 'react-router-dom'
+import { WorkspaceNavigate as Navigate } from '@/features/workbench/WorkspaceNavigate'
+import { useParams } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { useNativeSurfaceOccluded } from '@/app/nativeSurfaceOcclusion'
 import WebTabSurface from '@/pages/web/WebTabSurface'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import type { WorkspaceTab } from '@/store/appTypes'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 
 type WebTab = Extract<WorkspaceTab, { kind: 'web' }>
 
@@ -18,12 +20,20 @@ const WebTabPage = () => {
     })),
   ).tab
   const suspended = useNativeSurfaceOccluded()
+  const pane = useWorkspacePane()
 
   if (!tabId || !tab) {
     return <Navigate replace to="/" />
   }
 
-  return <WebTabSurface key={tab.id} suspended={suspended} tab={tab} onClose={onCloseActiveTab} />
+  return (
+    <WebTabSurface
+      key={tab.id}
+      suspended={suspended || (pane ? !pane.active || !pane.visible : false)}
+      tab={tab}
+      onClose={onCloseActiveTab}
+    />
+  )
 }
 
 export default WebTabPage

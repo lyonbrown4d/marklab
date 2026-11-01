@@ -49,6 +49,7 @@ describe('Markdown editor return position', () => {
         useMarkdownEditorPosition({
           activePath: 'return-position.md',
           workspaceKey: 'internal:/one',
+          paneId: 'heading-pane',
           active,
           ready: true,
           rootRef,
@@ -70,6 +71,36 @@ describe('Markdown editor return position', () => {
     expect(editable.scrollTop).toBe(400)
     expect(editable.scrollLeft).toBe(12)
     expect(focus).not.toHaveBeenCalled()
+  })
+
+  it('keeps independent caret and scroll snapshots for two panes of the same document', () => {
+    const editor = createEditor()
+    const { editable, rootRef } = createSurface()
+    const getEditor = () => editor
+    const mount = (paneId: string) =>
+      renderHook(() =>
+        useMarkdownEditorPosition({
+          activePath: 'shared-pane-position.md',
+          workspaceKey: 'internal:/one',
+          paneId,
+          active: true,
+          ready: true,
+          rootRef,
+          getEditor,
+        }),
+      )
+    const first = mount('first-pane')
+    act(() => editor.tf.select({ path: [0, 0], offset: 3 }))
+    editable.scrollTop = 100
+    first.unmount()
+    const second = mount('second-pane')
+    act(() => editor.tf.select({ path: [0, 0], offset: 9 }))
+    editable.scrollTop = 500
+    second.unmount()
+    mount('first-pane')
+    act(flushFrames)
+    expect(editor.selection?.anchor.offset).toBe(3)
+    expect(editable.scrollTop).toBe(100)
   })
 
   it('uses scroll progress when content changed and isolates snapshots by workspace', () => {
@@ -118,6 +149,7 @@ describe('Markdown editor return position', () => {
         useMarkdownEditorPosition({
           activePath: 'heading-position.md',
           workspaceKey: 'internal:/one',
+          paneId: 'heading-pane',
           active,
           ready: true,
           rootRef,

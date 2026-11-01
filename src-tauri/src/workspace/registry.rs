@@ -1,3 +1,5 @@
+#[path = "registry_bindings.rs"]
+mod bindings;
 use super::root::prepare_root;
 use super::{RootInfo, Workspace};
 use crate::error::{BackendError, BackendResult};
@@ -10,6 +12,7 @@ pub struct WorkspaceRegistry {
   windows: RwLock<HashMap<String, Arc<Workspace>>>,
   internal: PathBuf,
   generation: AtomicU64,
+  binding_generations: RwLock<HashMap<String, u64>>,
   history_pool: Option<sqlx::SqlitePool>,
   shutdown: AtomicBool,
   closing: std::sync::Mutex<HashSet<String>>,
@@ -24,6 +27,7 @@ impl WorkspaceRegistry {
       windows: RwLock::new(HashMap::new()),
       internal,
       generation: AtomicU64::new(1),
+      binding_generations: RwLock::new(HashMap::new()),
       history_pool: None,
       shutdown: AtomicBool::new(false),
       closing: std::sync::Mutex::new(HashSet::new()),
@@ -82,7 +86,7 @@ impl WorkspaceRegistry {
       .write()
       .map_err(|_| BackendError::new("STATE_ERROR", "Workspace registry lock failed"))?;
     self.ensure_opening_label(label)?;
-    Ok(self.bind(&mut windows, label, root))
+    self.bind(&mut windows, label, root)
   }
 
   pub async fn open_async(
@@ -123,7 +127,7 @@ impl WorkspaceRegistry {
       ));
     }
     self.ensure_opening_label(label)?;
-    Ok(self.bind(&mut windows, label, root))
+    self.bind(&mut windows, label, root)
   }
 
   fn bind(
@@ -131,7 +135,11 @@ impl WorkspaceRegistry {
     windows: &mut HashMap<String, Arc<Workspace>>,
     label: &str,
     root: RootInfo,
-  ) -> Arc<Workspace> {
+  ) -> BackendResult<Arc<Workspace>> {
+    let mut binding_generations = self
+      .binding_generations
+      .write()
+      .map_err(|_| BackendError::new("STATE_ERROR", "Workspace binding generation lock failed"))?;
     let workspace = windows
       .values()
       .find(|workspace| workspace.root_info() == root)
@@ -153,7 +161,8 @@ impl WorkspaceRegistry {
     {
       previous.deactivate();
     }
-    workspace
+    binding_generations.insert(label.into(), self.generation.fetch_add(1, Ordering::AcqRel));
+    Ok(workspace)
   }
 
   pub fn owners(&self, generation: u64) -> BackendResult<Vec<String>> {
@@ -266,6 +275,7 @@ impl WorkspaceRegistry {
         "Workspace changed while closing",
       ));
     }
+    self.forget_binding(label)?;
     windows.remove(label);
     self
       .closing
@@ -286,6 +296,7 @@ impl WorkspaceRegistry {
       .windows
       .write()
       .map_err(|_| BackendError::new("STATE_ERROR", "Workspace registry lock failed"))?;
+    self.forget_binding(label)?;
     if let Some(workspace) = windows.remove(label) {
       self
         .closing

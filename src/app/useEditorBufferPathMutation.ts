@@ -7,10 +7,11 @@ export type BeginEditorPathMutation = (from: string, to: string) => (committed: 
 
 type Options = {
   activePath: string | null
+  visiblePaths: readonly string[]
   workspaceKey: string
   state: ReturnType<typeof useEditorBufferState>
   loadTokenRef: RefObject<number>
-  activeLoadRef: RefObject<{ path: string; token: number; workspace: string } | null>
+  activeLoadsRef: RefObject<Map<string, { path: string; token: number; workspace: string }>>
 }
 
 const containsPath = (parent: string, path: string) =>
@@ -41,17 +42,16 @@ export const useEditorBufferPathMutation = (options: Options) => {
       current &&
       !current.pending &&
       (current.workspace !== options.workspaceKey ||
-        !options.activePath ||
-        !containsPath(current.from, options.activePath))
+        !options.visiblePaths.some((path) => containsPath(current.from, path)))
     ) {
       mutation.current = null
       setPending(null)
     }
-  }, [options.activePath, options.workspaceKey, mutationGeneration])
+  }, [options.visiblePaths, options.workspaceKey, mutationGeneration])
 
   const beginPathMutation = useCallback<BeginEditorPathMutation>(
     (from, to) => {
-      const { workspaceKey, state, loadTokenRef, activeLoadRef } = latestRef.current
+      const { workspaceKey, state, loadTokenRef, activeLoadsRef } = latestRef.current
       const current = { from, workspace: workspaceKey, pending: true }
       mutation.current = current
       setPending(current)
@@ -71,10 +71,10 @@ export const useEditorBufferPathMutation = (options: Options) => {
         }
         return next
       })
-      const active = activeLoadRef.current
-      if (active?.workspace === workspaceKey && containsPath(from, active.path)) {
+      for (const [identity, active] of activeLoadsRef.current) {
+        if (active.workspace !== workspaceKey || !containsPath(from, active.path)) continue
         loadTokenRef.current += 1
-        activeLoadRef.current = null
+        activeLoadsRef.current.delete(identity)
         state.setPathLoading(workspaceKey, active.path, false)
       }
       return (committed) => {

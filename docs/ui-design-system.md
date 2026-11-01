@@ -48,6 +48,28 @@ This document records the current UI foundation decisions so future UI work uses
 - Keep settings, shell, graph, and editor styles connected to the same theme tokens.
 - Every UI iteration should run typecheck and tests before handoff.
 
+## Workspace editor groups and graph
+
+Dockview supplies the workspace's tab, group, resize, and pointer-drag behavior.
+Use its group model for right/down splits and tab moves; keep close commands
+scoped to the tab's group. The graph opens a selected existing file in the complete
+editor on its right without taking focus. The selected editor is read-only until
+its pane is activated. Non-Markdown files use the existing workspace previews.
+
+`src/features/workbench/workbench-dock.scss` contains only the Dockview integration
+selectors and semantic-token mappings. Business controls compose existing shadcn
+components and Tailwind classes. Avoid transformed pane wrappers that offset
+Plate overlays. Preserve visible focus, read-only states, and both themes when
+resizing, moving tabs, or restoring a saved layout.
+
+Graph nodes use eleven shared file-kind pictograms through Sigma's official image
+program. Pixel-wheel input pans; Ctrl pinch, Alt/Meta pixel-wheel input, and
+line/page wheel input zoom around the pointer. Camera changes use Sigma's
+coordinate conversions. Hidden/disposed surfaces cancel pending wheel work.
+
+These are implementation rules. Native input behavior and large-workspace
+performance require results from the actual target environment.
+
 ## Existing-style migration
 
 This section records the 2026-10-14 pre-Tauri styling verification. Its Electron

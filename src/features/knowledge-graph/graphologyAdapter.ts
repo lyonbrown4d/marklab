@@ -1,13 +1,16 @@
 import { MultiDirectedGraph } from 'graphology'
-import type { GraphData } from '@/logic/graph'
+import type { GraphData, GraphNode } from '@/logic/graph'
+import { graphNodeIcon, type GraphFileIcon } from '@/features/knowledge-graph/graphNodeIcons'
 
 export type KnowledgeNodeAttributes = {
   x: number
   y: number
   label: string
-  kind: string
+  kind: GraphNode['kind']
   size: number
   color: string
+  image: string
+  iconKind: GraphFileIcon
 }
 export type KnowledgeEdgeAttributes = { weight: number; kind: string }
 export type KnowledgeTopology = MultiDirectedGraph<KnowledgeNodeAttributes, KnowledgeEdgeAttributes>
@@ -59,8 +62,9 @@ export const createKnowledgeTopology = (
       ...(positions[node.id] ?? { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }),
       label: node.label,
       kind: node.kind,
+      ...graphNodeIcon(node),
       color: palette[node.kind],
-      size: node.kind === 'file' ? 5 : 3.5,
+      size: 10,
     })
   })
   data.edges.forEach((edge) => {

@@ -6,7 +6,7 @@ import DrawioEditorSurface from '@/components/previews/DrawioEditorSurface'
 import { DEFAULT_DRAWIO_EMBED_URL } from '@/logic/drawioEmbed'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
-import { ActiveWorkspaceProvider } from '@/app/AppCachedOutlet'
+import { ActiveWorkspaceProvider } from '@/app/activeWorkspaceContext'
 import { toast } from 'sonner'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))

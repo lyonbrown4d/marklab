@@ -1,5 +1,4 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { useKeepAliveContext } from 'keepalive-for-react'
 import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
 import { useAiProvidersQuery } from '@/components/ai/aiProviderQuery'
 import { EditorContextMenu } from '@/components/EditorContextMenu'
@@ -22,6 +21,7 @@ import type { PlateSelectionToolbarLabels } from '@/components/plate/selection/P
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 
 type ScopedEditorStatus = {
   activePath: string | null
@@ -30,9 +30,8 @@ type ScopedEditorStatus = {
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const { t } = useI18n()
-  const keepAlive = useKeepAliveContext()
-  const interactionActive =
-    (props.interactionActive ?? true) && (!keepAlive.cacheKey || keepAlive.active)
+  const pane = useWorkspacePane()
+  const interactionActive = (props.interactionActive ?? true) && (pane?.active ?? true)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const aiDefaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const markdownAssetImportStrategy = usePreferencesStore(
@@ -73,6 +72,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   useMarkdownEditorPosition({
     activePath: props.activePath,
     workspaceKey: props.workspaceKey,
+    paneId: props.paneId ?? pane?.id,
     active: interactionActive,
     ready: status.phase === 'ready',
     rootRef,
@@ -184,7 +184,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
         <PlateEditorSurface
           activePath={props.activePath}
           assetImportStrategy={markdownAssetImportStrategy}
-          autoFocus={props.autoFocus}
+          autoFocus={interactionActive && props.autoFocus}
           className={cn(
             'markdown-editor flex-1',
             markdownContentWidth === 'full' && '[--markdown-content-width:100%]',

@@ -21,6 +21,12 @@ export type LayoutContext = {
   graphRefreshing: boolean
   editorBufferPath: string | null
   onEditorChange: EditorChangeHandler
+  bindDocument?: (
+    path: string,
+    ownerId: string,
+    onRejected?: (attempted: string, current: string) => void,
+  ) => EditorChangeHandler
+  flushBuffers?: () => Promise<void>
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
   theme: ThemeMode

@@ -1,18 +1,36 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
+import { act, fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceDocumentLinkPreview } from '@/components/knowledge/WorkspaceDocumentLinkPreview'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import i18n from '@/i18n/setup'
 
-const keepAlive = vi.hoisted(() => ({ cacheKey: '', active: true }))
-vi.mock('keepalive-for-react', () => ({ useKeepAliveContext: () => keepAlive }))
+const paneState = vi.hoisted(() => ({ active: true }))
 
 const { pathsExist, getWorkspaceGraph, getWorkspaceGraphNodeDetails } = vi.hoisted(() => ({
   pathsExist: vi.fn(),
   getWorkspaceGraph: vi.fn(),
   getWorkspaceGraphNodeDetails: vi.fn(),
 }))
+const PaneProvider = ({ children }: { children: ReactNode }) => (
+  <WorkspacePaneContext.Provider
+    value={{
+      id: 'test-pane',
+      active: paneState.active,
+      visible: paneState.active,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: () => undefined,
+      openBeside: () => undefined,
+    }}
+  >
+    {children}
+  </WorkspacePaneContext.Provider>
+)
+const render = (callback: ReactNode) => testingRender(callback, { wrapper: PaneProvider })
+
 vi.mock('@/services/workspaceTreeApi', () => ({ workspaceTreeApi: { pathsExist } }))
 vi.mock('@/services/fsApi', () => ({ fsApi: { getWorkspaceGraph, getWorkspaceGraphNodeDetails } }))
 
@@ -41,8 +59,7 @@ const hover = () =>
   })
 
 beforeEach(async () => {
-  keepAlive.cacheKey = ''
-  keepAlive.active = true
+  paneState.active = true
   useWorkspaceStore.setState({ rootKind: 'internal', rootPath: '/workspace' })
   pathsExist.mockReset().mockResolvedValue({
     root: { kind: 'internal', path: '/workspace' },
@@ -98,8 +115,7 @@ describe('Markdown document link preview', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
-  it('unmounts a portaled preview and stops its pending lookup when the cached route becomes hidden', async () => {
-    keepAlive.cacheKey = 'notes/current.md'
+  it('unmounts a portaled preview and stops its pending lookup when the pane becomes hidden', async () => {
     let finishLookup: (value: {
       root: { kind: string; path: string }
       existing: string[]
@@ -117,7 +133,7 @@ describe('Markdown document link preview', () => {
     hover()
     await waitFor(() => expect(pathsExist).toHaveBeenCalledOnce())
     expect(screen.getByRole('status')).toHaveTextContent(i18n.t('knowledgeGraph.loadingPreview'))
-    keepAlive.active = false
+    paneState.active = false
     refresh()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     await act(async () =>

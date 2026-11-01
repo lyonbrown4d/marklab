@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { WorkspaceNavigate as Navigate } from '@/features/workbench/WorkspaceNavigate'
 import { useShallow } from 'zustand/react/shallow'
 import EditorEmptyState from '@/pages/EditorEmptyState'
 import { pathToFileViewRoute } from '@/logic/routing'

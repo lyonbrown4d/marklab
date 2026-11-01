@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { KeepAlive } from 'keepalive-for-react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
 import { describe, expect, it, vi } from 'vitest'
 import {
   AppStatusBarProvider,
@@ -108,14 +108,27 @@ describe('EditorStatusBar', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders status only for the active keep-alive editor instance', () => {
+  it('renders status only for the active pane editor instance', () => {
     const CachedStatus = ({ cacheKey }: { cacheKey: string }) => (
       <AppStatusBarProvider activePath="note.md" viewMode="wysiwyg">
-        <KeepAlive activeCacheKey={cacheKey} max={2}>
-          <EditorStatusBar activePath="note.md" viewMode="wysiwyg">
-            {cacheKey} status
-          </EditorStatusBar>
-        </KeepAlive>
+        {['first', 'second'].map((id) => (
+          <WorkspacePaneContext.Provider
+            key={id}
+            value={{
+              id,
+              active: id === cacheKey,
+              visible: true,
+              recoveryKey: 0,
+              registerFlush: () => () => undefined,
+              openFile: () => undefined,
+              openBeside: () => undefined,
+            }}
+          >
+            <EditorStatusBar activePath="note.md" viewMode="wysiwyg">
+              {id} status
+            </EditorStatusBar>
+          </WorkspacePaneContext.Provider>
+        ))}
         <footer>
           <EditorStatusBarSlot label="Document status" />
         </footer>

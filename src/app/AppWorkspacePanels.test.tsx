@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
@@ -233,20 +233,17 @@ describe('AppWorkspacePanels render isolation', () => {
     expect(persistedContentChange).toHaveBeenCalledWith('/notes/one.md', 'restored')
   })
 
-  it('mounts the immersive tabs dock over the workspace content', () => {
+  it('renders the pane workspace without layering the retired floating tabs', () => {
     render(renderPanels(baseState))
-
-    expect(screen.getByTestId('tabs-dock')).toBeInTheDocument()
-    expect(screen.getByText('Editor')).toBeInTheDocument()
+    expect(screen.queryByTestId('tabs-dock')).not.toBeInTheDocument()
+    expect(screen.getByText('Editor')).toBeVisible()
   })
 
-  it('uses native surface occlusion for the active webpage floating tabs', async () => {
+  it('leaves webpage occlusion to the pane surfaces and menus', () => {
     const webTab = { kind: 'web' as const, id: 'docs', title: 'Docs', url: 'https://example.com' }
     render(renderPanels({ ...baseState, activeTabId: 'web:docs', tabs: [webTab] } as never))
-    fireEvent.click(screen.getByRole('button', { name: /tabs.showOpenFiles/ }))
-    await waitFor(() =>
-      expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBe(1),
-    )
+    expect(screen.getByText('Editor')).toBeVisible()
+    expect(useNativeSurfaceOcclusionStore.getState().reasons['tabs-dock']).toBeUndefined()
   })
 
   it('hides the file tabs dock while the workspace map is active', () => {
@@ -269,7 +266,7 @@ describe('AppWorkspacePanels render isolation', () => {
     expect(screen.queryByText('Editor')).not.toBeInTheDocument()
   })
 
-  it('keeps the previous editor visible while the selected tab loads', () => {
+  it('delegates loading to panes without freezing the workspace outlet', () => {
     const { rerender } = render(renderPanels(baseState))
     const loadingState = {
       ...baseState,
@@ -292,8 +289,8 @@ describe('AppWorkspacePanels render isolation', () => {
       />,
     )
 
-    expect(screen.getByText('Editor')).toBeVisible()
-    expect(screen.queryByText('Second editor')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('editor.transition.loading')
+    expect(screen.queryByText('Editor')).not.toBeInTheDocument()
+    expect(screen.getByText('Second editor')).toBeVisible()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })

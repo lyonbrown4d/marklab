@@ -4,6 +4,7 @@ import type { OnMount } from '@monaco-editor/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourceCodeEditor from '@/components/SourceCodeEditor'
 import { executeFocusedEditCommand } from '@/app/focusedEditCommand'
+import { WorkspacePaneContext, type WorkspacePane } from '@/features/workbench/paneContext'
 
 type FocusEditor = {
   focus: ReturnType<typeof vi.fn>
@@ -76,6 +77,33 @@ const props = {
 beforeEach(() => editors.clear())
 
 describe('cached source editor command focus', () => {
+  it('does not let an inactive pane mount or focus claim the native edit target', async () => {
+    const pane = (id: string, active: boolean): WorkspacePane => ({
+      id,
+      active,
+      visible: true,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: vi.fn(),
+      openBeside: vi.fn(),
+    })
+    const view = render(
+      <>
+        <WorkspacePaneContext.Provider value={pane('active', true)}>
+          <SourceCodeEditor {...props} activePath="active.ts" />
+        </WorkspacePaneContext.Provider>
+        <WorkspacePaneContext.Provider value={pane('passive', false)}>
+          <SourceCodeEditor {...props} activePath="passive.ts" />
+        </WorkspacePaneContext.Provider>
+      </>,
+    )
+    await waitFor(() => expect(editors.size).toBe(2))
+    act(() => screen.getByRole('textbox', { name: 'passive.ts' }).focus())
+    executeFocusedEditCommand('edit.undo')
+    expect(editors.get('active.ts')!.trigger).toHaveBeenCalledWith('marklab.editMenu', 'undo', null)
+    expect(editors.get('passive.ts')!.trigger).not.toHaveBeenCalled()
+    view.unmount()
+  })
   it('routes native undo and redo to the refocused retained editor rather than the latest mounted editor', async () => {
     render(
       <>

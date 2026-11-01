@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 
-import { workspaceGraphQueryKey, workspaceGraphRequest } from '@/logic/knowledgeGraphRequest'
+import { workspaceGraphQueryKey } from '@/logic/knowledgeGraphRequest'
 import { preloadWorkspaceGraph } from '@/app/preloadWorkspaceGraph'
 import { fsApi } from '@/services/fsApi'
 
@@ -37,9 +37,8 @@ describe('preloadWorkspaceGraph', () => {
     await Promise.all([first, second])
 
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
-    expect(
-      queryClient.getQueryData(workspaceGraphQueryKey('external:D:/wiki', workspaceGraphRequest())),
-    ).toEqual({
+    const request = vi.mocked(fsApi.getWorkspaceGraph).mock.calls[0][0]
+    expect(queryClient.getQueryData(workspaceGraphQueryKey('external:D:/wiki', request))).toEqual({
       revision: '1',
       mode: 'relations',
       topology_key: 'empty',

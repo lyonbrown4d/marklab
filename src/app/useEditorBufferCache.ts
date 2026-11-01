@@ -10,6 +10,8 @@ import type { createEditorBufferSync } from '@/app/editorBufferSync'
 
 type Options = {
   activePath: string | null
+  visiblePaths: readonly string[]
+  writersRef: RefObject<Record<string, { ownerId: string; version: number }>>
   settledUpdates: number
   workspaceKey: string
   openPaths: readonly string[] | undefined
@@ -23,6 +25,8 @@ type Options = {
 
 export const useEditorBufferCache = ({
   activePath,
+  visiblePaths,
+  writersRef,
   workspaceKey,
   openPaths,
   settledUpdates,
@@ -33,8 +37,8 @@ export const useEditorBufferCache = ({
   latestContentsRef,
   changeVersionRef,
 }: Options) => {
-  const activeIdentity = useLatest(
-    activePath ? editorBufferIdentity(workspaceKey, activePath) : null,
+  const visibleIdentities = useLatest(
+    new Set(visiblePaths.map((path) => editorBufferIdentity(workspaceKey, path))),
   )
   const activity = useRef(new Map<string, number>())
   const sequence = useRef(0)
@@ -74,18 +78,27 @@ export const useEditorBufferCache = ({
       delete syncedContentsRef.current[identity]
       delete latestContentsRef.current[identity]
       delete changeVersionRef.current[identity]
+      delete writersRef.current[identity]
       bufferSync.forget(identity)
     }
     previousEntries.current = currentEntries
-    const evictions = getEditorBufferEvictions(entries, workspaceKey, activePath, openPaths)
+    const evictions = getEditorBufferEvictions(
+      entries,
+      workspaceKey,
+      activePath,
+      openPaths,
+      visiblePaths,
+    )
     if (evictions.length)
       evictSavedBuffers(
         evictions,
-        (identity) => persistence.isPending(identity) || activeIdentity.current === identity,
+        (identity) => persistence.isPending(identity) || visibleIdentities.current.has(identity),
       )
   }, [
     activePath,
-    activeIdentity,
+    visibleIdentities,
+    visiblePaths,
+    writersRef,
     settledUpdates,
     workspaceKey,
     openPaths,

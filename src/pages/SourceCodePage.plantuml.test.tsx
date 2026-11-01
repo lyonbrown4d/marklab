@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import SourceCodePage from '@/pages/SourceCodePage'
 
 const lifecycle = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }))
-vi.mock('keepalive-for-react', () => ({ useKeepAliveContext: () => ({}) }))
 vi.mock('@/pages/useDocumentStats', () => ({ useDocumentStats: () => ({}) }))
 vi.mock('@/components/EditorDocumentStatus', () => ({ EditorDocumentStatus: () => null }))
 vi.mock('@/components/SourceCodeEditor', () => {

@@ -5,7 +5,6 @@ import { LocateFixed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { requestWorkspaceMapNodeFocus } from '@/utils/workspaceMapNavigation'
-import { useKeepAliveContext } from 'keepalive-for-react'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
 import type {
@@ -24,6 +23,7 @@ import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
 import { useWorkspaceLinkNavigation } from '@/pages/hooks/useWorkspaceLinkNavigation'
 import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
@@ -114,8 +114,8 @@ const WysiwygEditorPage = ({
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const keepAlive = useKeepAliveContext()
-  const interactionActive = !keepAlive.cacheKey || keepAlive.active
+  const pane = useWorkspacePane()
+  const interactionActive = pane?.active ?? true
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
   const [editorStatus, setEditorStatus] = useState<{
     activePath: string | null
@@ -124,15 +124,25 @@ const WysiwygEditorPage = ({
   const currentEditorStatus =
     editorStatus.activePath === activePath ? editorStatus.status.phase : 'loading'
   const activePathRef = useLatest(activePath)
+  const interactionActiveRef = useLatest(interactionActive)
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar && interactionActive)
   const focusEditor = useCallback(() => editorRef.current?.focus(), [])
   useEditorFocusHandoffTarget({
+    active: interactionActive,
     focus: focusEditor,
     path: activePath,
     status: currentEditorStatus,
     view: 'edit',
   })
+  const registerFlush = pane?.registerFlush
+  useEffect(() => {
+    if (!registerFlush || currentEditorStatus !== 'ready' || readOnly) return
+    return registerFlush(async () => {
+      const editor = editorRef.current
+      if (editor) onChange(await editor.getMarkdown())
+    })
+  }, [activePath, currentEditorStatus, onChange, readOnly, registerFlush])
   const handleEditorStatusChange = useCallback(
     (status: MarkdownEditorStatus) => setEditorStatus({ activePath, status }),
     [activePath],
@@ -182,6 +192,7 @@ const WysiwygEditorPage = ({
 
   useEffect(() => {
     return onExportContentRequest(({ expectedActivePath, respond }) => {
+      if (!interactionActiveRef.current) return
       if (typeof respond !== 'function') return
       if (expectedActivePath != null && activePathRef.current !== expectedActivePath) return
       const editor = editorRef.current
@@ -194,7 +205,7 @@ const WysiwygEditorPage = ({
         respond(valueRef.current)
       })
     })
-  }, [activePathRef, valueRef])
+  }, [activePathRef, interactionActiveRef, valueRef])
   return (
     <div
       className="flex h-full flex-col overflow-hidden"

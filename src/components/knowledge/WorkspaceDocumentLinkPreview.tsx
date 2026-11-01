@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { HoverCard } from 'radix-ui'
-import { useKeepAliveContext } from 'keepalive-for-react'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { KnowledgeNodePreview } from '@/components/knowledge/KnowledgeNodePreview'
@@ -95,8 +95,8 @@ export const WorkspaceDocumentLinkPreview = ({
   ...props
 }: WorkspaceDocumentLinkPreviewProps) => {
   const [open, setOpen] = useState(false)
-  const keepAlive = useKeepAliveContext()
-  const interactionActive = !keepAlive.cacheKey || keepAlive.active
+  const pane = useWorkspacePane()
+  const interactionActive = pane?.active ?? true
   const visible = interactionActive && open
   return (
     <HoverCard.Root

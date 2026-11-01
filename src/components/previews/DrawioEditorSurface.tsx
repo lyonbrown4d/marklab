@@ -23,7 +23,7 @@ import DrawioEditorToolbar, {
 import { Button } from '@/components/ui/button'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { useLayoutContext } from '@/pages/useLayoutContext'
-import { useActiveWorkspaceKey } from '@/app/AppCachedOutlet'
+import { useActiveWorkspaceKey } from '@/app/activeWorkspaceContext'
 import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 
 type DrawioEditorSurfaceProps = {

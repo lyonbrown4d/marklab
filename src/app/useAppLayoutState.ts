@@ -17,6 +17,11 @@ import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
 import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
 import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useAppLayoutGraphState } from '@/app/useAppLayoutGraphState'
+import { useWorkbenchBufferPaths } from '@/features/workbench/workbenchState'
+import {
+  closeActiveWorkspacePane,
+  beginWorkspacePanePathMutation,
+} from '@/features/workbench/workbenchCommands'
 
 export const useAppLayoutState = () => {
   const recoveryBridge = useWorkspaceRecoveryBridge()
@@ -114,6 +119,7 @@ export const useAppLayoutState = () => {
   })
   const { onOpenFileView } = workspaceTabActions
   const workspaceKey = `${rootKind}:${rootPath}`
+  const workbench = useWorkbenchBufferPaths(workspaceKey, tabs)
   const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
   const editorBufferPath =
     currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null
@@ -124,7 +130,8 @@ export const useAppLayoutState = () => {
     useEditorBuffer({
       activePath: editorBufferPath,
       workspaceKey,
-      openPaths: tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
+      openPaths: workbench.openPaths,
+      visiblePaths: workbench.visiblePaths,
     })
 
   const {
@@ -158,10 +165,12 @@ export const useAppLayoutState = () => {
     onWorkspaceOpened: recoveryBridge.onWorkspaceOpened,
     onBeforeWorkspaceOpen: recoveryBridge.onBeforeWorkspaceOpen,
     rootSwitchingRef: recoveryBridge.rootSwitchingRef,
-    onBeforePathMutation: editorBuffer.beginPathMutation,
+    onBeforePathMutation: (from, to) =>
+      beginWorkspacePanePathMutation(workspaceKey, editorBuffer.beginPathMutation, from, to),
   })
   useMarkdownFileDrop(openFolder)
   const {
+    isWorkspaceDataReady,
     isSessionRestored,
     restoreStatusMessage,
     isRestoringSession,
@@ -252,6 +261,7 @@ export const useAppLayoutState = () => {
     workspaceView,
     ...graphState,
     workspaceKey,
+    isWorkspaceDataReady,
     restoreStatusMessage,
     restoreFailure,
     workspaceRecovery,
@@ -262,7 +272,12 @@ export const useAppLayoutState = () => {
     isMaximized,
     setIsMaximized,
     ...workspaceTabActions,
+    onCloseActiveTab: () => {
+      if (!closeActiveWorkspacePane(workspaceKey)) workspaceTabActions.onCloseActiveTab()
+    },
     onEditorChange: editorBuffer.onEditorChange,
+    bindDocument: editorBuffer.bindDocument,
+    flushBuffers: editorBuffer.flushBuffers,
     onPersistedContentChange: editorBuffer.onPersistedContentChange,
     onOpenWorkspaceFiles,
     onSelectProject: onSelectFolder,

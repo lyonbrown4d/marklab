@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import { useKeepAliveContext } from 'keepalive-for-react'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 import type { PlateEditor } from 'platejs/react'
 import { PointApi, type Point } from 'platejs'
 import { PlateInlineCompletionLeaf } from '@/components/plate/completion/PlateInlineCompletionLeaf'
@@ -15,8 +15,8 @@ export const usePlateInlineCompletion = ({
   readOnly,
   value,
 }: UsePlateInlineCompletionOptions) => {
-  const routeCache = useKeepAliveContext()
-  const routeActive = !routeCache.cacheKey || routeCache.active
+  const pane = useWorkspacePane()
+  const interactionActive = pane?.active ?? true
   const { indexRevision, options, syncDocumentIndex, syncKey } = usePlateInlineCompletionOptions({
     activePath,
     editor,
@@ -77,13 +77,13 @@ export const usePlateInlineCompletion = ({
   }, [controller, dismiss])
 
   useEffect(() => {
-    if (!routeActive) {
+    if (!interactionActive) {
       dismiss()
       controller.deactivate()
       return
     }
     controller.activate()
-  }, [controller, dismiss, routeActive])
+  }, [controller, dismiss, interactionActive])
 
   useEffect(() => {
     dismiss()
@@ -91,14 +91,14 @@ export const usePlateInlineCompletion = ({
 
   useEffect(() => {
     if (
-      routeActive &&
+      interactionActive &&
       inputAnchorRef.current &&
       inputTimerRef.current === null &&
       syncFrameRef.current === null
     ) {
       controller.sync()
     }
-  }, [controller, indexRevision, routeActive])
+  }, [controller, indexRevision, interactionActive])
 
   return useMemo(
     () => ({

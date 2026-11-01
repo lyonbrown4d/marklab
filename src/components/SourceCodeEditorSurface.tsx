@@ -4,7 +4,6 @@ import { useMonacoVim } from '@/components/vim/useMonacoVim'
 import { MonacoVimStatus } from '@/components/vim/MonacoVimStatus'
 import { createSourceVimCommands } from '@/components/vim/vimCommands'
 import { useEditorVimMode } from '@/components/vim/useEditorVimMode'
-import { useKeepAliveContext } from 'keepalive-for-react'
 import { AlertTriangle } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
@@ -17,6 +16,8 @@ import { toEditorTextChanges } from '@/components/sourceCodeChanges'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 import { monacoSuggestionOptions } from '@/components/source-code/monacoSuggestionOptions'
 import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
+import { useWorkbenchSourceModel } from '@/components/source-code/useWorkbenchSourceModel'
 
 type SourceCodeEditorSurfaceProps = {
   activePath: string | null
@@ -61,10 +62,11 @@ export const SourceCodeEditorSurface = ({
   onMount,
   contextMenu,
 }: SourceCodeEditorSurfaceProps) => {
-  const keepAlive = useKeepAliveContext()
-  const routeInteractionActive = interactionActive ?? (!keepAlive.cacheKey || keepAlive.active)
+  const pane = useWorkspacePane()
+  const routeInteractionActive = (interactionActive ?? true) && (pane?.active ?? true)
   const acceptsLocalChanges = useCachedEditorInteractionGate(routeInteractionActive)
   const [editor, setEditor] = useState<Parameters<OnMount>[0] | null>(null)
+  useWorkbenchSourceModel(editor, pane?.id)
   const rootRef = useRef<HTMLDivElement>(null)
   const statusRef = useRef<HTMLDivElement>(null)
   const vimEnabled = useEditorVimMode({ workspaceKey, path: activePath ?? '' })
@@ -116,7 +118,12 @@ export const SourceCodeEditorSurface = ({
             language={language}
             theme={darkMode ? 'vs-dark' : 'vs'}
             path={modelPath}
-            value={value}
+            // The wrapper's controlled readOnly updates call setValue and erase shared undo.
+            // Workbench external values use the existing executeEdits synchronizer instead.
+            defaultValue={pane ? value : undefined}
+            value={pane ? undefined : value}
+            keepCurrentModel={Boolean(pane)}
+            saveViewState={!pane}
             onChange={(next, event) => {
               if (!acceptsLocalChanges()) return
               onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
@@ -163,8 +170,10 @@ export const SourceCodeEditorSurface = ({
   if (!contextMenu || !monacoReady || errorMessage) return surface
   return (
     <EditorContextMenu
-      getCapabilities={contextMenu.getCapabilities}
-      onAction={contextMenu.onAction}
+      getCapabilities={() => (routeInteractionActive ? contextMenu.getCapabilities() : {})}
+      onAction={(action) => {
+        if (routeInteractionActive) contextMenu.onAction(action)
+      }}
       showFormatting={language === 'markdown'}
       shortcutOverrides={shortcutOverrides}
     >

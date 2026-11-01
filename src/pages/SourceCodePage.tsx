@@ -1,5 +1,4 @@
 import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
-import { useKeepAliveContext } from 'keepalive-for-react'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useDocumentStats } from '@/pages/useDocumentStats'
@@ -11,6 +10,7 @@ import SourceDocumentPreview, {
 } from '@/components/previews/SourceDocumentPreview'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
 type SourceCodePageProps = {
   activePath: string | null
@@ -35,8 +35,8 @@ const SourceCodePage = ({
   readOnly,
 }: SourceCodePageProps) => {
   const { t } = useI18n()
-  const keepAlive = useKeepAliveContext()
-  const interactionActive = !keepAlive.cacheKey || keepAlive.active
+  const pane = useWorkspacePane()
+  const interactionActive = pane?.active ?? true
   const [previewPath, setPreviewPath] = useState<string | null>(null)
   const plantuml = isPlantUmlFilePath(activePath ?? '')
   const previewAvailable = hasSourceDocumentPreview(activePath ?? '')
@@ -78,7 +78,7 @@ const SourceCodePage = ({
           </Button>
         </div>
       ) : null}
-      {preview && interactionActive ? (
+      {preview && (pane?.visible ?? true) ? (
         <div className="min-h-0 flex-1 overflow-auto p-4">
           <Suspense fallback={<EditorPaneFallback />}>
             <SourceDocumentPreview

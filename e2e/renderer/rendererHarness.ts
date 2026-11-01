@@ -21,6 +21,7 @@ export const launchRendererSession = async (
     colorScheme: 'light',
     serviceWorkers: 'block',
   })
+  let startup: { page: Page; backend: Awaited<ReturnType<typeof createFixtureBackend>> } | undefined
   try {
     const page = await context.newPage()
     const errors: string[] = []
@@ -32,6 +33,7 @@ export const launchRendererSession = async (
         errors.push(message.text().slice(0, 2000))
     })
     const backend = await createFixtureBackend(root, file, allowedRoots)
+    startup = { page, backend }
     const origin = new URL(url).origin
     await page.route('**/*', async (route) => {
       const request = new URL(route.request().url())
@@ -75,6 +77,18 @@ export const launchRendererSession = async (
       initialization: { ...probe, navigationToReadyMs: probe.readyAtEpochMs - navigationStartedAt },
     }
   } catch (error) {
+    if (startup) {
+      const layout = startup.backend.workspaceLayout
+      const diagnostics = JSON.stringify({
+        url: startup.page.url(),
+        layout: layout.read(),
+        reads: layout.reads,
+        writes: layout.writes(),
+        rejections: layout.rejections,
+      })
+      if (error instanceof Error)
+        error.message += `\nRenderer startup layout diagnostics: ${diagnostics}`
+    }
     await context.close()
     throw error
   }

@@ -112,7 +112,7 @@ Validation:
 - Regression tests must verify that only the Plate editor stylesheet is imported
   at runtime.
 - Regression tests must verify that WYSIWYG containers do not use app editor card
-  shells or route cache motion transforms.
+  shells or transformed workspace pane wrappers.
 - Regression tests must verify that editor overlays are attached to the correct
   viewport coordinate root.
 - Any reintroduced editor customization must prove it does not offset block
@@ -148,14 +148,35 @@ Validation:
 
 ### 2. Document relation graph
 
-The graph is a navigation surface derived from Markdown references. Sigma.js and
-Graphology replace the React Flow document-card canvas; ForceAtlas2 runs in a
-finite-lived Worker. Documents open in the ordinary editor instead of graph nodes.
+The graph is a navigation surface derived from Markdown references. Sigma 4 and
+Graphology render the topology; ForceAtlas2 runs in a finite-lived Worker. The
+official `@sigma/node-image` pictogram program renders shared file-kind icons.
 
-Current implementation scope (runtime and performance acceptance still required):
+Current implementation scope (native runtime and performance acceptance still required):
 
 - Directed references retain occurrence counts and relation kinds.
-- The global graph has title/path search, selection, document preview and opening.
+- The global graph has title/path search and selection. Selecting an existing file
+  opens the complete ordinary editor to the right of the graph without stealing
+  graph focus. Focusing that pane enables editing. Explicit open activates it.
+- Non-Markdown selection uses the existing workspace file preview, not a separate
+  graph-only preview implementation.
+- Dockview owns resizable editor groups, right/down splits, pointer tab dragging,
+  regrouping, and group-scoped close/move commands. The graph and document panes
+  can be rearranged using the same workspace tabs.
+- Rust persists each workspace's split tree, pane sizes, tab order, and selected
+  views in local SQLite through typed IPC. Saves bind to the current window
+  session; restoring prunes unavailable files. Editor content stays in the
+  existing document buffers, and ephemeral web tabs are excluded.
+- One workspace buffer/save queue serves path-bound pane callbacks. Same-file
+  ownership changes reject stale callbacks and offer a copyable recovery draft.
+  Carets stay pane-local; Monaco shares the document model and undo history.
+- Outgoing editor serialization completes before activating or closing its pane.
+  Visible panes remain mounted; hidden editor retention is bounded to eight
+  recent panes, separately from the text-buffer cache policy.
+- Pixel-wheel gestures pan, Ctrl pinch and Alt/Meta pixel-wheel gestures zoom,
+  and line/page wheel gestures zoom. Sigma computes pointer-anchored zoom state.
+- Eleven shared icon kinds distinguish Markdown, documents, images, PDFs, audio,
+  video, source code, spreadsheets, diagrams, missing targets, and other files.
 - The document inspector queries a bounded one/two-hop neighborhood with direction
   filters and an optional pinned center. It does not download the entire graph.
 - Attachments and missing targets are explicit graph filters.
@@ -167,10 +188,13 @@ projections. Graph topology has a content-independent key; reference details and
 publication queries continue to use the shared index. Native card layout/community
 commands and the single-result graph disk cache have been removed.
 
-Validation covers graph topology, bounded traversal, cache isolation, renderer
-lifecycle, selection/open behavior, document position restoration and keyboard
-navigation. Native UI and large-workspace performance runs must be reported with
-the actual environment and results; replacing the renderer alone does not establish
+Validation targets graph topology, bounded traversal, workspace isolation, icon
+mapping, wheel cancellation, keyboard navigation, group persistence, split/drag/close
+behavior, document position restoration, pane-local focus and carets, same-file
+edit ownership and shared undo.
+Chromium fixture checks exercise renderer behavior; native UI and large-workspace
+performance runs must report their actual environment and results. Library versions,
+source inspection and renderer tests do not establish cross-platform acceptance or
 new performance guarantees.
 
 ### 3. All Pages

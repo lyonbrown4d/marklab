@@ -1,13 +1,31 @@
+import type { ReactNode } from 'react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
 import { EditorView } from '@codemirror/view'
 import { getCM, Vim } from '@replit/codemirror-vim'
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { fireEvent, render as testingRender, waitFor } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import MermaidCodeEditor from '@/components/previews/MermaidCodeEditor'
 import { setVimCommandHost } from '@/components/vim/vimCommandDock'
 import { getVimEditorRoot } from '@/components/vim/vimKeyboardScope'
 
-const context = vi.hoisted(() => ({ active: true, cacheKey: 'editor-tab' }))
-vi.mock('keepalive-for-react', () => ({ useKeepAliveContext: () => context }))
+const context = vi.hoisted(() => ({ active: true }))
+const PaneProvider = ({ children }: { children: ReactNode }) => (
+  <WorkspacePaneContext.Provider
+    value={{
+      id: 'test-pane',
+      active: context.active,
+      visible: context.active,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: () => undefined,
+      openBeside: () => undefined,
+    }}
+  >
+    {children}
+  </WorkspacePaneContext.Provider>
+)
+const render = (callback: ReactNode) => testingRender(callback, { wrapper: PaneProvider })
+
 vi.mock('@/components/vim/useEditorVimMode', () => ({ useCurrentTabVimModeEnabled: () => true }))
 vi.mock('@/components/plate/code/mermaidCodeMirrorLanguage', () => ({
   createMermaidCodeMirrorIntelligence: () => ({ extensions: [], dispose: vi.fn() }),

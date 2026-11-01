@@ -192,6 +192,8 @@ macro_rules! desktop_commands {
       crate::workspace::commands::fs_set_root,
       crate::workspace::commands::fs_set_single_file,
       crate::workspace::commands::fs_write_file,
+      crate::workspace::layout::fs_get_workspace_layout,
+      crate::workspace::layout::fs_set_workspace_layout,
       crate::workspace::tasks::fs_get_background_tasks,
       crate::workspace::tree::workspace_tree_initial_file,
       crate::workspace::tree::workspace_tree_list_children,

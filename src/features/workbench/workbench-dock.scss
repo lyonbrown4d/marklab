@@ -1,0 +1,24 @@
+/* Dockview's native split tree is styled through its supported theme variables. */
+.workbench-dock .dockview-theme-marklab {
+  color-scheme: inherit;
+  --dv-background-color: hsl(var(--background));
+  --dv-group-view-background-color: hsl(var(--background));
+  --dv-tabs-and-actions-container-background-color: hsl(var(--muted));
+  --dv-activegroup-visiblepanel-tab-background-color: hsl(var(--background));
+  --dv-activegroup-hiddenpanel-tab-background-color: hsl(var(--muted));
+  --dv-inactivegroup-visiblepanel-tab-background-color: hsl(var(--background));
+  --dv-inactivegroup-hiddenpanel-tab-background-color: hsl(var(--muted));
+  --dv-activegroup-visiblepanel-tab-color: hsl(var(--foreground));
+  --dv-activegroup-hiddenpanel-tab-color: hsl(var(--muted-foreground));
+  --dv-inactivegroup-visiblepanel-tab-color: hsl(var(--foreground));
+  --dv-inactivegroup-hiddenpanel-tab-color: hsl(var(--muted-foreground));
+  --dv-tab-divider-color: hsl(var(--border));
+  --dv-separator-border: hsl(var(--border));
+  --dv-sash-color: hsl(var(--border));
+  --dv-active-sash-color: hsl(var(--primary));
+  --dv-drag-over-background-color: color-mix(in srgb, hsl(var(--primary)) 15%, transparent);
+  --dv-drag-over-border-color: hsl(var(--primary));
+  --dv-tabs-and-actions-container-height: 35px;
+  --dv-font-family: inherit;
+  --dv-border-radius: 0;
+}

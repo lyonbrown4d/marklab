@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
 import { useEffect, useState } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render as testingRender, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourceCodePage from '@/pages/SourceCodePage'
 import {
@@ -8,9 +10,23 @@ import {
 } from '@/components/previews/SourceDocumentPreview'
 
 const state = vi.hoisted(() => ({ mounts: 0, unmounts: 0, active: true }))
-vi.mock('keepalive-for-react', () => ({
-  useKeepAliveContext: () => ({ cacheKey: 'source', active: state.active }),
-}))
+const PaneProvider = ({ children }: { children: ReactNode }) => (
+  <WorkspacePaneContext.Provider
+    value={{
+      id: 'test-pane',
+      active: state.active,
+      visible: state.active,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: () => undefined,
+      openBeside: () => undefined,
+    }}
+  >
+    {children}
+  </WorkspacePaneContext.Provider>
+)
+const render = (callback: ReactNode) => testingRender(callback, { wrapper: PaneProvider })
+
 vi.mock('@/pages/useDocumentStats', () => ({ useDocumentStats: () => ({}) }))
 vi.mock('@/components/EditorDocumentStatus', () => ({ EditorDocumentStatus: () => null }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
@@ -122,7 +138,7 @@ describe('Mermaid source page', () => {
     expect(state.mounts).toBe(1)
   })
 
-  it('scopes preview selection to its file and unmounts previews in cached inactive tabs', async () => {
+  it('scopes preview selection to its file and unmounts previews in hidden panes', async () => {
     const view = render(<Page />)
     const editor = await screen.findByRole('textbox')
     togglePreview()

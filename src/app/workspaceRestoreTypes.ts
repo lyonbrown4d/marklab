@@ -15,6 +15,8 @@ export type UseWorkspaceRestoreArgs = {
 }
 
 export type UseWorkspaceRestoreResult = {
+  /** Backend root and workspace data are ready; interactive paint may still be pending. */
+  isWorkspaceDataReady: boolean
   isSessionRestored: boolean
   restoreStatusMessage: string | null
   isRestoringSession: boolean

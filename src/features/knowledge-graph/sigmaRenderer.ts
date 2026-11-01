@@ -1,6 +1,7 @@
 import Sigma, { DEFAULT_STYLES } from 'sigma'
 import { DEFAULT_EDGE_PRIMITIVES } from 'sigma/primitives'
-import { extremityArrow } from 'sigma/rendering'
+import { extremityArrow, sdfSquare } from 'sigma/rendering'
+import { layerImage } from '@sigma/node-image'
 import FA2Layout from 'graphology-layout-forceatlas2/worker'
 import { inferSettings } from 'graphology-layout-forceatlas2'
 import type { GraphData } from '@/logic/graph'
@@ -11,6 +12,8 @@ import {
 } from '@/features/knowledge-graph/graphologyAdapter'
 import { readGraphView, saveGraphView } from '@/features/knowledge-graph/graphViewCache'
 import type { GraphCameraState, GraphFocusRequest } from '@/features/knowledge-graph/types'
+import { graphNodeIcon } from '@/features/knowledge-graph/graphNodeIcons'
+import { bindGraphWheelController } from '@/features/knowledge-graph/graphWheelController'
 
 type Options = {
   container: HTMLElement
@@ -37,10 +40,27 @@ export const createSigmaRenderer = ({
   let selected: string | null = null
   let neighborhood = new Set<string>()
   const renderer = new Sigma(graph, container, {
-    primitives: { edges: { ...DEFAULT_EDGE_PRIMITIVES, extremities: [extremityArrow()] } },
+    primitives: {
+      nodes: {
+        shapes: [sdfSquare()],
+        variables: { image: { type: 'string', default: '' } },
+        layers: [
+          layerImage({
+            drawingMode: 'color',
+            padding: 0,
+            textureManagerOptions: {
+              size: { mode: 'force', value: 64 },
+              maxTextureSize: 512,
+              debounceTimeout: 0,
+            },
+          }),
+        ],
+      },
+      edges: { ...DEFAULT_EDGE_PRIMITIVES, extremities: [extremityArrow()] },
+    },
     settings: {
       allowInvalidContainer: true,
-      // Sigma 4 defaults to graph-coordinate sizes; navigation dots use screen pixels.
+      // Keep the file icons legible in screen pixels as the graph camera changes.
       itemSizesReference: 'screen',
       hideEdgesOnMove: true,
       enableCameraRotation: false,
@@ -54,6 +74,7 @@ export const createSigmaRenderer = ({
     styles: {
       nodes: {
         ...DEFAULT_STYLES.nodes,
+        shape: 'square',
         labelColor: palette.foreground,
         labelSize: 12,
         backdropColor: palette.foreground,
@@ -62,10 +83,7 @@ export const createSigmaRenderer = ({
       edges: { ...DEFAULT_STYLES.edges, color: palette.edge, size: 0.7, head: 'arrow' },
     },
     nodeReducer: (id, display) => ({
-      color:
-        id === selected
-          ? palette.primary
-          : palette[graph.getNodeAttribute(id, 'kind') as 'file' | 'preview' | 'missing'],
+      color: id === selected ? palette.primary : palette[graph.getNodeAttribute(id, 'kind')],
       labelColor: palette.foreground,
       opacity: !selected || neighborhood.has(id) ? 1 : 0.2,
       size: display.size + (id === selected ? 3 : 0),
@@ -81,6 +99,7 @@ export const createSigmaRenderer = ({
       }
     },
   })
+  const wheelController = bindGraphWheelController(renderer, container)
   const camera = renderer.getCamera()
   if (snapshot) camera.setState(snapshot.camera)
   const reducedMotion =
@@ -151,7 +170,10 @@ export const createSigmaRenderer = ({
     onOpenNode(node)
   })
   renderer.on('clickStage', () => onSelectNode(null))
-  renderer.on('nodeDragStart', stopLayout)
+  renderer.on('nodeDragStart', () => {
+    wheelController.cancel()
+    stopLayout()
+  })
   renderer.on('nodeDragEnd', save)
   const cameraUpdated = (state: GraphCameraState) => {
     onCameraChange(state)
@@ -174,7 +196,8 @@ export const createSigmaRenderer = ({
     updateContent: (next: GraphData) => {
       if (destroyed) return
       next.nodes.forEach((node) => {
-        if (graph.hasNode(node.id)) graph.setNodeAttribute(node.id, 'label', node.label)
+        if (graph.hasNode(node.id))
+          graph.mergeNodeAttributes(node.id, { label: node.label, ...graphNodeIcon(node) })
       })
     },
     select: (id: string | null) => {
@@ -192,6 +215,7 @@ export const createSigmaRenderer = ({
       if (node) onSelectNode(node.id)
       else onSelectNode(null)
       stopLayout()
+      wheelController.cancel()
       if (request.viewport) camera.setState(request.viewport)
       else if (node)
         camera.setState({
@@ -204,10 +228,12 @@ export const createSigmaRenderer = ({
     fit: () => {
       if (destroyed) return
       stopLayout()
+      wheelController.cancel()
       camera.setState({ x: 0.5, y: 0.5, ratio: 1, angle: 0 })
     },
     zoom: (factor: number) => {
       if (destroyed) return
+      wheelController.cancel()
       camera.setState({ ratio: camera.ratio * factor })
     },
     destroy: () => {
@@ -219,6 +245,7 @@ export const createSigmaRenderer = ({
       themeObserver.disconnect()
       camera.off('updated', cameraUpdated)
       camera.cancelAnimation()
+      wheelController.destroy()
       renderer.kill()
     },
   }

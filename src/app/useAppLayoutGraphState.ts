@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { buildFileTree } from '@/logic/fileTree'
 import { useGraphData } from '@/app/useGraphData'
 import type { FileEntry } from '@/store/appTypes'
+import { useWorkbenchState } from '@/features/workbench/workbenchState'
 
 type Options = {
   entries: FileEntry[]
@@ -11,7 +12,10 @@ type Options = {
 
 export const useAppLayoutGraphState = ({ entries, graphWorkspace, workspaceKey }: Options) => {
   const fileTree = useMemo(() => buildFileTree(entries), [entries])
-  const graphState = useGraphData(graphWorkspace ? 'workspace' : null, workspaceKey)
+  const graphVisible = useWorkbenchState(
+    (state) => state.workspaces[workspaceKey]?.graphVisible ?? false,
+  )
+  const graphState = useGraphData(graphWorkspace || graphVisible ? 'workspace' : null, workspaceKey)
   return {
     fileTree,
     graph: graphState.graph,

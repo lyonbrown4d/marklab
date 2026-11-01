@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
+import { fireEvent, render as testingRender, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceGraphPage from '@/pages/WorkspaceGraphPage'
 import { testGraph } from '@/features/knowledge-graph/testGraph'
@@ -9,12 +11,30 @@ import {
 } from '@/utils/workspaceMapNavigation'
 import type { KnowledgeGraphCanvasProps } from '@/features/knowledge-graph/types'
 
-const state = vi.hoisted(() => ({ context: {} as Record<string, unknown>, active: true }))
+const state = vi.hoisted(() => ({
+  context: {} as Record<string, unknown>,
+  active: true,
+  openBeside: vi.fn(),
+}))
+const PaneProvider = ({ children }: { children: ReactNode }) => (
+  <WorkspacePaneContext.Provider
+    value={{
+      id: 'test-pane',
+      active: state.active,
+      visible: state.active,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: vi.fn(),
+      openBeside: state.openBeside,
+    }}
+  >
+    {children}
+  </WorkspacePaneContext.Provider>
+)
+const render = (callback: ReactNode) => testingRender(callback, { wrapper: PaneProvider })
+
 vi.mock('@/pages/useLayoutContext', () => ({
   useLayoutContext: (selector: (state: never) => unknown) => selector(state.context as never),
-}))
-vi.mock('keepalive-for-react', () => ({
-  useKeepAliveContext: () => ({ cacheKey: 'graph', active: state.active }),
 }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/features/knowledge-graph/KnowledgeGraphCanvas', () => ({
@@ -40,6 +60,7 @@ vi.mock('@/features/knowledge-graph/KnowledgeGraphDetails', () => ({
 
 beforeEach(() => {
   state.active = true
+  state.openBeside.mockClear()
   state.context = {
     graph: testGraph(),
     rootKind: 'external',
@@ -58,14 +79,16 @@ describe('WorkspaceGraphPage', () => {
   it('keeps selection independent from document editing and refuses to open missing targets', () => {
     render(<WorkspaceGraphPage />)
     fireEvent.click(screen.getByText('select alpha'))
-    expect(screen.getByRole('complementary', { name: 'details' })).toHaveTextContent('Alpha')
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    expect(state.openBeside).toHaveBeenCalledWith('a.md')
     expect(state.context.onOpenFile).not.toHaveBeenCalled()
     fireEvent.click(screen.getByText('open alpha'))
-    expect(state.context.onOpenFile).toHaveBeenCalledWith('a.md')
+    expect(state.openBeside).toHaveBeenCalledWith('a.md', undefined, true)
     fireEvent.click(screen.getByText('select missing'))
     fireEvent.click(screen.getByText('open missing'))
     expect(screen.getByRole('complementary')).toHaveTextContent('Missing')
-    expect(state.context.onOpenFile).toHaveBeenCalledTimes(1)
+    expect(state.context.onOpenFile).not.toHaveBeenCalled()
+    expect(state.openBeside).toHaveBeenCalledTimes(2)
     fireEvent.click(screen.getByText('close details'))
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
   })

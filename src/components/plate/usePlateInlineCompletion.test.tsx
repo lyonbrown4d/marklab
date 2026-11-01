@@ -1,15 +1,31 @@
-import { act, renderHook } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
+import { act, renderHook as testingRender } from '@testing-library/react'
 import { createPlateEditor } from 'platejs/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
-const routeCache = vi.hoisted(() => ({ active: true, cacheKey: '' }))
+const paneState = vi.hoisted(() => ({ active: true }))
 
-vi.mock('keepalive-for-react', () => ({
-  useKeepAliveContext: () => routeCache,
-}))
+const PaneProvider = ({ children }: { children: ReactNode }) => (
+  <WorkspacePaneContext.Provider
+    value={{
+      id: 'test-pane',
+      active: paneState.active,
+      visible: paneState.active,
+      recoveryKey: 0,
+      registerFlush: () => () => undefined,
+      openFile: () => undefined,
+      openBeside: () => undefined,
+    }}
+  >
+    {children}
+  </WorkspacePaneContext.Provider>
+)
+const renderHook: typeof testingRender = (callback, options) =>
+  testingRender(callback, { ...options, wrapper: PaneProvider })
 
 vi.mock('@/services/aiInlineCompletionRequest', () => ({
   requestAiInlineCompletion: vi.fn(async () => ' tomorrow'),
@@ -61,8 +77,8 @@ const createEditorWithBlocks = () => {
 describe('usePlateInlineCompletion', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    routeCache.active = true
-    routeCache.cacheKey = ''
+    paneState.active = true
+
     usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
     vi.mocked(requestAiInlineCompletion).mockClear()
   })
@@ -252,7 +268,7 @@ describe('usePlateInlineCompletion', () => {
     expect(result.current.state).toBeNull()
   })
 
-  it('clears suggestions while its cached route is inactive and resumes on return', async () => {
+  it('clears suggestions while its pane is inactive and resumes on return', async () => {
     const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'
     const { result, rerender } = renderHook(() =>
@@ -263,14 +279,13 @@ describe('usePlateInlineCompletion', () => {
     expect(result.current.state).not.toBeNull()
 
     act(() => {
-      routeCache.cacheKey = 'cache:note.md'
-      routeCache.active = false
+      paneState.active = false
       rerender()
     })
     expect(result.current.state).toBeNull()
 
     act(() => {
-      routeCache.active = true
+      paneState.active = true
       rerender()
     })
     await act(async () => vi.advanceTimersByTimeAsync(200))

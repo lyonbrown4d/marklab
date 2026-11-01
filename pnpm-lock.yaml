@@ -267,6 +267,9 @@ importers:
       '@replit/codemirror-vim':
         specifier: 6.4.0
         version: 6.4.0(@codemirror/commands@6.11.1)(@codemirror/language@6.13.1)(@codemirror/search@6.7.2)(@codemirror/state@6.7.6)(@codemirror/view@6.43.15)
+      '@sigma/node-image':
+        specifier: 4.0.1
+        version: 4.0.1(sigma@4.0.4(graphology-types@0.24.8))
       '@tanstack/react-hotkeys':
         specifier: ^0.20.1
         version: 0.20.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -324,6 +327,9 @@ importers:
       diff:
         specifier: ^9.0.0
         version: 9.0.0
+      dockview-react:
+        specifier: 8.8.3
+        version: 8.8.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       docx-preview:
         specifier: ^0.4.1
         version: 0.4.1
@@ -348,9 +354,6 @@ importers:
       immer:
         specifier: ^11.2.9
         version: 11.2.9
-      keepalive-for-react:
-        specifier: ^6.0.0
-        version: 6.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       lodash-es:
         specifier: 4.18.1
         version: 4.18.1
@@ -4448,6 +4451,11 @@ packages:
   '@shikijs/vscode-textmate@10.1.0':
     resolution: {integrity: sha512-cVBuhDQjBZaNMTwBquYfPydrUP+E3hE6oYGasx8h6ZrODIM7/r+gxLDXdd66oszbrggZHEntdE6j+5gYIVyMWQ==}
 
+  '@sigma/node-image@4.0.1':
+    resolution: {integrity: sha512-IEs3Xg/l8wKO/mUKivv7LP1lzmkY8PoRIUMaXdDuBNG1sGAQhM6kM857R57VNtCIaM52rt1fQ3vNwGt7wKZG/Q==}
+    peerDependencies:
+      sigma: ^4.0.0
+
   '@sinclair/typebox@0.34.52':
     resolution: {integrity: sha512-XiMQh7qqVlxZzcVD+kkGMNGMzcTrDMLWI7S4x7z1MkCkbDPrekpZXEUK0eZqZFMuHQg2a2DZOcDIh9o5v3Gonw==}
 
@@ -6469,6 +6477,18 @@ packages:
   dnd-core@16.0.1:
     resolution: {integrity: sha512-HK294sl7tbw6F6IeuK16YSBUoorvHpY8RHO+9yFfaJyCDVb6n7PRcezrOEOa2SBCqiYpemh5Jx20ZcjKdFAVng==}
 
+  dockview-core@8.8.3:
+    resolution: {integrity: sha512-B9v+ibiXnZ5qgFJ7VEqMcNxpG0S5Y7Yx7uuGqqSyEFSC3bRZktUoXWo3HCrFp+QTdFmA1dJD1ye/gI4yL3hU2g==}
+
+  dockview-react@8.8.3:
+    resolution: {integrity: sha512-pfd5Dgwbh+OeGIwrctIsRLeDb5rLTuKK9rBM2ZRKEGLri9KHPL58FYAYTzZ2T5m/Fy6ysjRgVe8hBgib2JAmmA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  dockview@8.8.3:
+    resolution: {integrity: sha512-hTb5X4Z74k0+5wtOlx1gNsx/q5ve1p0JQ6s7Ovl24YhdkaR9AhfWFlq1dQYwXjXIoWm8RFW6aTZMhCTiEv94EA==}
+
   docx-preview@0.4.1:
     resolution: {integrity: sha512-Dv4g+LeE0swHpPvNC0lAT0YsR5Zq5pAxw7d3vHQ8EChBLgIrqqe9VPL5nVt2HBJap8bEZbXUI0TJob7kBeNU9w==}
 
@@ -7596,12 +7616,6 @@ packages:
     resolution: {integrity: sha512-jG8uKntjSEcm2EpQOh0XturpPuuC9r3Sq5HLHdsFdWZT27E672SF19QEi+of0/YeOy15lDgRhKvr5614uRrEfA==}
     hasBin: true
 
-  keepalive-for-react@6.0.0:
-    resolution: {integrity: sha512-cYTcRX0OJSYmvXy9lcxbxxC/cZWeLKdeulefdNLUdOdem+Rq1Dt3XahWoPvFWWX5aqdTaXDWKvan9ZAU/ob4ow==}
-    peerDependencies:
-      react: '>=16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0'
-      react-dom: '>=16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0'
-
   keyv@3.1.0:
     resolution: {integrity: sha512-9ykJ/46SN/9KPM/sichzQ7OvXyGDYKGTaDlKMGCAlg2UK8KRy4jb0d8sFc+0Tt0YYnThq8X2RZgCg74RPxgcVA==}
 
@@ -8362,8 +8376,8 @@ packages:
   oxc-resolver@11.24.2:
     resolution: {integrity: sha512-FY91FiDBj7ls5MsFS9jN3tjz2o0/zsdSsymlakySaBwVJZorHhkWyICLZMKxlu1R9vYo+sd3z1jwb4J8x7bNDw==}
 
-  oxlint-plugin-react-doctor@0.9.18:
-    resolution: {integrity: sha512-1mfeb/jzXnduWOZJxrvdJjvKT0pFNKrNFYcPO4ncpFAnfW41M0mLz/23lAFzHb0knNLYayEgIQ5DjI4ZfFe+DQ==}
+  oxlint-plugin-react-doctor@0.9.19:
+    resolution: {integrity: sha512-mW+AfJYEQmwaa7LWqNKydMa9XXOK8kGUbXN6MkqK+/Lbcj9CcGcfromwl8URlgOKtTvFjiz3t5KudIwU/jYC5Q==}
     engines: {node: ^20.19.0 || >=22.13.0}
 
   oxlint@1.81.0:
@@ -8775,8 +8789,8 @@ packages:
       '@types/react':
         optional: true
 
-  react-doctor@0.9.18:
-    resolution: {integrity: sha512-4Ach00KtfnfjTBGgr2PyPgHua85vT/UfPY5sR0bHgRAc/QSu0JInA0GHCL6a7WFGMeGUrxtGnI8oqZinG44BOA==}
+  react-doctor@0.9.19:
+    resolution: {integrity: sha512-2KrG7ZbdVN3VKhT6YRAPyh6e14rfBk1JpbWWNE8eYVo/dofFq7S1A9QKEDzJQXhO/i9xi6snJS0PnAovj8orkA==}
     engines: {node: ^20.19.0 || >=22.13.0}
     hasBin: true
 
@@ -14328,6 +14342,10 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.1.0': {}
 
+  '@sigma/node-image@4.0.1(sigma@4.0.4(graphology-types@0.24.8))':
+    dependencies:
+      sigma: 4.0.4(graphology-types@0.24.8)
+
   '@sinclair/typebox@0.34.52': {}
 
   '@sindresorhus/is@0.14.0': {}
@@ -16689,6 +16707,18 @@ snapshots:
       '@react-dnd/invariant': 4.0.2
       redux: 4.2.1
 
+  dockview-core@8.8.3: {}
+
+  dockview-react@8.8.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      dockview: 8.8.3
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  dockview@8.8.3:
+    dependencies:
+      dockview-core: 8.8.3
+
   docx-preview@0.4.1:
     dependencies:
       jszip: 3.10.2
@@ -17944,12 +17974,6 @@ snapshots:
     dependencies:
       commander: 15.0.0
 
-  keepalive-for-react@6.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
-    dependencies:
-      mitt: 3.0.1
-      react: 19.3.1
-      react-dom: 19.3.1(react@19.3.1)
-
   keyv@3.1.0:
     dependencies:
       json-buffer: 3.0.0
@@ -19198,7 +19222,7 @@ snapshots:
       '@oxc-resolver/binding-win32-arm64-msvc': 11.24.2
       '@oxc-resolver/binding-win32-x64-msvc': 11.24.2
 
-  oxlint-plugin-react-doctor@0.9.18:
+  oxlint-plugin-react-doctor@0.9.19:
     dependencies:
       '@shaderfrog/glsl-parser': 7.0.1
       '@typescript-eslint/types': 8.72.1
@@ -19669,7 +19693,7 @@ snapshots:
       '@types/node': 26.6.6
       '@types/react': 19.3.0
 
-  react-doctor@0.9.18(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1):
+  react-doctor@0.9.19(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1):
     dependencies:
       '@astrojs/compiler': 4.0.0
       '@sentry/node': 10.78.0(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(supports-color@8.1.1)
@@ -19684,7 +19708,7 @@ snapshots:
       oxc-parser: 0.148.0
       oxc-resolver: 11.24.2
       oxlint: 1.81.0
-      oxlint-plugin-react-doctor: 0.9.18
+      oxlint-plugin-react-doctor: 0.9.19
       playwright-core: 1.64.1
       prompts: 2.4.2
       typescript: 5.9.3
@@ -19820,7 +19844,7 @@ snapshots:
       preact: 10.29.8
       prompts: 2.4.2
       react: 19.3.1
-      react-doctor: 0.9.18(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)
+      react-doctor: 0.9.19(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1))(eslint@10.14.0(jiti@2.7.0)(supports-color@8.1.1))(react@19.3.1)(supports-color@8.1.1)
       react-dom: 19.3.1(react@19.3.1)
       react-grab: 0.2.0(react@19.3.1)
     optionalDependencies:

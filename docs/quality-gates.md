@@ -11,7 +11,12 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
   scoped event subscriptions. Commands validate requests and root ownership;
   external child webviews have no desktop capability.
 - Monaco owns source editing; Plate owns rich editing; Sigma.js owns relation graph
-  interaction and layout. Native edit routing respects actual focus and Vim ownership.
+  interaction and layout. Dockview owns workspace tab groups, splits, dragging and
+  resizing. Native edit routing respects actual pane focus and Vim ownership.
+- One workspace buffer/save queue serves path-bound pane callbacks. Pane ownership
+  guards stale same-file changes; recovery drafts remain copyable. Caret positions
+  are pane-local and Monaco models share document undo. Outgoing serialization
+  precedes activation/close; visible panes are protected from hidden-editor eviction.
 - Zustand owns renderer preferences. Rust's settings allowlist and per-window
   session rules control persistence.
 - Node.js is build/test tooling. The former Electron runtime, preload, Node
@@ -41,23 +46,23 @@ files remain selected; six current runtime, renderer lifecycle/frame, and Tauri
 adapter files replace the nine removed backend files. Native Rust behavior is
 covered by its own real service tests, rather than counted as frontend coverage.
 
-| Impact area                      | Common risk                                                    | Required checks                                                                |
-| -------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Tauri native runtime             | workspace isolation, unsafe IPC, lifecycle or cache drift      | Rust checks and affected native acceptance                                     |
-| Native menus / windows           | double dispatch, focus, close/quit or splash races             | native lifecycle/menu and focused edit tests; native window smoke              |
-| Source editor / Monaco           | duplicate edits, option or navigation drift                    | source editor and focused edit tests                                           |
-| WYSIWYG / Plate                  | paste/drop, serialization, readiness or performance regression | editor integration, preview/zoom and renderer performance tests                |
-| Knowledge relation graph         | node mapping, drag/selection or model drift                    | graph logic, workspace map and style tests                                     |
-| Settings / persisted preferences | missing field, defaults or session isolation                   | settings allowlist contract, Rust settings/session tests and affected controls |
-| Keyboard shortcuts               | missing defaults, scope or settings drift                      | shortcut catalog, settings and editor/map tests                                |
-| IPC / runtime services           | DTO mismatch, broad capabilities or stale events               | typed runtime/service and native capability tests                              |
-| Workspace filesystem/services    | path escape, external changes, lost saves or restore races     | real Rust workspace/history/asset tests and native multi-window smoke          |
-| Knowledge engine / Rust analysis | parsing, FTS, cache, graph or language drift                   | native analysis/language/MCP tests and `pnpm test:knowledge:integration`       |
-| Renderer lifecycle / route cache | stale routes or retained workers                               | route/worker tests and `pnpm test:renderer:e2e`                                |
-| Document preview lifecycle       | stale preview data or retained resources                       | preview components, renderer smoke and affected native asset tests             |
-| Build/package                    | missing resources, CI or artifact drift                        | renderer build, Rust checks and target packaging                               |
-| i18n                             | renderer/native locale mismatch                                | locale/resource and affected UI tests                                          |
-| Quality gates                    | stale commands, missing assertions or misleading evidence      | quality tests, impact reporting and lint                                       |
+| Impact area                                  | Common risk                                                            | Required checks                                                                                                |
+| -------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Tauri native runtime                         | workspace isolation, unsafe IPC, lifecycle or cache drift              | Rust checks and affected native acceptance                                                                     |
+| Native menus / windows                       | double dispatch, focus, close/quit or splash races                     | native lifecycle/menu and focused edit tests; native window smoke                                              |
+| Source editor / Monaco                       | duplicate edits, option or navigation drift                            | source editor and focused edit tests                                                                           |
+| WYSIWYG / Plate                              | paste/drop, serialization, readiness or performance regression         | editor integration, preview/zoom and renderer performance tests                                                |
+| Knowledge relation graph                     | node mapping, drag/selection or model drift                            | graph logic, icon/wheel, workspace graph and style tests; renderer smoke                                       |
+| Settings / persisted preferences             | missing field, defaults or session isolation                           | settings allowlist contract, Rust settings/session tests and affected controls                                 |
+| Keyboard shortcuts                           | missing defaults, scope or settings drift                              | shortcut catalog, settings and editor/map tests                                                                |
+| IPC / runtime services                       | DTO mismatch, broad capabilities or stale events                       | typed runtime/service and native capability tests                                                              |
+| Workspace filesystem/services                | path escape, external changes, lost saves or restore races             | real Rust workspace/history/asset tests and native multi-window smoke                                          |
+| Knowledge engine / Rust analysis             | parsing, FTS, cache, graph or language drift                           | native analysis/language/MCP tests and `pnpm test:knowledge:integration`                                       |
+| Workspace editor groups / renderer lifecycle | cross-pane edits/focus, lost serialization or retained editors/workers | workbench controller/persistence, pane buffer/focus/shared-model and lifecycle tests; `pnpm test:renderer:e2e` |
+| Document preview lifecycle                   | stale preview data or retained resources                               | preview components, renderer smoke and affected native asset tests                                             |
+| Build/package                                | missing resources, CI or artifact drift                                | renderer build, Rust checks and target packaging                                                               |
+| i18n                                         | renderer/native locale mismatch                                        | locale/resource and affected UI tests                                                                          |
+| Quality gates                                | stale commands, missing assertions or misleading evidence              | quality tests, impact reporting and lint                                                                       |
 
 ## Plate Large-Document Performance Gate
 
@@ -105,6 +110,11 @@ Each fix should leave one focused assertion at the boundary that failed. For
 example, duplicate menu actions require native dispatch/edit-routing coverage;
 wrong graph renderers require node-mapping coverage; persistence drift requires
 comparison with the native allowlist; stale IPC needs adapter/event isolation.
+Workspace group regressions require behavioral controller/persistence and pane
+buffer/focus/shared-model checks. Retired single-route cache tests are replaced
+by these boundaries; the per-file coverage thresholds and selected files remain
+unchanged. Renderer workbench/graph smoke checks run against the typed fixture and
+do not prove native input, process memory, or cross-platform performance.
 Do not replace behavioral assertions with snapshots or file existence alone.
 
 ## Desktop Smoke Checklist
@@ -121,7 +131,17 @@ uses the actual native app and must report its own run separately:
   modifications preserve drafts and report conflicts without overwriting disk.
 - In both editors, check typing, paste, cut/copy, select-all, undo/redo, links,
   images, source navigation and Vim shortcut ownership.
-- Exercise graph selection, dragging, keyboard navigation and opening files.
+- Exercise graph selection, node dragging, keyboard navigation, and explicit
+  opening of Markdown and non-Markdown files;
+  verify the graph stays left and the full editor/preview opens right without
+  focus theft, then activate and edit the pane. Check file-kind icons, pixel-wheel
+  pan, pinch/modifier and line/page wheel zoom, and pointer anchoring.
+- Split right/down, drag tabs to edges and other groups, resize, and exercise
+  group-scoped close/move and layout restore. Native persistence checks cover
+  workspace isolation, stale session saves, malformed layouts, missing files,
+  and atomic writes; renderer checks cover queued saves and close flushing. Open the same file in two groups;
+  check independent carets, shared source undo, serialized switch/close, stale
+  same-file callback recovery, workspace isolation, and bounded hidden retention.
 - Change preferences, locale and theme, then reopen and verify persistence and
   native menus/dialogs.
 - Exercise affected Git, PTY, WebDAV, AI, export, PDF/media preview and native

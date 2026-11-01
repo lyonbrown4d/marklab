@@ -9,13 +9,10 @@ import type { FsSearchResult } from '@/services/fsApi'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import TabsBar from '@/components/TabsBar'
 import {
   EditorFocusHandoffProvider,
   useEditorFocusHandoffController,
 } from '@/app/EditorFocusHandoff'
-import { EditorTransitionFrame, type EditorTransitionStatus } from '@/app/EditorTransitionFrame'
-import { useEditorRouteSnapshot } from '@/app/useEditorRouteSnapshot'
 import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -74,10 +71,8 @@ export const AppWorkspacePanels = ({
   onOpenGitDiff,
   onOpenSearchResult,
   immersiveZenMode,
-  onRetryActiveFile,
 }: AppWorkspacePanelsProps) => {
   const { t } = useI18n()
-  const outletSnapshot = useEditorRouteSnapshot(outlet)
   const commandPaletteOpen = useNativeSurfaceOcclusionStore(
     (surface) => (surface.reasons['command-palette'] ?? 0) > 0,
   )
@@ -105,20 +100,6 @@ export const AppWorkspacePanels = ({
     const tab = state.tabs.find((candidate) => getWorkspaceTabId(candidate) === state.activeTabId)
     return tab?.kind === 'file' ? tab : null
   }, [state.activeTabId, state.tabs])
-  const transitionStatus = useMemo<EditorTransitionStatus>(() => {
-    if (state.workspaceView === 'map') return 'ready'
-    if (!activeFileTab || activeFileTab.view === 'preview') return 'ready'
-    if (state.loadingPaths?.[activeFileTab.path]) return 'loading'
-    if (Object.prototype.hasOwnProperty.call(state.fileContents, activeFileTab.path)) return 'ready'
-    return state.saveStates[activeFileTab.path]?.status === 'error' ? 'error' : 'loading'
-  }, [activeFileTab, state.fileContents, state.loadingPaths, state.saveStates, state.workspaceView])
-  const transitionKey =
-    state.workspaceView === 'map'
-      ? `${state.workspaceKey}:workspace-map`
-      : activeFileTab
-        ? getWorkspaceTabId(activeFileTab)
-        : (state.activeTabId ?? state.workspaceView)
-  const transitionError = activeFileTab ? state.saveStates[activeFileTab.path]?.message : undefined
   const {
     begin: beginFocusHandoff,
     cancel: cancelFocusHandoff,
@@ -202,33 +183,8 @@ export const AppWorkspacePanels = ({
       onToggleInspector={toggleInspector}
     >
       <section className="workspace-main [:root[data-immersive-zen=true]_&]:[border-inline:0] bg-background [&_[data-panel-content]]:outline-none relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        {!immersiveZenMode && state.workspaceView !== 'map' ? (
-          <TabsBar
-            activeTabId={state.activeTabId}
-            placement={
-              state.tabs.find((tab) => getWorkspaceTabId(tab) === state.activeTabId)?.kind === 'web'
-                ? 'web'
-                : 'document'
-            }
-            dirtyPaths={state.dirtyPaths}
-            saveStates={state.saveStates}
-            silentSave={state.silentSave}
-            tabs={state.tabs}
-            onCloseTab={state.onCloseTab}
-            onOpenTab={state.onOpenTab}
-          />
-        ) : null}
         <EditorFocusHandoffProvider value={focusHandoffValue}>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <EditorTransitionFrame
-              errorMessage={transitionError}
-              onRetry={onRetryActiveFile}
-              requestKey={transitionKey}
-              status={transitionStatus}
-            >
-              {outletSnapshot}
-            </EditorTransitionFrame>
-          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">{outlet}</div>
         </EditorFocusHandoffProvider>
       </section>
     </ImmersiveWorkspaceShell>

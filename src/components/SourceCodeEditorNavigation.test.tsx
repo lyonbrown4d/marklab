@@ -166,6 +166,22 @@ const deferMonaco = () => {
 }
 
 describe('SourceCodeEditor source navigation', () => {
+  it('leaves a sticky navigation request for the editor until its pane becomes active', async () => {
+    const view = render(<SourceCodeEditor {...sourceProps} interactionActive={false} />)
+    await screen.findByLabelText('markdown source')
+    act(() =>
+      requestFocusSourcePosition({
+        path: 'source.md',
+        line: 2,
+        column: 1,
+        workspaceKey: sourceProps.workspaceKey,
+      }),
+    )
+    expect(monacoEditor.setPosition).not.toHaveBeenCalled()
+    expect(monacoEditor.focus).not.toHaveBeenCalled()
+    view.rerender(<SourceCodeEditor {...sourceProps} interactionActive />)
+    expect(monacoEditor.setPosition).toHaveBeenCalledExactlyOnceWith({ lineNumber: 2, column: 1 })
+  })
   it('replays only the latest matching request after Monaco loads without changing content', async () => {
     const finishLoading = deferMonaco()
     const onChange = vi.fn()

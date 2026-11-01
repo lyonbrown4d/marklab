@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react'
-import { useKeepAliveContext } from 'keepalive-for-react'
 import { useStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/button'
@@ -7,6 +6,7 @@ import { KnowledgeGraphCanvas } from '@/features/knowledge-graph/KnowledgeGraphC
 import { KnowledgeGraphDetails } from '@/features/knowledge-graph/KnowledgeGraphDetails'
 import type { GraphCameraState } from '@/features/knowledge-graph/types'
 import { navigationHistoryStore } from '@/features/navigation/navigationHistory'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import {
@@ -28,12 +28,13 @@ const WorkspaceGraphPage = () => {
     })),
   )
   const { t } = useI18n()
-  const keepAlive = useKeepAliveContext()
-  const active = !keepAlive.cacheKey || keepAlive.active
+  const pane = useWorkspacePane()
+  const active = pane?.visible ?? true
+  const focused = pane?.active ?? true
   const workspaceKey = `${context.rootKind}:${context.rootPath}`
   const [selection, setSelection] = useState<{ workspaceKey: string; id: string } | null>(null)
   const request = useStore(workspaceMapNavigationStore, (state) => state.request)
-  const pending = request?.workspaceKey === workspaceKey ? request : null
+  const pending = request?.workspaceKey === workspaceKey && (pane?.active ?? true) ? request : null
   const targetUnavailable =
     active &&
     !context.graphLoading &&
@@ -69,24 +70,29 @@ const WorkspaceGraphPage = () => {
   const selectNode = useCallback(
     (id: string | null) => {
       setSelection(id ? { workspaceKey, id } : null)
+      const node = context.graph.nodes.find((candidate) => candidate.id === id)
+      if (node && node.kind !== 'missing') pane?.openBeside(node.path)
       const history = navigationHistoryStore.getState()
-      if (active && history.workspaceKey === workspaceKey)
+      if (focused && history.workspaceKey === workspaceKey)
         history.visit({ kind: 'graph', nodeId: id ?? 'workspace', viewId: 'all' })
     },
-    [active, workspaceKey],
+    [focused, context.graph.nodes, pane, workspaceKey],
   )
   const openNode = (id: string) => {
     const node = context.graph.nodes.find((candidate) => candidate.id === id)
-    if (node && node.kind !== 'missing') context.onOpenFile(node.path)
+    if (node && node.kind !== 'missing') {
+      if (pane) pane.openBeside(node.path, undefined, true)
+      else context.onOpenFile(node.path)
+    }
   }
   const cameraChanged = useCallback(
     (viewport: GraphCameraState) => {
       const history = navigationHistoryStore.getState()
-      if (!active || history.workspaceKey !== workspaceKey) return
+      if (!focused || history.workspaceKey !== workspaceKey) return
       const current = history.entries[history.index]
       if (current?.kind === 'graph') history.visit({ ...current, viewport })
     },
-    [active, workspaceKey],
+    [focused, workspaceKey],
   )
   if (context.graphLoading && !context.graph.nodes.length) {
     return (
@@ -130,9 +136,10 @@ const WorkspaceGraphPage = () => {
           onSelectNode={selectNode}
           selectedNodeId={selected?.id ?? null}
           workspaceKey={workspaceKey}
+          viewKey={pane ? `pane:${pane.id}` : 'workspace'}
         />
       </div>
-      {selected ? (
+      {selected?.kind === 'missing' ? (
         <KnowledgeGraphDetails
           active={active}
           graph={context.graph}

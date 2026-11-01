@@ -84,14 +84,22 @@ operation and offer a useful retry or recovery path.
 
 - The title bar contains compact workspace and view-level actions.
 - The left workspace drawer can preview on hover and pins open through explicit interaction.
-- Tabs are compact, support many open files, and preserve recent-use navigation.
+- Compact workspace tabs preserve recent-use navigation within resizable editor
+  groups. Split right or down, drag tabs to edges or between groups, and use
+  group-scoped close and move commands.
+- Selecting a document in the graph opens the complete editor beside it, with the graph
+  on the left by default. The editor becomes editable when its pane receives focus.
+  Non-Markdown files use their ordinary workspace preview in the same groups.
 - The bottom status surface contains document state, background work, terminal access, and
   read-only state without duplicating title-bar information.
 - Search Everywhere is the unified route to files, workspace text, headings, commands,
   settings, and recent locations.
 - The relationship graph is a first-class workspace view. Nodes represent documents and
-  directed edges represent Markdown references. Selecting a node previews it; opening it
-  navigates to the document editor. The document inspector provides a bounded local graph.
+  directed edges represent Markdown references. File-kind icons distinguish documents,
+  attachments, and missing targets. Selecting an existing file opens it beside the graph;
+  explicit opening activates its pane. The document inspector provides a bounded local graph.
+- Smooth pixel-wheel gestures pan the graph. Ctrl pinch and modified pixel-wheel gestures
+  zoom; line/page wheel gestures zoom around the pointer.
 - AI is an explicit user capability. Local and remote providers can coexist; automatic AI
   suggestions are opt-in. Local lexical and language-service completion remains independent.
 

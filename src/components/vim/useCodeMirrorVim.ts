@@ -1,4 +1,4 @@
-import { useKeepAliveContext } from 'keepalive-for-react'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 import { useI18n } from '@/i18n/useI18n'
 import type { Compartment } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
@@ -19,8 +19,8 @@ export const useCodeMirrorVim = (
 ) => {
   const { t } = useI18n()
   const enabled = useCurrentTabVimModeEnabled()
-  const keepAlive = useKeepAliveContext()
-  const interactive = !keepAlive.cacheKey || keepAlive.active
+  const pane = useWorkspacePane()
+  const interactive = pane?.active ?? true
   const [status, setStatus] = useState<CodeMirrorVimStatus>('loading')
   useEffect(() => {
     const view = viewRef.current

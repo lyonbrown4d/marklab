@@ -4,6 +4,11 @@ mod buffers;
 pub mod commands;
 mod events;
 pub mod guide;
+pub mod layout;
+#[cfg(test)]
+mod layout_tests;
+mod layout_types;
+mod layout_validation;
 mod operations;
 mod patches;
 mod paths;

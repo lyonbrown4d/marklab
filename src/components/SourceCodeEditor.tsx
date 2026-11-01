@@ -1,19 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useLatest } from 'ahooks'
-import { useStore } from 'zustand'
 import type { EditorCursorPosition } from '@/components/EditorDocumentStatus'
 import type { OnMount } from '@monaco-editor/react'
-import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER } from '@/logic/markdownDiagnostics'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
-import {
-  clearFocusSourcePositionRequest,
-  onFocusSourcePositionRequest,
-  sourcePositionNavigationStore,
-  type FocusSourcePositionRequest,
-  type PendingFocusSourcePositionRequest,
-} from '@/utils/editorNavigation'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
@@ -30,6 +21,8 @@ import type { EditorChangeHandler } from '@/types/editorChanges'
 import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 import { useConfiguredMonaco } from '@/components/source-code/useConfiguredMonaco'
 import { useSourceCodeEditorExternalValue } from '@/components/source-code/useSourceCodeEditorExternalValue'
+import { useSourceCodePositionNavigation } from '@/components/source-code/useSourceCodePositionNavigation'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 
 type SourceCodeEditorProps = {
   activePath: string | null
@@ -54,9 +47,12 @@ const SourceCodeEditor = ({
   onOpenFileView,
   onCursorChange,
   readOnly = false,
-  interactionActive,
+  interactionActive: requestedInteractionActive,
 }: SourceCodeEditorProps) => {
   const { t } = useI18n()
+  const pane = useWorkspacePane()
+  const interactionActive = (requestedInteractionActive ?? true) && (pane?.active ?? true)
+  const interactionActiveRef = useLatest(interactionActive)
   const darkMode = useDarkMode()
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
@@ -76,8 +72,6 @@ const SourceCodeEditor = ({
   const diagnosticHostRef = useRef<MarkdownSourceDiagnosticHost | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const shortcutsDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
-  const searchHighlightTimerRef = useRef<number | null>(null)
   const { completionContextRef, scheduleDiagnostics } = useMarkdownSourceDiagnostics({
     activePath,
     enabled: markdownEnabled,
@@ -85,15 +79,21 @@ const SourceCodeEditor = ({
     fileContents,
     hostRef: diagnosticHostRef,
   })
-  const pendingSourcePosition = useStore(sourcePositionNavigationStore, (state) =>
-    activePath ? state.requests[`${workspaceKey}:${activePath}`] : undefined,
-  )
-  const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
+  const focusPendingSourcePosition = useSourceCodePositionNavigation({
+    active: interactionActive,
+    activePath,
+    workspaceKey,
+    editorRef,
+    hostRef: diagnosticHostRef,
+  })
   const previousMarkdownEnabledRef = useRef(markdownEnabled)
   const contextMenu = useSourceCodeContextMenu(editorRef, readOnly)
-  const focusEditor = useCallback(() => editorRef.current?.focus(), [])
+  const focusEditor = useCallback(() => {
+    if (interactionActiveRef.current) editorRef.current?.focus()
+  }, [interactionActiveRef])
   const isEditorMounted = useCallback(() => editorRef.current !== null, [])
   const focusHandoff = useEditorFocusHandoffTarget({
+    active: interactionActive,
     focus: focusEditor,
     isReady: isEditorMounted,
     path: activePath,
@@ -101,16 +101,9 @@ const SourceCodeEditor = ({
     view: 'source',
   })
 
-  useEffect(() => {
-    const navigationKey = activePath ? `${workspaceKey}:${activePath}` : null
-
-    return () => {
-      pendingSourcePositionRef.current = null
-      if (!navigationKey) return
-      const previousRequest = sourcePositionNavigationStore.getState().requests[navigationKey]
-      if (previousRequest) clearFocusSourcePositionRequest(previousRequest)
-    }
-  }, [activePath, workspaceKey])
+  useLayoutEffect(() => {
+    if (!interactionActive && editorRef.current) clearFocusedCodeEditor(editorRef.current)
+  }, [interactionActive])
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
@@ -121,9 +114,11 @@ const SourceCodeEditor = ({
       cursorCallbackRef.current?.(position)
     })
     cursorCallbackRef.current?.(editor.getPosition())
-    setFocusedCodeEditor(editor)
+    if (interactionActiveRef.current) setFocusedCodeEditor(editor)
     focusSubscriptionRef.current?.dispose()
-    focusSubscriptionRef.current = editor.onDidFocusEditorText(() => setFocusedCodeEditor(editor))
+    focusSubscriptionRef.current = editor.onDidFocusEditorText(() => {
+      if (interactionActiveRef.current) setFocusedCodeEditor(editor)
+    })
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
     providersDisposableRef.current?.dispose()
@@ -139,17 +134,12 @@ const SourceCodeEditor = ({
       : null
     shortcutsDisposableRef.current?.dispose()
     shortcutsDisposableRef.current =
-      readOnly || !markdownEnabled
+      readOnly || !interactionActive || !markdownEnabled
         ? null
         : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
 
     scheduleDiagnostics()
-    const pending =
-      pendingSourcePositionRef.current ??
-      (activePath
-        ? sourcePositionNavigationStore.getState().requests[`${workspaceKey}:${activePath}`]
-        : undefined)
-    if (pending) focusSourcePosition(pending)
+    focusPendingSourcePosition()
   }
 
   useEffect(() => {
@@ -161,10 +151,10 @@ const SourceCodeEditor = ({
     if (!editor) return
     shortcutsDisposableRef.current?.dispose()
     shortcutsDisposableRef.current =
-      readOnly || !markdownEnabled
+      readOnly || !interactionActive || !markdownEnabled
         ? null
         : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
-  }, [markdownEnabled, readOnly, shortcutOverrides])
+  }, [interactionActive, markdownEnabled, readOnly, shortcutOverrides])
 
   useEffect(() => {
     if (previousMarkdownEnabledRef.current === markdownEnabled) return
@@ -194,12 +184,6 @@ const SourceCodeEditor = ({
       providersDisposableRef.current = null
       shortcutsDisposableRef.current?.dispose()
       shortcutsDisposableRef.current = null
-      if (searchHighlightTimerRef.current !== null) {
-        window.clearTimeout(searchHighlightTimerRef.current)
-        searchHighlightTimerRef.current = null
-      }
-      searchHighlightRef.current?.clear()
-      searchHighlightRef.current = null
 
       const host = diagnosticHostRef.current
       const model = host?.editor.getModel()
@@ -211,62 +195,8 @@ const SourceCodeEditor = ({
       }
       diagnosticHostRef.current = null
       editorRef.current = null
-      pendingSourcePositionRef.current = null
     }
   }, [])
-
-  const focusSourcePosition = useCallback(
-    (request: FocusSourcePositionRequest) => {
-      const { path, line, column, endColumn } = request
-      if (request.workspaceKey && request.workspaceKey !== workspaceKeyRef.current) return
-      if (!path || path !== completionContextRef.current.activePath) return
-      if (!Number.isFinite(line) || !Number.isFinite(column)) return
-
-      const editor = editorRef.current
-      const monaco = diagnosticHostRef.current?.monaco
-      if (!editor || !monaco) {
-        pendingSourcePositionRef.current = request
-        return
-      }
-      pendingSourcePositionRef.current = null
-
-      const lineNumber = Math.max(1, line)
-      const columnNumber = Math.max(1, column)
-      const endColumnNumber = Math.max(columnNumber + 1, endColumn ?? columnNumber + 1)
-      const range = new monaco.Range(lineNumber, columnNumber, lineNumber, endColumnNumber)
-      editor.setPosition({ lineNumber, column: columnNumber })
-      editor.setSelection(range)
-      editor.revealRangeInCenter(range)
-      editor.focus()
-
-      searchHighlightRef.current ??= editor.createDecorationsCollection()
-      searchHighlightRef.current.set([
-        {
-          range,
-          options: {
-            className: 'marklab-search-hit-line',
-            inlineClassName: 'marklab-search-hit-inline',
-          },
-        },
-      ])
-      if (searchHighlightTimerRef.current !== null) {
-        window.clearTimeout(searchHighlightTimerRef.current)
-      }
-      searchHighlightTimerRef.current = window.setTimeout(() => {
-        searchHighlightRef.current?.clear()
-        searchHighlightTimerRef.current = null
-      }, 2_400)
-      if (request.workspaceKey) {
-        clearFocusSourcePositionRequest(request as PendingFocusSourcePositionRequest)
-      }
-    },
-    [completionContextRef, workspaceKeyRef],
-  )
-
-  useEffect(() => {
-    if (pendingSourcePosition) focusSourcePosition(pendingSourcePosition)
-  }, [focusSourcePosition, pendingSourcePosition])
-  useEffect(() => onFocusSourcePositionRequest(focusSourcePosition), [focusSourcePosition])
 
   const editorLoadError =
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)

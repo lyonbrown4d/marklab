@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useKeepAliveContext } from 'keepalive-for-react'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 import type { ViewMode } from '@/store/appTypes'
 
 type EditorStatusContextValue = {
@@ -59,9 +59,9 @@ export const EditorStatusBar = ({
   children: ReactNode
 }) => {
   const context = useContext(EditorStatusContext)
-  const keepAlive = useKeepAliveContext()
+  const pane = useWorkspacePane()
   if (
-    (keepAlive.cacheKey && !keepAlive.active) ||
+    (pane && !pane.active) ||
     !context?.target ||
     !activePath ||
     activePath !== context.activePath ||

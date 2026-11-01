@@ -55,7 +55,7 @@ export const useMonacoVim = ({
       setModelVersion((version) => version + 1)
     })
     const disposalSubscription = editor.onDidDispose(stop)
-    // KeepAlive enables editing on its next animation frame; attach after that gate.
+    // Pane activation enables editing on the next frame; attach after that gate.
     const frame = window.requestAnimationFrame(() => {
       setError(null)
       void loadMonacoVim()

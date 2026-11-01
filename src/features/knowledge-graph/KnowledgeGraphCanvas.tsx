@@ -44,7 +44,7 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
     >
       <div
         aria-label={t('knowledgeGraph.canvas')}
-        className="absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="absolute inset-0 overscroll-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             props.onSelectNode(null)
@@ -139,6 +139,11 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
           />
         </div>
       ) : null}
+      {!props.graph.truncated && (
+        <p className="pointer-events-none absolute bottom-3 left-3 hidden max-w-[65%] rounded-md bg-background/80 px-2 py-1 text-[10px] text-muted-foreground sm:block">
+          {t('knowledgeGraph.gestures')}
+        </p>
+      )}
       <div className="absolute bottom-3 right-3 flex rounded-md border bg-card/95 p-1 shadow-sm">
         <Button
           aria-label={t('knowledgeGraph.zoomOut')}

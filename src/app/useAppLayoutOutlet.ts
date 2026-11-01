@@ -1,17 +1,25 @@
 import { createElement, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
 import type { FileViewKind } from '@/store/appTypes'
 import type { LayoutContext } from '@/app/AppLayoutContext'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
-import { AppCachedOutlet } from '@/app/AppCachedOutlet'
+import EditorPaneFallback from '@/pages/EditorPaneFallback'
+import { WorkspaceDockOutlet } from '@/features/workbench/WorkspaceDockOutlet'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
+type OutletState = Pick<
+  AppLayoutState,
+  | Exclude<keyof LayoutContext, 'currentView' | 'onOpenFile' | 'onOpenFileView'>
+  | 'viewMode'
+  | 'workspaceKey'
+  | 'tabs'
+  | 'isWorkspaceDataReady'
+>
 
 type UseAppLayoutOutletOptions = {
   immersiveZenMode: boolean
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
-  state: AppLayoutState
+  state: OutletState
 }
 
 export const useAppLayoutOutlet = ({
@@ -20,7 +28,6 @@ export const useAppLayoutOutlet = ({
   onOpenFileView,
   state,
 }: UseAppLayoutOutletOptions) => {
-  const location = useLocation()
   const totalFiles = useMemo(
     () => state.files.reduce((count, file) => count + (file.kind === 'file' ? 1 : 0), 0),
     [state.files],
@@ -36,6 +43,8 @@ export const useAppLayoutOutlet = ({
       graphRefreshing: state.graphRefreshing,
       editorBufferPath: state.editorBufferPath,
       onEditorChange: state.onEditorChange,
+      bindDocument: state.bindDocument,
+      flushBuffers: state.flushBuffers,
       onOpenFile,
       onOpenFileView,
       theme: state.theme,
@@ -76,6 +85,8 @@ export const useAppLayoutOutlet = ({
     state.onCloseActiveTab,
     state.onCloseTab,
     state.onEditorChange,
+    state.bindDocument,
+    state.flushBuffers,
     state.onOpenProject,
     state.onOpenProjectInCurrentWindow,
     state.recentProjects,
@@ -87,20 +98,17 @@ export const useAppLayoutOutlet = ({
     state.theme,
     state.viewMode,
   ])
-  const routeCacheKey = location.pathname
-  const shouldAnimateRouteCache = state.viewMode !== 'wysiwyg'
-  // Keep sidebar and terminal state changes outside the cached route subtree.
-  // AppCachedOutlet still subscribes to router context for navigation updates.
   const outlet = useMemo(
     () =>
-      createElement(AppCachedOutlet, {
-        context: outletContext,
-        routeCacheKey,
-        routePathname: location.pathname,
-        shouldAnimateRouteCache,
-        workspaceKey: state.workspaceKey,
-      }),
-    [location.pathname, outletContext, routeCacheKey, shouldAnimateRouteCache, state.workspaceKey],
+      state.isWorkspaceDataReady
+        ? createElement(WorkspaceDockOutlet, {
+            context: outletContext,
+            workspaceKey: state.workspaceKey,
+            tabs: state.tabs,
+            key: state.workspaceKey,
+          })
+        : createElement(EditorPaneFallback),
+    [outletContext, state.tabs, state.workspaceKey, state.isWorkspaceDataReady],
   )
 
   return {

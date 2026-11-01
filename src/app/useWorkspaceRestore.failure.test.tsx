@@ -48,6 +48,7 @@ describe('workspace restore failures', () => {
     await waitFor(() => expect(result.current.isRestoringSession).toBe(false))
     expect(result.current.restoreStatusMessage).toBe('app.restoreRootFailed')
     expect(result.current.isSessionRestored).toBe(false)
+    expect(result.current.isWorkspaceDataReady).toBe(false)
     expect(mocks.setRoot).not.toHaveBeenCalled()
     expect(loadWorkspace).not.toHaveBeenCalled()
     expect(result.current.restoreFailure).toMatchObject({
@@ -74,6 +75,7 @@ describe('workspace restore failures', () => {
     await waitFor(() => expect(result.current.isRestoringSession).toBe(false))
     expect(result.current.restoreStatusMessage).toBe('app.restoreRootFailed')
     expect(result.current.isSessionRestored).toBe(false)
+    expect(result.current.isWorkspaceDataReady).toBe(false)
     expect(loadWorkspace).not.toHaveBeenCalled()
     expect(result.current.restoreFailure?.detail).toBe('root unavailable')
   })
@@ -103,6 +105,7 @@ describe('workspace restore failures', () => {
     expect(result.current.isRestoringSession).toBe(true)
     expect(result.current.restoreFailure?.rootPath).toBe('/workspace')
     expect(result.current.isSessionRestored).toBe(false)
+    expect(result.current.isWorkspaceDataReady).toBe(false)
     await act(async () => {
       finishRoot()
       expect(await retry).toBe(true)
@@ -151,6 +154,7 @@ describe('workspace restore failures', () => {
     })
     expect(result.current.restoreFailure).toBeNull()
     expect(result.current.isSessionRestored).toBe(true)
+    expect(result.current.isWorkspaceDataReady).toBe(true)
     expect(mocks.setRoot).toHaveBeenCalledExactlyOnceWith('/workspace')
     expect(loadWorkspace).not.toHaveBeenCalled()
     expect(

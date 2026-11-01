@@ -17,3 +17,6 @@ CREATE TABLE IF NOT EXISTS history_entries (
  content TEXT NOT NULL, PRIMARY KEY(workspace_key,path,id)
 );
 CREATE INDEX IF NOT EXISTS history_document_time ON history_entries(workspace_key,path,created_at_ms DESC,id DESC);
+CREATE TABLE IF NOT EXISTS workspace_layouts (
+ workspace_key TEXT PRIMARY KEY, value_json TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1
+);

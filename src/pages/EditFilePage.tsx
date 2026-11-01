@@ -1,5 +1,6 @@
+import { WorkspaceNavigate as Navigate } from '@/features/workbench/WorkspaceNavigate'
 import { lazy, Suspense } from 'react'
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'

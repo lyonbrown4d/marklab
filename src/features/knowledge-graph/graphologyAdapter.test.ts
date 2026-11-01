@@ -58,9 +58,12 @@ describe('Graphology domain adapter', () => {
       y: 20,
       label: 'Alpha',
       kind: 'file',
-      size: 5 + Math.sqrt(2),
+      size: 10 + Math.sqrt(2),
+      iconKind: 'markdown',
+      image: expect.stringContaining('data:image/svg+xml'),
     })
     expect(graph.getNodeAttribute('missing:c.md', 'color')).toBe('#333333')
+    expect(graph.getNodeAttribute('missing:c.md', 'iconKind')).toBe('missing')
     expect(graph.source('a-b')).toBe('file:a.md')
     expect(graph.target('a-b')).toBe('file:b.md')
     expect(graph.getEdgeAttribute('a-b', 'weight')).toBe(3)

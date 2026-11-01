@@ -126,7 +126,7 @@ describe('writing-first layout preferences', () => {
 
   it('persists relation graph filters', async () => {
     const store = usePreferencesStore.getState()
-    expect(store.graphShowAttachments).toBe(false)
+    expect(store.graphShowAttachments).toBe(true)
     expect(store.graphShowMissing).toBe(true)
     store.setGraphShowAttachments(true)
     store.setGraphShowMissing(false)

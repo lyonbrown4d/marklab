@@ -2,27 +2,20 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { rendererReadyPhases, type RendererReadySignal } from '@/types/rendererReady'
 import type { AiGenerateTextRequest, PublicAiProvider } from '@/services/aiApi'
-// eslint-disable-next-line no-restricted-imports -- Node-run test fixtures remain outside production.
+/* eslint-disable no-restricted-imports -- Renderer fixture helpers remain outside production. */
 import { createFixtureBuffers } from './fixtureBuffers.js'
-// eslint-disable-next-line no-restricted-imports -- Test-only capability store serves only generated fixture files.
 import { createFixtureAssets } from './fixtureAssets.js'
-// eslint-disable-next-line no-restricted-imports -- Test-only native command fixture.
 import { readFixtureSpreadsheet } from './fixtureSpreadsheet.js'
-// eslint-disable-next-line no-restricted-imports -- Test-only native publication analysis DTO.
 import { readFixturePublication } from './fixturePublication.js'
-// eslint-disable-next-line no-restricted-imports -- Explicit test-only graph fixture state.
 import { createFixtureGraph } from './fixtureGraph.js'
+import { createFixtureWorkspaceLayout } from './fixtureWorkspaceLayout.js'
 
-type Payload = Record<string, unknown>
-const record = (value: unknown): Payload => {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Fixture requires an object DTO')
-  return value as Payload
-}
-const text = (value: unknown): string => {
-  if (typeof value !== 'string') throw new Error('Fixture requires a string DTO field')
-  return value
-}
+import {
+  fixtureRecord as record,
+  fixtureText as text,
+  type FixturePayload as Payload,
+} from './fixturePayload.js'
+/* eslint-enable no-restricted-imports */
 
 export const createFixtureBackend = async (
   initialRoot: string,
@@ -46,6 +39,10 @@ export const createFixtureBackend = async (
   )
   const assets = createFixtureAssets(buffers.target)
   const rootInfo = () => ({ kind: 'external' as const, path: root })
+  const workspaceLayout = createFixtureWorkspaceLayout(
+    () => `external:${root}`,
+    () => generation,
+  )
   const treeBase = () => ({ root: rootInfo(), generation, revision: treeRevision })
   const seed = () => ({
     version: 1,
@@ -108,6 +105,10 @@ export const createFixtureBackend = async (
       }
       case 'lifecycle_get_launch_info':
         return { args: [], cwd: root, deepLinks: [] }
+      case 'fs_get_workspace_layout':
+        return workspaceLayout.get(request)
+      case 'fs_set_workspace_layout':
+        return workspaceLayout.set(request)
       case 'fs_get_workspace_graph':
         return graph.get()
       case 'fs_get_workspace_graph_node_details':
@@ -291,6 +292,7 @@ export const createFixtureBackend = async (
     invoke,
     phases,
     seed,
+    workspaceLayout,
     setGraph: graph.set,
     setGraphDetails: graph.setDetails,
   }

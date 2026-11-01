@@ -139,6 +139,50 @@ describe('quality impact rules', () => {
     )
   })
 
+  it.each([
+    'src/features/workbench/WorkspaceDockOutlet.tsx',
+    'src/features/workbench/dockController.ts',
+    'src/features/workbench/dockPersistence.ts',
+    'src/app/useEditorBufferChanges.ts',
+    'src/app/editorBufferCachePolicy.ts',
+    'src/app/EditorFocusHandoff.tsx',
+    'src/app/activeWorkspaceContext.tsx',
+    'src/app/AppLayoutContext.ts',
+    'src/app/AppWorkspacePanels.tsx',
+    'src/app/useAppLayoutGraphState.ts',
+    'src/components/source-code/useWorkbenchSourceModel.ts',
+    'e2e/renderer/workbench.spec.ts',
+  ])('routes workspace pane boundary %s to group and editor safety checks', (file) => {
+    const impacts = analyzeChangedFiles([file])
+    const workbench = impacts.find(
+      (impact) => impact.area === 'Workspace editor groups / renderer lifecycle',
+    )
+
+    expect(workbench?.files).toEqual([file])
+    expect(workbench?.checks).toEqual(
+      expect.arrayContaining([
+        'workbench controller and persistence tests',
+        'pane buffer/focus/shared-model tests',
+        'editor buffer and worker lifecycle tests',
+        'pnpm test:renderer:e2e',
+      ]),
+    )
+  })
+
+  it.each([
+    'src/features/knowledge-graph/graphNodeIcons.ts',
+    'src/features/knowledge-graph/graphWheelController.ts',
+    'e2e/renderer/knowledge-graph.spec.ts',
+  ])('routes graph input and icon boundary %s to renderer checks', (file) => {
+    const graph = analyzeChangedFiles([file]).find(
+      (impact) => impact.area === 'Knowledge relation graph',
+    )
+
+    expect(graph?.files).toEqual([file])
+    expect(graph?.checks).toContain('graph icon and wheel controller tests')
+    expect(graph?.checks).toContain('pnpm test:renderer:e2e')
+  })
+
   it('compiles the shared rule data into runtime matchers', () => {
     expect(qualityImpactRules).toHaveLength(qualityImpactRulesData.length)
     expect(

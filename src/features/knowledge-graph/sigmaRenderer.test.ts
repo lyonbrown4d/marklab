@@ -13,10 +13,12 @@ const mocks = vi.hoisted(() => ({
   resize: vi.fn(),
   events: new Map<string, (...args: never[]) => void>(),
   cameraEvents: new Map<string, (camera: GraphCameraState) => void>(),
+  wheelEvents: new Map<string, (...args: never[]) => void>(),
   graph: null as KnowledgeTopology | null,
   layoutGraph: null as KnowledgeTopology | null,
   camera: { x: 0.5, y: 0.5, ratio: 1, angle: 0 },
   options: null as {
+    primitives: { nodes: { layers: { drawingMode: string }[] } }
     settings: { enableNodeDrag: boolean; itemSizesReference: string }
     nodeReducer: (id: string, data: { size: number }) => { opacity: number }
     edgeReducer: (id: string) => { opacity: number }
@@ -36,6 +38,7 @@ vi.mock('sigma', () => ({
     getCamera() {
       return {
         getState: () => mocks.camera,
+        getBoundedRatio: (ratio: number) => Math.min(8, Math.max(0.05, ratio)),
         setState: (next: Partial<GraphCameraState>) => {
           mocks.camera = { ...mocks.camera, ...next }
           mocks.cameraEvents.get('updated')?.(mocks.camera)
@@ -49,6 +52,13 @@ vi.mock('sigma', () => ({
         },
       }
     }
+    getMouseCaptor() {
+      return {
+        on: (name: string, callback: (...args: never[]) => void) =>
+          mocks.wheelEvents.set(name, callback),
+        off: (name: string) => mocks.wheelEvents.delete(name),
+      }
+    }
     graphToFramedGraph() {
       return { x: 0.2, y: 0.3 }
     }
@@ -58,7 +68,11 @@ vi.mock('sigma', () => ({
   },
 }))
 vi.mock('sigma/primitives', () => ({ DEFAULT_EDGE_PRIMITIVES: {} }))
-vi.mock('sigma/rendering', () => ({ extremityArrow: () => ({ name: 'arrow' }) }))
+vi.mock('sigma/rendering', () => ({
+  extremityArrow: () => ({ name: 'arrow' }),
+  sdfSquare: () => ({ name: 'square' }),
+}))
+vi.mock('@sigma/node-image', () => ({ layerImage: (options: unknown) => options }))
 vi.mock('graphology-layout-forceatlas2/worker', () => ({
   default: class {
     constructor(graph: KnowledgeTopology) {
@@ -74,6 +88,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.events.clear()
   mocks.cameraEvents.clear()
+  mocks.wheelEvents.clear()
   mocks.camera = { x: 0.5, y: 0.5, ratio: 1, angle: 0 }
   graphViewCache.setState({ entries: [] })
   vi.stubGlobal(
@@ -109,12 +124,16 @@ describe('Sigma4 graph renderer integration', () => {
     const { renderer } = setup()
     expect(mocks.options?.settings.enableNodeDrag).toBe(true)
     expect(mocks.options?.settings.itemSizesReference).toBe('screen')
+    expect(mocks.options?.primitives.nodes.layers[0].drawingMode).toBe('color')
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('markdown')
+    expect(mocks.wheelEvents.has('wheel')).toBe(true)
     expect(mocks.start).toHaveBeenCalledOnce()
     vi.advanceTimersByTime(3000)
     expect(mocks.workerKill).toHaveBeenCalledOnce()
     renderer.destroy()
     renderer.destroy()
     expect(mocks.kill).toHaveBeenCalledOnce()
+    expect(mocks.wheelEvents.size).toBe(0)
     expect(graphViewCache.getState().entries[0].topologyKey).toBe('topology-1')
   })
   it('rearranges cached positions, cancels an earlier run and stops the replacement without moving the camera', () => {
@@ -166,8 +185,10 @@ describe('Sigma4 graph renderer integration', () => {
     renderer.focus({ nodeId: 'file:a.md', viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 } })
     const updated = testGraph()
     updated.nodes[0].label = 'Renamed'
+    updated.nodes[0].path = 'assets/renamed.png'
     renderer.updateContent(updated)
     expect(mocks.graph?.getNodeAttribute('file:a.md', 'label')).toBe('Renamed')
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('image')
     expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
     expect(mocks.camera.ratio).toBe(0.6)
     renderer.destroy()
@@ -197,6 +218,8 @@ describe('Sigma4 graph renderer integration', () => {
     mocks.events.get('clickNode')?.({ node: 'file:b.md' } as never)
     expect(onSelectNode).toHaveBeenCalledWith('file:b.md')
     expect(onOpenNode).not.toHaveBeenCalled()
+    mocks.events.get('clickStage')?.()
+    expect(onSelectNode).toHaveBeenLastCalledWith(null)
     const preventSigmaDefault = vi.fn()
     mocks.events.get('doubleClickNode')?.({
       node: 'file:b.md',
@@ -211,6 +234,49 @@ describe('Sigma4 graph renderer integration', () => {
     renderer.select(null)
     expect(mocks.options?.nodeReducer('missing:c.md', { size: 3 }).opacity).toBe(1)
     expect(renderer.focus({ nodeId: 'absent' })).toBe(false)
+    renderer.destroy()
+  })
+  it('retains focus, drag, camera controls and theme colors with icon nodes', async () => {
+    const { renderer, onCameraChange } = setup()
+    renderer.select('file:a.md')
+    renderer.focus({ nodeId: 'a.md' })
+    expect(mocks.camera).toMatchObject({ x: 0.2, y: 0.3, ratio: 0.35 })
+    renderer.fit()
+    renderer.zoom(0.5)
+    expect(mocks.camera).toMatchObject({ x: 0.5, y: 0.5, ratio: 0.5 })
+    expect(onCameraChange).toHaveBeenLastCalledWith(mocks.camera)
+    vi.advanceTimersByTime(250)
+    expect(graphViewCache.getState().entries[0].camera.ratio).toBe(0.5)
+    renderer.arrange()
+    mocks.events.get('nodeDragStart')?.()
+    mocks.graph?.setNodeAttribute('file:a.md', 'x', 9)
+    mocks.events.get('nodeDragEnd')?.()
+    expect(graphViewCache.getState().entries[0].positions['file:a.md'].x).toBe(9)
+    const previousPrimary = document.documentElement.style.getPropertyValue('--primary')
+    document.documentElement.style.setProperty('--primary', '0 100% 50%')
+    await Promise.resolve()
+    expect(mocks.options?.nodeReducer('file:a.md', { size: 10 })).toMatchObject({
+      color: 'rgb(255, 0, 0)',
+    })
+    renderer.focus({ nodeId: 'workspace' })
+    expect(mocks.camera).toMatchObject({ x: 0.5, y: 0.5, ratio: 1 })
+    renderer.destroy()
+    document.documentElement.style.setProperty('--primary', previousPrimary)
+    renderer.zoom(2)
+    renderer.fit()
+    renderer.select('file:a.md')
+    renderer.updateContent(testGraph())
+    expect(renderer.focus({ nodeId: 'workspace' })).toBe(false)
+    expect(mocks.camera.ratio).toBe(1)
+  })
+  it('keeps seeded icon nodes usable when the layout worker fails', () => {
+    mocks.start.mockImplementationOnce(() => {
+      throw new Error('Worker unavailable')
+    })
+    const { renderer } = setup()
+    expect(mocks.workerKill).toHaveBeenCalledOnce()
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('markdown')
+    renderer.focus({ nodeId: 'workspace' })
     renderer.destroy()
   })
 })

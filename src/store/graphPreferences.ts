@@ -14,7 +14,7 @@ export const createGraphPreferencesSlice: StateCreator<
   [],
   GraphPreferencesState
 > = (set) => ({
-  graphShowAttachments: false,
+  graphShowAttachments: true,
   graphShowMissing: true,
   setGraphShowAttachments: (graphShowAttachments) => set({ graphShowAttachments }),
   setGraphShowMissing: (graphShowMissing) => set({ graphShowMissing }),

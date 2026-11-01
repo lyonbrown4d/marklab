@@ -47,7 +47,8 @@
       "^src/components/sourceCodeContextMenu",
       "^src/lib/focusedCodeEditor",
       "^src/logic/sourceLanguages",
-      "^src/pages/Source"
+      "^src/pages/Source",
+      "^src/components/source-code/"
     ],
     "checks": ["source editor tests", "focused edit tests", "pnpm typecheck"]
   },
@@ -75,7 +76,7 @@
   },
   {
     "area": "Knowledge relation graph",
-    "risk": "directed reference drift, cross-workspace cache leaks, or renderer resource lifecycle regression",
+    "risk": "directed reference drift, file-kind icon mismatch, wheel/camera drift, cross-workspace leaks, or renderer resource lifecycle regression",
     "patterns": [
       "^src/features/knowledge-graph/",
       "^src/logic/graph",
@@ -83,9 +84,16 @@
       "^src/pages/WorkspaceGraphPage",
       "^src/components/DocumentRelationsGraph",
       "^src/components/knowledge/",
-      "^src/styles/graph"
+      "^src/styles/graph",
+      "^e2e/renderer/knowledge-graph\\.spec\\.ts$"
     ],
-    "checks": ["graph logic tests", "knowledge graph tests", "graph interaction style tests"]
+    "checks": [
+      "graph logic tests",
+      "knowledge graph tests",
+      "graph icon and wheel controller tests",
+      "graph interaction style tests",
+      "pnpm test:renderer:e2e"
+    ]
   },
   {
     "area": "Settings / persisted preferences",
@@ -167,16 +175,30 @@
     ]
   },
   {
-    "area": "Renderer lifecycle / route cache",
-    "risk": "stale workspace state, retained workers, or cached routes crossing workspace boundaries",
+    "area": "Workspace editor groups / renderer lifecycle",
+    "risk": "cross-pane edits or focus, lost outgoing serialization, stale workspace state, unbounded hidden editors, or retained workers",
     "patterns": [
-      "^src/app/AppCachedOutlet",
-      "^src/app/routeCachePolicy",
-      "^src/app/scheduleEditorRuntimePreload",
+      "^src/features/workbench/",
+      "^src/app/activeWorkspaceContext",
+      "^src/app/EditorFocusHandoff",
+      "^src/app/editorBufferCachePolicy",
+      "^src/app/useEditorBuffer",
       "^src/app/useAppLayoutOutlet",
-      "^src/services/boundedWorkerPool"
+      "^src/app/useAppLayoutGraphState",
+      "^src/app/AppWorkspacePanels",
+      "^src/app/AppLayoutContext",
+      "^src/app/scheduleEditorRuntimePreload",
+      "^src/services/boundedWorkerPool",
+      "^src/components/source-code/useWorkbenchSourceModel",
+      "^e2e/renderer/workbench\\.spec\\.ts$"
     ],
-    "checks": ["route cache and worker lifecycle tests", "pnpm test:renderer:e2e", "pnpm typecheck"]
+    "checks": [
+      "workbench controller and persistence tests",
+      "pane buffer/focus/shared-model tests",
+      "editor buffer and worker lifecycle tests",
+      "pnpm test:renderer:e2e",
+      "pnpm typecheck"
+    ]
   },
   {
     "area": "Document preview lifecycle",

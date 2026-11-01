@@ -11,7 +11,7 @@ export type QualityImpactArea =
   | 'IPC / runtime services'
   | 'Workspace filesystem/services'
   | 'Knowledge engine / Rust analysis'
-  | 'Renderer lifecycle / route cache'
+  | 'Workspace editor groups / renderer lifecycle'
   | 'Document preview lifecycle'
   | 'Build/package'
   | 'i18n'

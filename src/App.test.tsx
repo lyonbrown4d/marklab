@@ -1,27 +1,36 @@
-import { act, render, screen } from '@testing-library/react'
-import { Outlet } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { useEffect } from 'react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { Link, useLocation } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App'
 
-vi.mock('@/app/AppLayout', () => ({
-  default: () => <Outlet />,
-}))
+const mounted = vi.hoisted(() => vi.fn())
+vi.mock('@/app/AppLayout', () => {
+  const MockAppLayout = () => {
+    const location = useLocation()
+    useEffect(() => {
+      mounted()
+    }, [])
+    return (
+      <main>
+        <output>{location.pathname}</output>
+        <Link to="/workspace/graph">Graph</Link>
+      </main>
+    )
+  }
+  return { default: MockAppLayout }
+})
+beforeEach(() => mounted.mockClear())
 
-vi.mock('@/pages/WorkspaceRootPage', () => ({
-  default: () => <div>Workspace root</div>,
-}))
-
-describe('App root route', () => {
-  it('mounts the file-resolving root route instead of the legacy dashboard', async () => {
+describe('App workspace routing', () => {
+  it('retains the workspace shell while navigation switches the active pane route', () => {
     window.location.hash = '#/'
     render(<App />)
-
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    expect(screen.getByText('Workspace root')).toBeInTheDocument()
-    expect(screen.queryByText('Workspace dashboard')).not.toBeInTheDocument()
+    const shell = screen.getByRole('main')
+    expect(screen.getByRole('status')).toHaveTextContent('/')
+    fireEvent.click(screen.getByRole('link', { name: 'Graph' }))
+    expect(screen.getByRole('status')).toHaveTextContent('/workspace/graph')
+    expect(screen.getByRole('main')).toBe(shell)
+    expect(mounted).toHaveBeenCalledOnce()
   })
 })

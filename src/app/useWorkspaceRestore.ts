@@ -40,6 +40,7 @@ export const useWorkspaceRestore = ({
   const [restoreFailure, setRestoreFailure] = useState<WorkspaceRestoreFailure | null>(null)
   const [isRestoringSession, setIsRestoringSession] = useState(false)
   const [isSessionRestored, setIsSessionRestored] = useState(false)
+  const [isWorkspaceDataReady, setIsWorkspaceDataReady] = useState(false)
   const [queuedSeed, setQueuedSeed] = useState<QueuedSeed | null>(null)
   const activeOperationRef = useRef<RestoreOperation | null>(null)
   const defaultRestorePromiseRef = useRef<Promise<RestoreResult> | null>(null)
@@ -131,9 +132,13 @@ export const useWorkspaceRestore = ({
         if (defaultRestorePromiseRef.current === operation.promise) {
           defaultRestorePromiseRef.current = null
         }
-        if (result.ok) await waitForWorkspaceInteractivePaint()
         if (!mountedRef.current || generationRef.current !== operation.generation) return
         automaticRestoreCompletedRef.current = true
+        if (result.ok) {
+          setIsWorkspaceDataReady(true)
+          await waitForWorkspaceInteractivePaint()
+          if (!mountedRef.current || generationRef.current !== operation.generation) return
+        }
         if (operation.payload) {
           setQueuedSeed((current) =>
             current?.generation === operation.generation ? null : current,
@@ -191,6 +196,7 @@ export const useWorkspaceRestore = ({
     activeOperationRef.current = operation
     setIsRestoringSession(true)
     setIsSessionRestored(false)
+    setIsWorkspaceDataReady(false)
     observeOperation(operation)
     return operation
   }, [observeOperation, rootKind, rootPath, runDefaultRestore])
@@ -225,6 +231,7 @@ export const useWorkspaceRestore = ({
       activeOperationRef.current = operation
       setIsRestoringSession(true)
       setIsSessionRestored(false)
+      setIsWorkspaceDataReady(false)
       observeOperation(operation)
       return operation
     },
@@ -240,6 +247,7 @@ export const useWorkspaceRestore = ({
 
   const completeWorkspaceRecovery = useCallback(async () => {
     if (automaticRestoreCompletedRef.current && activeOperationRef.current === null) return
+    if (!mountedRef.current) return
     const generation = ++generationRef.current
     pendingRestoreGenerationRef.current = generation
     activeOperationRef.current = null
@@ -249,9 +257,10 @@ export const useWorkspaceRestore = ({
     setRestoreFailure(null)
     setRestoreStatusMessage(null)
     setIsRestoringSession(false)
-    setIsSessionRestored(true)
+    setIsWorkspaceDataReady(true)
     await waitForWorkspaceInteractivePaint()
     if (!mountedRef.current || generationRef.current !== generation) return
+    setIsSessionRestored(true)
     await reportWorkspaceRendererReady({ phase: 'workspace-interactive' })
     if (!mountedRef.current || generationRef.current !== generation) return
     pendingRestoreGenerationRef.current = null
@@ -286,12 +295,14 @@ export const useWorkspaceRestore = ({
       setRestoreFailure(null)
       setRestoreStatusMessage(null)
       setIsSessionRestored(false)
+      setIsWorkspaceDataReady(false)
     })
 
     return unlistenWorkspaceSeed
   }, [])
 
   return {
+    isWorkspaceDataReady,
     isSessionRestored,
     restoreStatusMessage,
     isRestoringSession,

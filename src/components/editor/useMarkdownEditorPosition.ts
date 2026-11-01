@@ -69,6 +69,7 @@ const validSelection = (editor: PlateEditor, selection: TRange) =>
 type MarkdownEditorPositionOptions = {
   activePath: string | null
   workspaceKey?: string
+  paneId?: string
   active: boolean
   ready: boolean
   rootRef: RefObject<HTMLDivElement | null>
@@ -78,6 +79,7 @@ type MarkdownEditorPositionOptions = {
 export const useMarkdownEditorPosition = ({
   activePath,
   workspaceKey,
+  paneId,
   active,
   ready,
   rootRef,
@@ -87,6 +89,7 @@ export const useMarkdownEditorPosition = ({
   useLayoutEffect(() => {
     if (!activePath || !workspaceKey || !active || !ready) return
     const key = `${workspaceKey}:${activePath}`
+    const positionKey = paneId ? JSON.stringify([paneId, workspaceKey, activePath]) : key
     const editor = latestGetEditor.current()
     const editable = rootRef.current?.querySelector<HTMLElement>('[data-editor-engine="plate"]')
     if (!editor || !editable) return
@@ -95,7 +98,7 @@ export const useMarkdownEditorPosition = ({
         headingNavigationStore.getState().requests[key] ||
         sourcePositionNavigationStore.getState().requests[key],
       )
-    const saved = positions.get(key)
+    const saved = positions.get(positionKey)
     let frame: number | null = null
     let navigated = hasNavigationRequest()
     const stopRestore = () => {
@@ -124,7 +127,7 @@ export const useMarkdownEditorPosition = ({
       unsubscribeHeading()
       unsubscribeSource()
       if (frame !== null) window.cancelAnimationFrame(frame)
-      positions.set(key, {
+      positions.set(positionKey, {
         revision: fingerprint(editor),
         selection: cloneSelection(editor.selection),
         scrollTop: editable.scrollTop,
@@ -133,5 +136,5 @@ export const useMarkdownEditorPosition = ({
           editable.scrollTop / Math.max(1, editable.scrollHeight - editable.clientHeight),
       })
     }
-  }, [active, activePath, latestGetEditor, ready, rootRef, workspaceKey])
+  }, [active, activePath, latestGetEditor, paneId, ready, rootRef, workspaceKey])
 }

@@ -69,6 +69,7 @@ describe('workspace renderer readiness', () => {
     await waitFor(() => expect(loadWorkspace).toHaveBeenCalledOnce())
     expect(lifecycle.signalRendererReady).not.toHaveBeenCalled()
     expect(result.current.isSessionRestored).toBe(false)
+    expect(result.current.isWorkspaceDataReady).toBe(false)
 
     finishLoad()
     await waitFor(() =>
@@ -103,6 +104,7 @@ describe('workspace renderer readiness', () => {
     )
     expect(result.current.restoreStatusMessage).toBe('app.restoreSessionFailed')
     expect(result.current.isSessionRestored).toBe(false)
+    expect(result.current.isWorkspaceDataReady).toBe(false)
   })
 
   it('retains a standby seed through the StrictMode effect replay', async () => {
@@ -165,7 +167,7 @@ describe('workspace renderer readiness', () => {
       }),
     )
     const loadWorkspace = vi.fn(async () => undefined)
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useWorkspaceRestore({
         hasHydrated: true,
         loadWorkspace,
@@ -178,6 +180,8 @@ describe('workspace renderer readiness', () => {
     await waitFor(() => expect(loadWorkspace).toHaveBeenCalledOnce())
     expect(lifecycle.signalRendererReady).not.toHaveBeenCalled()
 
+    await waitFor(() => expect(result.current.isWorkspaceDataReady).toBe(true))
+    expect(result.current.isSessionRestored).toBe(false)
     finishPaint()
     await waitFor(() =>
       expect(lifecycle.signalRendererReady).toHaveBeenCalledWith({
@@ -194,7 +198,7 @@ describe('workspace renderer readiness', () => {
           finishLoads.push(resolve)
         }),
     )
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useWorkspaceRestore({
         hasHydrated: true,
         loadWorkspace,
@@ -213,6 +217,7 @@ describe('workspace renderer readiness', () => {
     await act(async () => undefined)
     expect(lifecycle.signalRendererReady).not.toHaveBeenCalled()
     expect(lifecycle.consumeWorkspaceSessionSeed).not.toHaveBeenCalled()
+    expect(result.current.isWorkspaceDataReady).toBe(false)
 
     finishLoads[1]?.()
     await waitFor(() =>

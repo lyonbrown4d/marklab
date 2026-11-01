@@ -35,6 +35,7 @@ export default defineConfig({
       testMatch: [
         '**/smoke.spec.ts',
         '**/knowledge-graph.spec.ts',
+        '**/workbench.spec.ts',
         '**/layout.spec.ts',
         '**/publication-layout.spec.ts',
         '**/editor-integrations.spec.ts',

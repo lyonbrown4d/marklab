@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { useLatest } from 'ahooks'
 import type { FileViewKind } from '@/store/appTypes'
+import { useWorkspacePane } from '@/features/workbench/paneContext'
 
 type FocusHandoffRequest = {
   allowFocus: boolean
@@ -35,6 +36,7 @@ type EditorFocusHandoffControllerOptions = {
 }
 
 type EditorFocusHandoffTargetOptions = {
+  active?: boolean
   focus: () => void
   isReady?: () => boolean
   path: string | null
@@ -144,6 +146,7 @@ export const EditorFocusHandoffProvider = ({
 )
 
 export const useEditorFocusHandoffTarget = ({
+  active = true,
   focus,
   isReady,
   path,
@@ -151,25 +154,39 @@ export const useEditorFocusHandoffTarget = ({
   view,
 }: EditorFocusHandoffTargetOptions) => {
   const context = useContext(EditorFocusHandoffContext)
+  const contextRef = useLatest(context)
+  const pane = useWorkspacePane()
+  const enabled = active && (pane?.active ?? true)
+  const enabledRef = useLatest(enabled)
   const focusRef = useLatest(focus)
   const isReadyRef = useLatest(isReady)
+  const pathRef = useLatest(path)
+  const viewRef = useLatest(view)
 
   const reportStatus = useCallback(
     (nextStatus: EditorFocusHandoffTargetOptions['status']) => {
-      const request = context?.request
-      if (!request || !path || request.path !== path || request.view !== view) return
+      const currentContext = contextRef.current
+      const request = currentContext?.request
+      if (!enabledRef.current) return
+      if (
+        !request ||
+        !pathRef.current ||
+        request.path !== pathRef.current ||
+        request.view !== viewRef.current
+      )
+        return
       if (nextStatus === 'error') {
-        context.fail(request.id)
+        currentContext.fail(request.id)
         return
       }
-      if (nextStatus === 'ready') context.complete(request.id, () => focusRef.current())
+      if (nextStatus === 'ready') currentContext.complete(request.id, () => focusRef.current())
     },
-    [context, focusRef, path, view],
+    [contextRef, enabledRef, focusRef, pathRef, viewRef],
   )
 
   useEffect(() => {
     reportStatus(status === 'loading' && isReadyRef.current?.() ? 'ready' : status)
-  }, [isReadyRef, reportStatus, status])
+  }, [context, enabled, isReadyRef, path, reportStatus, status, view])
 
   return {
     reportError: () => reportStatus('error'),

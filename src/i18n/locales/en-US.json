@@ -1617,5 +1617,19 @@
   "knowledgeGraph.inGraph": "Relation graph",
   "knowledgeGraph.resultLimit": "Showing the first {{count}} of {{total}} nodes. Refine your search to find others.",
   "knowledgeGraph.targetUnavailable": "This target is not in the current graph. It may have been removed or exceed the displayed scope.",
-  "knowledgeGraph.arrange": "Rearrange graph"
+  "knowledgeGraph.arrange": "Rearrange graph",
+  "workbench.loadingLayout": "Restoring workspace layout…",
+  "workbench.loadLayoutFailed": "Could not restore the workspace layout. Layout changes will not be saved in this session.",
+  "workbench.saveLayoutFailed": "Could not save the workspace layout. Please retry before closing.",
+  "workbench.splitRight": "Split Right",
+  "workbench.splitDown": "Split Down",
+  "workbench.moveToGroup": "Move to Group",
+  "workbench.group": "Group {{index}}",
+  "workbench.closeOthers": "Close Others",
+  "workbench.closeRight": "Close to the Right",
+  "workbench.closeAll": "Close All in Group",
+  "workbench.recoveredDraft": "Another pane updated this document. This view was synchronized; you can copy your previous edit.",
+  "workbench.copyDraft": "Copy Previous Edit",
+  "workbench.copyDraftFailed": "Could not copy. Please try again.",
+  "knowledgeGraph.gestures": "Two-finger scroll to pan · Pinch or Alt + wheel to zoom"
 }

@@ -54,6 +54,14 @@ describe('editor buffer retention', () => {
     ).toEqual([files[0]])
   })
 
+  it('protects all visible documents even when they exceed the cache budget', () => {
+    const files = Array.from({ length: EDITOR_BUFFER_CACHE_LIMITS.maxDocuments + 1 }, (_, index) =>
+      entry(`${index}.md`),
+    )
+    const paths = files.map((file) => file.path)
+    expect(getEditorBufferEvictions(files, 'current', '0.md', [], paths)).toEqual([])
+  })
+
   it('accounts for large documents without encoding copies and protects an oversized active document', () => {
     const large = entry('large.md', {
       content: 'x'.repeat(EDITOR_BUFFER_CACHE_LIMITS.maxTextBytes / 2),

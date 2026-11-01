@@ -15,17 +15,14 @@ import {
 import MarkdownEditor from '@/components/MarkdownEditor'
 import * as configuredEditor from '@/components/plate/useConfiguredPlateEditor'
 
+vi.mock('@/features/workbench/paneContext', () => ({ useWorkspacePane: () => paneState }))
+
 const preferencesMock = Object.assign(controllerMock, {
   immersiveTypewriterMode: false,
 })
 
-const keepAliveState = vi.hoisted(() => ({
+const paneState = vi.hoisted(() => ({
   active: true,
-  cacheKey: undefined as string | undefined,
-}))
-
-vi.mock('keepalive-for-react', () => ({
-  useKeepAliveContext: () => keepAliveState,
 }))
 
 vi.mock('@/components/plate/PlateEditorOverlays', () => ({
@@ -53,8 +50,7 @@ describe('MarkdownEditor playground baseline', () => {
     preferencesMock.immersiveFocusScope = 'block'
     preferencesMock.immersiveTypewriterMode = false
     preferencesMock.markdownContentWidth = 'standard'
-    keepAliveState.active = true
-    keepAliveState.cacheKey = undefined
+    paneState.active = true
   })
 
   it('exposes the stable editor surface through the Plate engine', () => {
@@ -148,10 +144,10 @@ describe('MarkdownEditor playground baseline', () => {
     )
   })
 
-  it('suspends overlays and the AI composer when its KeepAlive route becomes inactive', () => {
+  it('suspends overlays and the AI composer when its workspace pane becomes inactive', () => {
     inlineAiMock.isOpen = true
-    keepAliveState.active = false
-    keepAliveState.cacheKey = 'workspace-map'
+    paneState.active = false
+
     renderEditor()
 
     expect(inlineAiComposerHookMock).toHaveBeenCalled()
@@ -161,7 +157,7 @@ describe('MarkdownEditor playground baseline', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('honors an explicitly inactive editor outside a KeepAlive route', () => {
+  it('honors an explicitly inactive editor outside a workspace pane', () => {
     inlineAiMock.isOpen = true
     renderEditor(undefined, false, '# Heading', false)
 

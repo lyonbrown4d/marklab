@@ -1,5 +1,5 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
-import { KeepAlive } from 'keepalive-for-react'
+import { WorkspacePaneContext } from '@/features/workbench/paneContext'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppStatusBarProvider, EditorStatusBarSlot } from '@/components/EditorStatusBar'
@@ -105,9 +105,28 @@ const StatsLayout = ({
     <MemoryRouter>
       <AppStatusBarProvider activePath="note.md" viewMode={source ? 'source' : 'wysiwyg'}>
         {cached ? (
-          <KeepAlive activeCacheKey={source ? 'source' : 'rich'} max={2}>
-            {editor}
-          </KeepAlive>
+          <>
+            {[false, true].map((isSource) => (
+              <WorkspacePaneContext.Provider
+                key={String(isSource)}
+                value={{
+                  id: isSource ? 'source' : 'rich',
+                  active: source === isSource,
+                  visible: source === isSource,
+                  recoveryKey: 0,
+                  registerFlush: () => () => undefined,
+                  openFile: () => undefined,
+                  openBeside: () => undefined,
+                }}
+              >
+                {isSource ? (
+                  <SourceCodePage {...sharedProps} fileContents={{}} value={value} />
+                ) : (
+                  <WysiwygEditorPage {...sharedProps} onOpenFile={vi.fn()} value={value} />
+                )}
+              </WorkspacePaneContext.Provider>
+            ))}
+          </>
         ) : (
           editor
         )}
@@ -130,7 +149,7 @@ const expectCorrectStats = async () => {
   expect(footer.getByText('344 characters')).toBeInTheDocument()
 }
 
-describe('cached editor document statistics', () => {
+describe('retained pane editor document statistics', () => {
   beforeEach(() => {
     workerState.requests.length = 0
     workerState.richMounts.mockClear()
@@ -145,7 +164,7 @@ describe('cached editor document statistics', () => {
     vi.unstubAllGlobals()
   })
 
-  it('cancels hidden rich work and recomputes unchanged content through source/rich cache round trips', async () => {
+  it('cancels hidden rich work and recomputes unchanged content through source/rich pane round trips', async () => {
     const view = render(<StatsLayout />)
     const rich = await waitForRequest(1)
     view.rerender(<StatsLayout source />)
@@ -167,7 +186,7 @@ describe('cached editor document statistics', () => {
     expect(workerState.sourceMounts).toHaveBeenCalledOnce()
   })
 
-  it('cancels hidden source work and recomputes it when the cached source becomes active', async () => {
+  it('cancels hidden source work and recomputes it when the retained source becomes active', async () => {
     const view = render(<StatsLayout source />)
     const source = await waitForRequest(1)
     view.rerender(<StatsLayout />)
@@ -184,7 +203,7 @@ describe('cached editor document statistics', () => {
   })
 
   it.each([false, true])(
-    'computes without a cache provider (source=%s) and preserves analysis failure behavior',
+    'computes without a pane provider (source=%s) and preserves analysis failure behavior',
     async (source) => {
       const view = render(<StatsLayout source={source} cached={false} />)
       const initial = await waitForRequest(1)

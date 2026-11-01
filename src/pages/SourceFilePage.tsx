@@ -1,4 +1,5 @@
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { WorkspaceNavigate as Navigate } from '@/features/workbench/WorkspaceNavigate'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'

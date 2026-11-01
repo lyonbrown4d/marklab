@@ -22,9 +22,11 @@ export const getEditorBufferEvictions = (
   workspace: string,
   activePath: string | null,
   openPaths: readonly string[] | undefined,
+  visiblePaths?: readonly string[],
 ) => {
   const protectedEntry = (entry: EditorBufferCacheEntry) =>
-    (entry.workspace === workspace && entry.path === activePath) ||
+    (entry.workspace === workspace &&
+      (entry.path === activePath || visiblePaths?.includes(entry.path))) ||
     entry.dirty ||
     entry.loading ||
     entry.pending ||
