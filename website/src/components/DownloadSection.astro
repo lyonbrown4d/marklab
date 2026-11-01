@@ -1,5 +1,5 @@
 ---
-import { getDownload, downloadSize, platforms } from '#site/lib/downloads'
+import { getDownload, getFlatpakDownload, downloadSize, platforms } from '#site/lib/downloads'
 import { releases } from '#site/lib/siteData'
 import { releasesUrl } from '#site/lib/releases'
 import { homeCopy, type Locale } from '#site/lib/homeCopy'
@@ -36,7 +36,8 @@ const labels = {
     </thead>
     <tbody>
       {platforms.map((platform) => {
-        const download = getDownload(releases, platform)
+        const flatpak = platform === 'linux-x64' ? getFlatpakDownload(releases) : null
+        const download = getDownload(releases, platform) ?? flatpak
         return (
           <tr class="border-t border-rule">
             <th scope="row" class="py-4 pr-3 font-medium">
@@ -60,6 +61,11 @@ const labels = {
               >
                 {download ? copy.install : copy.installation}
               </a>
+              {flatpak && flatpak.filename !== download?.filename && (
+                <a href={flatpak.url} class="mt-2 block text-accent underline underline-offset-4">
+                  Flatpak · v{flatpak.version} · {downloadSize(flatpak.size)}
+                </a>
+              )}
             </td>
           </tr>
         )

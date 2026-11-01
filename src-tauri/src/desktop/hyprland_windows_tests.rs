@@ -18,10 +18,62 @@ fn tiled_is_not_maximized_and_fullscreen_keeps_native_behavior() {
   assert_eq!(maximized(&client("0x1", "one", 2)), None);
 }
 #[test]
+fn hidden_window_activation_remembers_recent_owners_and_forgets_destroyed_ones() {
+  let windows = HyprlandWindows::default();
+  windows.remember_hidden("main").unwrap();
+  windows.remember_hidden("workspace-other").unwrap();
+  windows.remember_hidden("main").unwrap();
+  assert_eq!(
+    windows.owners.lock().unwrap().hidden,
+    ["workspace-other", "main"]
+  );
+  windows.forget("main");
+  assert_eq!(windows.owners.lock().unwrap().hidden, ["workspace-other"]);
+}
+#[test]
+fn flatpak_uses_the_verified_display_pid_and_still_rejects_foreign_windows() {
+  let mut owner = client("0x1", "sandbox", 0);
+  owner.pid = i64::from(std::process::id()) + 100;
+  let mut windows = WindowOwners {
+    pid: owner.pid,
+    windows: HashMap::new(),
+    ..WindowOwners::default()
+  };
+  assert_eq!(
+    resolve(
+      &mut windows,
+      std::slice::from_ref(&owner),
+      "main",
+      "Marklab",
+      [900, 700],
+      None,
+      false
+    )
+    .unwrap()
+    .pid,
+    owner.pid
+  );
+  let mut foreign = owner.clone();
+  foreign.pid += 1;
+  assert!(!same_window(&owner, &foreign));
+  assert!(
+    resolve(
+      &mut windows,
+      &[foreign],
+      "main",
+      "Marklab",
+      [900, 700],
+      None,
+      false
+    )
+    .is_err()
+  );
+}
+#[test]
 fn resolves_each_owner_and_does_not_follow_focus_after_binding() {
   let first = client("0x1", "one", 0);
   let second = client("0x2", "two", 1);
-  let mut owners = HashMap::new();
+  let mut owners = WindowOwners::default();
   resolve(
     &mut owners,
     std::slice::from_ref(&first),
@@ -73,13 +125,13 @@ fn resolves_each_owner_and_does_not_follow_focus_after_binding() {
     false,
   )
   .unwrap();
-  assert_eq!(owners.get("main").unwrap().fullscreen, 1);
+  assert_eq!(owners.windows.get("main").unwrap().fullscreen, 1);
 }
 #[test]
 fn ambiguous_or_foreign_windows_are_never_selected() {
   let first = client("0x1", "one", 0);
   let second = client("0x2", "two", 0);
-  let mut owners = HashMap::new();
+  let mut owners = WindowOwners::default();
   assert!(
     resolve(
       &mut owners,
@@ -92,7 +144,7 @@ fn ambiguous_or_foreign_windows_are_never_selected() {
     )
     .is_err()
   );
-  assert!(owners.is_empty());
+  assert!(owners.windows.is_empty());
   let mut foreign = first;
   foreign.pid += 1;
   assert!(
@@ -107,12 +159,12 @@ fn ambiguous_or_foreign_windows_are_never_selected() {
     )
     .is_err()
   );
-  assert!(owners.is_empty());
+  assert!(owners.windows.is_empty());
 }
 #[test]
 fn recycled_addresses_and_unmapped_clients_invalidate_ownership() {
   let first = client("0x1", "old", 0);
-  let mut owners = HashMap::new();
+  let mut owners = WindowOwners::default();
   resolve(
     &mut owners,
     &[first],
@@ -137,7 +189,7 @@ fn recycled_addresses_and_unmapped_clients_invalidate_ownership() {
     )
     .is_err()
   );
-  assert!(owners.is_empty());
+  assert!(owners.windows.is_empty());
   let mut hidden = client("0x2", "hidden", 0);
   hidden.mapped = false;
   assert!(

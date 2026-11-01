@@ -1,0 +1,4 @@
+#!/bin/sh
+# Zypak provides CEF's process sandbox using Flatpak's spawn portal.
+export ZYPAK_CEF_LIBRARY_PATH=/app/marklab/bin/libcef.so
+exec zypak-wrapper /app/marklab/bin/marklab-desktop "$@"

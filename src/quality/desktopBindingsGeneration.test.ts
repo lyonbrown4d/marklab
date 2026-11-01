@@ -62,10 +62,12 @@ describe('desktop contract generation cache', () => {
       io.files.set(path.join(process.cwd(), file), file)
     io.cargo
       .mockReset()
-      .mockImplementation(async (_template: TemplateStringsArray, output: string) => {
-        io.outputs.push(output)
-        io.files.set(output, `bindings for ${io.files.get(source)}`)
-      })
+      .mockImplementation(
+        async (_template: TemplateStringsArray, _profile: string[], output: string) => {
+          io.outputs.push(output)
+          io.files.set(output, `bindings for ${io.files.get(source)}`)
+        },
+      )
   })
 
   it('generates missing bindings, reuses matching output, and repairs deleted or edited output', async () => {
@@ -79,6 +81,14 @@ describe('desktop contract generation cache', () => {
     await generateDesktopBindings()
     expect(io.cargo).toHaveBeenCalledTimes(3)
     expect(io.files.get(bindings)).toBe(`bindings for ${io.files.get(source)}`)
+  })
+
+  it('can reuse release dependencies while producing the same cached wire contract', async () => {
+    await generateDesktopBindings(undefined, 'release')
+    expect(io.cargo.mock.calls[0]?.[1]).toEqual(['--release'])
+    expect(io.files.get(bindings)).toBe(`bindings for ${io.files.get(source)}`)
+    await generateDesktopBindings()
+    expect(io.cargo).toHaveBeenCalledOnce()
   })
 
   it.each([
@@ -95,11 +105,13 @@ describe('desktop contract generation cache', () => {
   })
 
   it('retries a changed source snapshot before publishing the contract', async () => {
-    io.cargo.mockImplementationOnce(async (_template: TemplateStringsArray, output: string) => {
-      io.outputs.push(output)
-      io.files.set(output, 'stale bindings')
-      io.files.set(source, 'updated Rust contracts')
-    })
+    io.cargo.mockImplementationOnce(
+      async (_template: TemplateStringsArray, _profile: string[], output: string) => {
+        io.outputs.push(output)
+        io.files.set(output, 'stale bindings')
+        io.files.set(source, 'updated Rust contracts')
+      },
+    )
     await generateDesktopBindings()
     expect(io.cargo).toHaveBeenCalledTimes(2)
     expect(io.files.get(bindings)).toBe('bindings for updated Rust contracts')
@@ -128,11 +140,13 @@ describe('desktop contract generation cache', () => {
     await generateDesktopBindings()
     const previous = io.files.get(bindings)
     io.files.set(source, 'changed Rust contracts')
-    io.cargo.mockImplementationOnce(async (_template: TemplateStringsArray, output: string) => {
-      io.outputs.push(output)
-      io.files.set(output, 'partial output')
-      throw new Error('Compilation failed')
-    })
+    io.cargo.mockImplementationOnce(
+      async (_template: TemplateStringsArray, _profile: string[], output: string) => {
+        io.outputs.push(output)
+        io.files.set(output, 'partial output')
+        throw new Error('Compilation failed')
+      },
+    )
     await expect(generateDesktopBindings()).rejects.toThrow('Compilation failed')
     expect(io.files.get(bindings)).toBe(previous)
     expect(io.outputs.every((file) => !io.files.has(file))).toBe(true)

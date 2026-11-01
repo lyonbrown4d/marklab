@@ -90,7 +90,7 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libxdo-dev libssl-dev libnss3 libasound2t64 libgbm1 libxcomposite1 libxdamage1 libxrandr2 libxss1 libxtst6 librsvg2-dev patchelf xdg-utils libfuse2t64
+          sudo apt-get install -y libgtk-4-dev libxdo-dev libssl-dev libnss3 libasound2t64 libgbm1 libxcomposite1 libxdamage1 libxrandr2 libxss1 libxtst6 librsvg2-dev patchelf xdg-utils libfuse2t64 flatpak
       - name: Install CEF macOS build tools
         if: runner.os == 'macOS'
         run: brew install cmake ninja
@@ -173,6 +173,28 @@ jobs:
           uploadUpdaterJson: true
           updaterJsonPreferNsis: true
           uploadWorkflowArtifacts: true
+      - name: Install Flatpak packaging runtime and CEF sandbox bridge
+        if: matrix.name == 'linux'
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive --no-related flathub org.gnome.Platform//50
+          flatpak install --user --noninteractive --no-deps flathub org.electronjs.Electron2.BaseApp//25.08
+      - name: Package Linux Flatpak from the release deb
+        if: matrix.name == 'linux'
+        run: pnpm dist:flatpak --deb src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/Marklab_*_amd64.deb
+      - name: Upload Flatpak to the draft release
+        if: matrix.name == 'linux'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release upload "$RELEASE_TAG" release/flatpak/*.flatpak --clobber
+      - name: Upload Flatpak workflow artifact
+        if: matrix.name == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: marklab-linux-flatpak
+          path: release/flatpak/*.flatpak
+          if-no-files-found: error
       - name: Verify macOS code signature
         if: matrix.name == 'macos'
         run: codesign --verify --deep --strict --verbose=2 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Marklab.app

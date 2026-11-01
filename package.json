@@ -31,6 +31,7 @@
     "dist:win": "moon run desktop:dist-win",
     "dist:mac": "moon run desktop:dist-mac",
     "dist:linux": "moon run desktop:dist-linux",
+    "dist:flatpak": "node --experimental-strip-types scripts/package-flatpak.ts",
     "lint": "moon run desktop:lint",
     "typecheck": "moon run desktop:typecheck",
     "quality:impact": "node --experimental-strip-types scripts/quality-impact.ts",

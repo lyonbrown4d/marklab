@@ -5051,6 +5051,7 @@ dependencies = [
  "pulldown-cmark",
  "puml",
  "quick-xml 0.42.0",
+ "raw-window-handle",
  "rectangle-pack",
  "regex",
  "reqwest",

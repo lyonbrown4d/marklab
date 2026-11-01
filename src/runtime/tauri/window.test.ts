@@ -59,6 +59,8 @@ describe('Tauri window lifecycle', () => {
       expect(await api.window.isMaximized()).toBe(true)
       await api.window.maximize()
       await api.window.unmaximize()
+      await api.window.minimize()
+      expect(native.window.minimize).toHaveBeenCalledOnce()
       expect(native.window.maximize).toHaveBeenCalledOnce()
       expect(native.window.unmaximize).toHaveBeenCalledOnce()
       expect(native.invoke).not.toHaveBeenCalled()
@@ -73,13 +75,16 @@ describe('Tauri window lifecycle', () => {
     expect(await api.window.isMaximized()).toBe(false)
     await api.window.maximize()
     await api.window.unmaximize()
+    await api.window.minimize()
     expect(native.invoke.mock.calls).toEqual([
       ['window_get_maximized', { request: {} }],
       ['window_set_maximized', { request: { maximized: true } }],
       ['window_set_maximized', { request: { maximized: false } }],
+      ['window_minimize', { request: {} }],
     ])
     expect(native.window.maximize).not.toHaveBeenCalled()
     expect(native.window.unmaximize).not.toHaveBeenCalled()
+    expect(native.window.minimize).not.toHaveBeenCalled()
     native.invoke.mockRejectedValueOnce(new Error('Compositor unavailable'))
     await expect(api.window.maximize()).rejects.toThrow('Compositor unavailable')
     api.dispose()

@@ -5,7 +5,7 @@ use crate::{
   workspace::WorkspaceRegistry,
 };
 use serde_json::Value;
-use std::{path::PathBuf, sync::atomic::Ordering};
+use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Manager};
 pub fn start(app: &AppHandle) {
   if app
@@ -199,12 +199,14 @@ pub async fn reopen(app: &AppHandle) -> BackendResult<()> {
 }
 pub(super) async fn seed_internal(app: &AppHandle, locale: &str) -> BackendResult<()> {
   let data = crate::composition::AppPaths::resolve(app).await?.data_dir;
-  let mut resources = app.path().resource_dir()?.join("workspace-guide");
+  let resources = app.path().resource_dir()?.join("workspace-guide");
   #[cfg(debug_assertions)]
-  {
+  let resources = {
     if tokio::fs::metadata(&resources).await.is_err() {
-      resources = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../resources/workspace-guide");
+      std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../resources/workspace-guide")
+    } else {
+      resources
     }
-  }
+  };
   crate::workspace::guide::initialize(data, resources, locale.to_string()).await
 }

@@ -61,6 +61,7 @@ pnpm package       # build, then bundle for the host
 pnpm dist:mac      # macOS ARM app/dmg
 pnpm dist:win      # Windows x64 NSIS/MSI
 pnpm dist:linux    # Linux x64 AppImage/deb
+pnpm dist:flatpak --deb <path/to/Marklab_0.2.8_amd64.deb> # Linux x64 Flatpak
 ```
 
 Build on the target OS. macOS needs CMake and Ninja. Linux needs GTK 4.12 or
@@ -83,6 +84,63 @@ WebView2 installation; CEF is included only on macOS/Linux.
 The runtime migration requires fresh startup, memory, native E2E, installer,
 code-signature and updater acceptance on each platform. Earlier Tauri 2/WebKit
 results are historical evidence, not Tauri 3 acceptance.
+
+## Flatpak (Linux x86_64)
+
+Install `flatpak` and `dpkg-deb` (Debian package extraction) using your distribution's
+package manager, then install the
+packaging runtime and Zypak BaseApp once:
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user flathub org.gnome.Platform//50
+flatpak install --user --no-deps flathub org.electronjs.Electron2.BaseApp//25.08
+pnpm dist:linux
+pnpm dist:flatpak --deb src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/Marklab_0.2.8_amd64.deb
+```
+
+For a host build without an explicit Rust target, use the deb below
+`src-tauri/target/release/bundle/deb/` instead. The script checks the package name,
+version, architecture, CEF files, and dynamic libraries against the actual GNOME
+Platform before exporting `release/flatpak/Marklab_<version>_x86_64.flatpak`.
+No SDK is needed for this binary repack. GNOME 50 and BaseApp 25.08 share the
+Freedesktop 25.08 base; GNOME supplies GTK4 and BaseApp supplies Zypak. This does
+not introduce Electron into Marklab. Existing Windows and macOS builds are unchanged.
+For a clean native release build, `pnpm bindings:generate --release` generates the
+same IPC contract while sharing the release dependency cache with the app build.
+
+```bash
+flatpak install --user ./release/flatpak/Marklab_0.2.8_x86_64.flatpak
+flatpak run app.marklab.tauri.desktop
+flatpak run app.marklab.tauri.desktop --workspace "$HOME/Projects/spec"
+```
+
+The Flatpak uses its own application data under
+`~/.var/app/app.marklab.tauri.desktop/`; it does not migrate or overwrite the deb's
+settings. Home access supports workspace folders and relative document links.
+It also uses a separate single-instance identity so activation does not select
+the installed deb. Repeat launches are forwarded before CEF opens its profile.
+For a workspace outside home, grant its directory explicitly, for example:
+`flatpak override --user --filesystem=/mnt/notes app.marklab.tauri.desktop`.
+X11/XWayland, GPU, audio, network and the Hyprland runtime socket
+are exposed for existing desktop features. Zypak's CEF support preserves Chromium
+process isolation through Flatpak's spawn portal; the launcher never disables the
+browser sandbox. See [Zypak's CEF support](https://github.com/refi64/zypak#cef-support).
+
+On Hyprland, Flatpak's minimize action hides the current window to avoid GTK
+reasserting a tiled window's maximized state. Launch Marklab again to activate
+the existing hidden window. Maximization and restoration target the current
+native owner through X11 and use the compositor's state for the button icon.
+Other desktops and non-Flatpak builds retain their existing native controls.
+
+The integrated terminal and executable AI/MCP providers run inside the Flatpak:
+host-installed commands and host shell configuration are not automatically
+available. Use tools installed in the sandbox or the deb for host tool integration.
+Updates are distributed as replacement Flatpak bundles (`flatpak install --user
+./Marklab_<version>_x86_64.flatpak`), not as Tauri installers. The build uses the
+deb as its source artifact; it is not a source-build submission to Flathub. Flathub
+publication, repository signing and an update repository are separate release work.
+The Linux release job attaches the bundle to the existing draft GitHub release.
 
 ## Release workflow
 

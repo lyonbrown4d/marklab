@@ -33,19 +33,70 @@ struct Identity {
 #[derive(Default)]
 pub struct HyprlandWindows {
   socket: Option<PathBuf>,
-  owners: Mutex<HashMap<String, Identity>>,
+  owners: Mutex<WindowOwners>,
   operation: AsyncMutex<()>,
 }
-impl HyprlandWindows {
-  pub fn detect() -> Self {
+struct WindowOwners {
+  pid: i64,
+  windows: HashMap<String, Identity>,
+  hidden: Vec<String>,
+}
+impl Default for WindowOwners {
+  fn default() -> Self {
     Self {
-      socket: ipc::socket_path(),
-      ..Self::default()
+      pid: i64::from(std::process::id()),
+      windows: HashMap::new(),
+      hidden: Vec::new(),
     }
+  }
+}
+impl HyprlandWindows {
+  pub(super) fn remember_hidden(&self, label: &str) -> BackendResult<()> {
+    let mut owners = self
+      .owners
+      .lock()
+      .map_err(|_| ipc::failure("Window ownership is unavailable"))?;
+    owners.hidden.retain(|value| value != label);
+    owners.hidden.push(label.into());
+    Ok(())
+  }
+  pub(super) fn activation_target(
+    &self,
+    app: &tauri::AppHandle,
+  ) -> Option<crate::native_window::TrustedWindow> {
+    if !self.is_flatpak_hyprland() {
+      return None;
+    }
+    let labels = self.owners.lock().ok()?.hidden.clone();
+    labels.into_iter().rev().find_map(|label| {
+      crate::native_window::get(app, &label)
+        .filter(|window| window.is_visible().is_ok_and(|visible| !visible))
+    })
+  }
+  pub(super) fn is_flatpak_hyprland(&self) -> bool {
+    self.socket.is_some() && std::path::Path::new("/.flatpak-info").is_file()
+  }
+  pub fn detect() -> BackendResult<Self> {
+    let socket = ipc::socket_path();
+    let pid = if socket.is_some() {
+      super::hyprland_process::pid()?
+    } else {
+      i64::from(std::process::id())
+    };
+    Ok(Self {
+      socket,
+      owners: Mutex::new(WindowOwners {
+        pid,
+        windows: HashMap::new(),
+        hidden: Vec::new(),
+      }),
+      ..Self::default()
+    })
   }
   pub fn forget(&self, label: &str) {
     if let Ok(mut owners) = self.owners.lock() {
-      owners.remove(label);
+      owners.windows.remove(label);
+      owners.hidden.retain(|value| value != label);
     }
   }
   pub async fn get(&self, window: &tauri::WebviewWindow) -> BackendResult<Option<bool>> {
@@ -58,6 +109,7 @@ impl HyprlandWindows {
           .owners
           .lock()
           .map_err(|_| ipc::failure("Window ownership is unavailable"))?
+          .windows
           .get(window.label())
           .and_then(|identity| fullscreen_maximized(identity.fullscreen)),
       );
@@ -80,7 +132,9 @@ impl HyprlandWindows {
     if current == desired {
       return Ok(true);
     }
-    if desired {
+    if self.is_flatpak_hyprland() {
+      super::hyprland_x11::maximize(window, desired).await?;
+    } else if desired {
       window.maximize()?;
     } else {
       window.unmaximize()?;
@@ -102,6 +156,7 @@ impl HyprlandWindows {
             .owners
             .lock()
             .map_err(|_| ipc::failure("Window ownership is unavailable"))?
+            .windows
             .get_mut(window.label())
           {
             identity.fullscreen = current.fullscreen;
@@ -160,14 +215,18 @@ fn fullscreen_maximized(fullscreen: u8) -> Option<bool> {
   // Native fullscreen keeps its existing GTK behavior and restore preference.
   (fullscreen != 2).then_some(fullscreen == 1)
 }
-fn owned(client: &Client) -> bool {
-  client.mapped && client.pid == i64::from(std::process::id())
+fn owned(client: &Client, pid: i64) -> bool {
+  client.mapped && client.pid == pid
 }
 fn same_window(left: &Client, right: &Client) -> bool {
-  owned(left) && left.address == right.address && left.stable_id == right.stable_id
+  left.mapped
+    && right.mapped
+    && left.pid == right.pid
+    && left.address == right.address
+    && left.stable_id == right.stable_id
 }
 fn resolve(
-  owners: &mut HashMap<String, Identity>,
+  owners: &mut WindowOwners,
   clients: &[Client],
   label: &str,
   title: &str,
@@ -175,14 +234,20 @@ fn resolve(
   active: Option<&Client>,
   focused: bool,
 ) -> BackendResult<Client> {
+  let pid = owners.pid;
+  let owners = &mut owners.windows;
   owners.retain(|_, identity| {
     clients.iter().any(|client| {
-      owned(client) && client.address == identity.address && client.stable_id == identity.stable_id
+      owned(client, pid)
+        && client.address == identity.address
+        && client.stable_id == identity.stable_id
     })
   });
   if let Some(identity) = owners.get_mut(label)
     && let Some(client) = clients.iter().find(|client| {
-      owned(client) && client.address == identity.address && client.stable_id == identity.stable_id
+      owned(client, pid)
+        && client.address == identity.address
+        && client.stable_id == identity.stable_id
     })
   {
     identity.fullscreen = client.fullscreen;
@@ -191,7 +256,7 @@ fn resolve(
   let candidates: Vec<_> = clients
     .iter()
     .filter(|client| {
-      owned(client)
+      owned(client, pid)
         && client.title == title
         && client.size == size
         && !owners
@@ -202,7 +267,7 @@ fn resolve(
   let available: Vec<_> = clients
     .iter()
     .filter(|client| {
-      owned(client)
+      owned(client, pid)
         && client.title == title
         && !owners
           .values()

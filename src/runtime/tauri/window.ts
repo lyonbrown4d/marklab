@@ -111,7 +111,7 @@ export const createWindowApis = (events: TauriEventHub) => {
   const windowApi: DesktopRuntimeApi['window'] = {
     setVimKeyboardOwnership: (active) => request('window_set_vim_keyboard_ownership', { active }),
     onPresented: (handler) => events.on('window-presented', handler),
-    minimize: () => nativeWindow.minimize(),
+    minimize: () => (linux ? request('window_minimize') : nativeWindow.minimize()),
     maximize: async () => {
       if (linux) await request('window_set_maximized', { maximized: true })
       else await nativeWindow.maximize()

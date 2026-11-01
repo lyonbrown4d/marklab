@@ -1,0 +1,19 @@
+{
+  "id": "app.marklab.tauri.desktop",
+  "runtime": "org.gnome.Platform",
+  "runtimeVersion": "50",
+  "base": "org.electronjs.Electron2.BaseApp",
+  "baseVersion": "25.08",
+  "branch": "stable",
+  "finishArgs": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=x11",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--filesystem=home",
+    "--filesystem=xdg-run/hypr:ro",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--env=SHELL=/bin/bash"
+  ]
+}

@@ -46,6 +46,7 @@ macro_rules! desktop_commands {
       crate::desktop::commands::window_close_commit,
       crate::desktop::commands::window_set_fullscreen,
       crate::desktop::commands::window_get_maximized,
+      crate::desktop::commands::window_minimize,
       crate::desktop::commands::window_set_maximized,
       crate::desktop::commands::window_set_vim_keyboard_ownership,
       crate::desktop::commands::workspace_session_seed,

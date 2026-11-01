@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parseReleases } from '#site/lib/releases'
-import { getDownload, platforms } from '#site/lib/downloads'
+import { getDownload, getFlatpakDownload, platforms } from '#site/lib/downloads'
 import { localPath } from '#site/lib/links'
 
 const fixture = (
@@ -135,6 +135,17 @@ test('rejects untrusted asset and release URLs', () => {
   invalid.assets[0]!.browser_download_url = 'https://example.com/untrusted.dmg'
   assert.throws(() => parseReleases([invalid]))
   assert.throws(() => parseReleases([fixture('0.2.7', [], { html_url: 'javascript:alert(1)' })]))
+})
+
+test('offers only published matching x86_64 Flatpak bundles without changing native installer selection', () => {
+  const releases = parseReleases([
+    fixture('0.2.8', ['Marklab_0.2.8_x86_64.flatpak', 'Marklab_0.2.8_amd64.AppImage']),
+    fixture('0.2.9', ['Marklab_0.2.9_x86_64.flatpak'], { draft: true }),
+    fixture('0.2.10', ['Marklab_0.2.9_x86_64.flatpak', 'Marklab_0.2.10_aarch64.flatpak']),
+  ])
+  assert.equal(getFlatpakDownload(releases)?.filename, 'Marklab_0.2.8_x86_64.flatpak')
+  assert.equal(getDownload(releases, 'linux-x64')?.filename, 'Marklab_0.2.8_amd64.AppImage')
+  assert.equal(getFlatpakDownload([]), null)
 })
 
 test('keeps all internal links under the GitHub Pages repository base path', () => {

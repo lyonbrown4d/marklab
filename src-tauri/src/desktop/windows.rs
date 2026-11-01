@@ -162,8 +162,18 @@ pub async fn activate_workspace_geometry(
 ) -> BackendResult<()> {
   super::geometry::activate(window, root).await
 }
+pub(super) fn activation_target(app: &AppHandle) -> Option<crate::native_window::TrustedWindow> {
+  #[cfg(target_os = "linux")]
+  if let Some(window) = app
+    .try_state::<super::hyprland_windows::HyprlandWindows>()
+    .and_then(|state| state.activation_target(app))
+  {
+    return Some(window);
+  }
+  super::menus::focused(app)
+}
 pub fn activate_existing(app: &AppHandle) -> BackendResult<bool> {
-  let window = super::menus::focused(app).or_else(|| {
+  let window = activation_target(app).or_else(|| {
     app
       .webview_windows()
       .keys()

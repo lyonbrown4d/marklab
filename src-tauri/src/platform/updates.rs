@@ -30,6 +30,10 @@ impl UpdateService {
           .and_then(|v| v.as_array())
           .is_some_and(|a| !a.is_empty())
     });
+    // Flatpak owns installation and updates; never offer a deb/AppImage from
+    // the embedded updater even when repacking a signed release build.
+    #[cfg(target_os = "linux")]
+    let configured = configured && !std::path::Path::new("/.flatpak-info").is_file();
     Self {
       state: Mutex::new(UpdateState::new(
         app.package_info().version.to_string(),

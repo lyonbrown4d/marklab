@@ -3,7 +3,15 @@ use crate::error::{BackendError, BackendResult};
 use clap::{Arg, Command, value_parser};
 use std::ffi::OsString;
 
-const VENDORS: [(ProviderKind, &str, &str, &[&str], &[&str]); 4] = [
+type VendorConfiguration = (
+  ProviderKind,
+  &'static str,
+  &'static str,
+  &'static [&'static str],
+  &'static [&'static str],
+);
+
+const VENDORS: [VendorConfiguration; 4] = [
   (
     ProviderKind::Openai,
     "OpenAI",

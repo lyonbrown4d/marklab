@@ -27,10 +27,14 @@ const assetNames: Record<Platform, (version: string) => readonly string[]> = {
 }
 
 // Resolve each platform separately: GitHub's global "Latest" can refer to an older Windows release.
-export const getDownload = (releases: readonly Release[], platform: Platform): Download | null => {
+const resolveDownload = (
+  releases: readonly Release[],
+  platform: Platform,
+  names: (version: string) => readonly string[],
+): Download | null => {
   for (const release of releases) {
     const version = release.tag_name.slice(5)
-    const asset = assetNames[platform](version)
+    const asset = names(version)
       .map((name) => release.assets.find((entry) => entry.name === name))
       .find(Boolean)
     if (asset)
@@ -45,5 +49,11 @@ export const getDownload = (releases: readonly Release[], platform: Platform): D
   }
   return null
 }
+
+export const getDownload = (releases: readonly Release[], platform: Platform): Download | null =>
+  resolveDownload(releases, platform, assetNames[platform])
+
+export const getFlatpakDownload = (releases: readonly Release[]): Download | null =>
+  resolveDownload(releases, 'linux-x64', (version) => [`Marklab_${version}_x86_64.flatpak`])
 
 export const downloadSize = (bytes: number) => `${Math.ceil(bytes / 1024 / 1024)} MB`

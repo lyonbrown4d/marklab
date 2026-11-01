@@ -51,7 +51,10 @@ const isCurrent = async (input: string) => {
   }
 }
 
-export const generateDesktopBindings = async (signal?: AbortSignal) => {
+export const generateDesktopBindings = async (
+  signal?: AbortSignal,
+  profile: 'debug' | 'release' = 'debug',
+) => {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     signal?.throwIfAborted()
     const input = await fingerprint()
@@ -71,7 +74,7 @@ export const generateDesktopBindings = async (signal?: AbortSignal) => {
     })
     const pending = path.join(directory, `.bindings-${process.pid}-${randomUUID()}.ts`)
     try {
-      await run`cargo run --manifest-path src-tauri/Cargo.toml --locked --jobs 2 --features ipc-codegen --bin generate-desktop-bindings -- ${pending}`
+      await run`cargo run ${profile === 'release' ? ['--release'] : []} --manifest-path src-tauri/Cargo.toml --locked --jobs 2 --features ipc-codegen --bin generate-desktop-bindings -- ${pending}`
       // Publish only a stable source snapshot; Vite must not observe an interim
       // contract from a backend edit that arrived while Cargo was compiling.
       if ((await fingerprint()) !== input) continue
@@ -95,5 +98,5 @@ export const generateDesktopBindings = async (signal?: AbortSignal) => {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  await generateDesktopBindings()
+  await generateDesktopBindings(undefined, process.argv.includes('--release') ? 'release' : 'debug')
 }

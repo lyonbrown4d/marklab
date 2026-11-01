@@ -7,12 +7,18 @@ mod controls;
 mod diagnostics;
 pub(crate) mod event_contracts;
 mod events;
+#[cfg(target_os = "linux")]
+mod flatpak_instance;
 mod flush;
 mod geometry;
 #[cfg(target_os = "linux")]
 mod hyprland_ipc;
 #[cfg(target_os = "linux")]
+mod hyprland_process;
+#[cfg(target_os = "linux")]
 mod hyprland_windows;
+#[cfg(target_os = "linux")]
+mod hyprland_x11;
 mod invoke;
 mod launch;
 mod lifecycle;
@@ -48,11 +54,14 @@ pub fn run() -> BackendResult<()> {
       return Ok(());
     }
   };
-  let builder = runtime::builder()?
-    .manage(cli::LaunchArguments(paths))
-    .manage(startup::StartupState::default())
-    .manage(launch::LaunchState::default())
-    .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+  #[cfg(target_os = "linux")]
+  if tauri::async_runtime::block_on(flatpak_instance::forward_existing(
+    &context.config().identifier,
+  ))? {
+    return Ok(());
+  }
+  let instance = tauri_plugin_single_instance::Builder::new().callback(
+    |app: &tauri::AppHandle, args: Vec<String>, cwd: String| {
       let callback_app = app.clone();
       // Dispatch native window operations onto the main thread.
       let dispatched = app.run_on_main_thread(move || {
@@ -81,7 +90,7 @@ pub fn run() -> BackendResult<()> {
             return;
           }
           if paths.is_empty() {
-            if let Some(window) = menus::focused(&app) {
+            if let Some(window) = windows::activation_target(&app) {
               let _ = window.unminimize();
               let _ = window.show();
               let _ = window.set_focus();
@@ -111,7 +120,19 @@ pub fn run() -> BackendResult<()> {
       if let Err(error) = dispatched {
         log::warn!("Could not dispatch forwarded command line: {error}");
       }
-    }))
+    },
+  );
+  #[cfg(target_os = "linux")]
+  let instance = if flatpak_instance::active() {
+    instance.dbus_id(flatpak_instance::identifier(&context.config().identifier))
+  } else {
+    instance
+  };
+  let builder = runtime::builder()?
+    .manage(cli::LaunchArguments(paths))
+    .manage(startup::StartupState::default())
+    .manage(launch::LaunchState::default())
+    .plugin(instance.build())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_clipboard_manager::init())
@@ -152,7 +173,7 @@ pub fn run() -> BackendResult<()> {
     })
     .invoke_handler(invoke::handler());
   #[cfg(target_os = "linux")]
-  let builder = builder.manage(hyprland_windows::HyprlandWindows::detect());
+  let builder = builder.manage(hyprland_windows::HyprlandWindows::detect()?);
   let app = builder.build(context)?;
   app.run(lifecycle::run_event);
   Ok(())
