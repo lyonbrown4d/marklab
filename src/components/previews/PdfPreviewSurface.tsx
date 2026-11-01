@@ -33,7 +33,7 @@ type MarkdownPdfPreviewProps = {
 
 type PdfViewerSurfaceProps = {
   fileUrl: string
-  mode: 'graph' | 'inline' | 'modal'
+  mode: 'inline' | 'modal'
 }
 
 const PdfPreviewStatus = ({ failed, label }: { failed: boolean; label: string }) => (
@@ -109,28 +109,6 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
       />
     )
   }
-  if (mode === 'graph') {
-    return (
-      <Document
-        className="marklab-pdf-viewer marklab-pdf-viewer--graph"
-        file={file}
-        options={typeof file === 'string' ? undefined : nativeRangeOptions}
-        suspense={false}
-        loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
-        error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
-      >
-        <div className="marklab-pdf-viewer__document" ref={documentRef}>
-          <Page
-            pageNumber={1}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-            width={pageWidth}
-          />
-        </div>
-      </Document>
-    )
-  }
-
   return (
     <Document
       className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}

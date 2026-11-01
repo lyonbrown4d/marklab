@@ -3,9 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourcePreviewSurface, {
-  GRAPH_SOURCE_PREVIEW_BYTES,
-  GRAPH_SOURCE_PREVIEW_CHARACTERS,
-  GRAPH_SOURCE_PREVIEW_LINES,
   MAX_SOURCE_PREVIEW_BYTES,
   MAX_SOURCE_PREVIEW_CHARACTERS,
   MAX_SOURCE_PREVIEW_LINES,
@@ -55,7 +52,7 @@ vi.mock('@/services/fsApi', () => ({
 const renderPreview = (
   path = 'src/example.ts',
   onChromeEvent?: () => void,
-  presentation?: 'embedded' | 'full' | 'graph',
+  presentation?: 'embedded' | 'full',
 ) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -243,37 +240,5 @@ describe('SourcePreviewSurface', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Copy source' }))
 
     expect(await screen.findByRole('button', { name: 'Copy source failed' })).toBeInTheDocument()
-  })
-
-  it('fits the graph node height instead of enforcing the document minimum', async () => {
-    vi.mocked(fsApi.readTextPreview).mockResolvedValue({
-      content: 'const value = 1',
-      truncated: false,
-    })
-
-    renderPreview('src/example.ts', undefined, 'graph')
-
-    const preview = await screen.findByRole('article', { name: 'example.ts source preview' })
-    expect(preview).toHaveClass('h-full', 'min-h-0')
-    expect(preview).not.toHaveClass('min-h-[20rem]')
-    expect(fsApi.readTextPreview).toHaveBeenCalledWith('src/example.ts', GRAPH_SOURCE_PREVIEW_BYTES)
-  })
-
-  it('bounds graph rendering independently from the main-process byte limit', async () => {
-    const lines = Array.from(
-      { length: GRAPH_SOURCE_PREVIEW_LINES + 5 },
-      (_, index) => `${index}:${'x'.repeat(180)}`,
-    )
-    vi.mocked(fsApi.readTextPreview).mockResolvedValue({
-      content: lines.join('\n'),
-      truncated: true,
-    })
-
-    renderPreview('src/example.ts', undefined, 'graph')
-
-    expect(await screen.findByText('Preview truncated')).toBeInTheDocument()
-    expect(screen.getAllByRole('listitem')).toHaveLength(GRAPH_SOURCE_PREVIEW_LINES)
-    const rendered = screen.getByRole('list', { name: 'Source lines' }).textContent ?? ''
-    expect(rendered.length).toBeLessThanOrEqual(GRAPH_SOURCE_PREVIEW_CHARACTERS + 200)
   })
 })

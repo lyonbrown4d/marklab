@@ -13,8 +13,10 @@ export const usePlateFocusHeading = (
   activePath: string | null,
   getEditor: () => PlateEditor | null,
   workspaceKey?: string,
+  interactionActive = true,
 ) => {
   useEffect(() => {
+    if (!interactionActive) return
     let retryHandle: number | null = null
     const cancelRetry = () => {
       if (retryHandle !== null) window.clearTimeout(retryHandle)
@@ -53,5 +55,5 @@ export const usePlateFocusHeading = (
       cancelRetry()
       unsubscribe()
     }
-  }, [activePath, getEditor, workspaceKey])
+  }, [activePath, getEditor, interactionActive, workspaceKey])
 }

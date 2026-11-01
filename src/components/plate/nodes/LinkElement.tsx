@@ -9,6 +9,7 @@ import {
   platePreviewKindForTarget,
   safeExternalLinkUrl,
 } from '@/components/plate/nodes/previewAdapters'
+import { WorkspaceDocumentLinkPreview } from '@/components/knowledge/WorkspaceDocumentLinkPreview'
 import { usePlateLinkPreviewPortal } from '@/components/plate/nodes/usePlateLinkPreviewPortal'
 
 export type PlatePreviewOptions = {
@@ -72,15 +73,29 @@ export const createLinkElement = ({
       target: externalHref ? '_blank' : undefined,
     }
 
+    const linkElement = (
+      <PlateElement
+        {...props}
+        as="a"
+        attributes={attributes}
+        className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary"
+        ref={localPreview || externalHref ? anchorRef : undefined}
+      />
+    )
     return (
       <>
-        <PlateElement
-          {...props}
-          as="a"
-          attributes={attributes}
-          className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary"
-          ref={localPreview || externalHref ? anchorRef : undefined}
-        />
+        {workspaceTarget && !target.startsWith('#') && !previewKind ? (
+          <WorkspaceDocumentLinkPreview
+            documentPath={documentPath}
+            target={target}
+            title={title}
+            onOpen={onWorkspaceLink ? () => onWorkspaceLink(target, documentPath) : undefined}
+          >
+            {linkElement}
+          </WorkspaceDocumentLinkPreview>
+        ) : (
+          linkElement
+        )}
         {localPreview || externalHref ? preview : null}
       </>
     )

@@ -1,105 +1,15 @@
 pub use super::graph_types::*;
 pub use super::publication::publication;
-use super::{Index, document::Document, targets};
+use super::{Index, document::Document};
 use crate::error::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 pub fn revision(index: &Index) -> String {
   format!("{}:{}", index.generation, index.revision)
 }
 
-pub fn graph(index: &Index) -> WorkspaceGraph {
-  let mut nodes = BTreeMap::new();
-  let mut edges = BTreeMap::new();
-  for document in index.files.values() {
-    let id = format!("file:{}", document.path);
-    let folder = document
-      .path
-      .rsplit_once('/')
-      .map_or("Workspace", |(folder, _)| folder);
-    nodes.insert(
-      id.clone(),
-      GraphNode::File {
-        id,
-        label: document.title.clone(),
-        path: document.path.clone(),
-        group: GraphGroup {
-          key: folder.into(),
-          label: folder.into(),
-          source: GroupSource::Path,
-        },
-      },
-    );
-  }
-  for document in index.files.values() {
-    let source = format!("file:{}", document.path);
-    for link in document.links.iter().chain(&document.assets) {
-      if link.is_external {
-        continue;
-      }
-      let path = link.target_path.as_deref().unwrap_or(&link.target);
-      let missing = targets::is_missing(link, &index.files, &index.paths);
-      let (target, kind) = if index.files.contains_key(path) && !missing {
-        (
-          format!("file:{path}"),
-          if link.target_heading_slug.is_some() {
-            EdgeKind::ReferencesHeading
-          } else {
-            EdgeKind::LinksTo
-          },
-        )
-      } else if index.paths.contains(path) {
-        (format!("preview:{path}"), EdgeKind::Previews)
-      } else {
-        (format!("missing:{path}"), EdgeKind::LinksTo)
-      };
-      if target == source {
-        continue;
-      }
-      nodes.entry(target.clone()).or_insert_with(|| {
-        if index.paths.contains(path) {
-          GraphNode::Preview {
-            id: target.clone(),
-            label: path.into(),
-            path: path.into(),
-            source_path: document.path.clone(),
-            target: link.target.clone(),
-            preview_kind: preview_kind(path),
-          }
-        } else {
-          GraphNode::Missing {
-            id: target.clone(),
-            label: path.into(),
-            path: path.into(),
-            source_path: document.path.clone(),
-            target: link.target.clone(),
-            preview_kind: preview_kind(path),
-          }
-        }
-      });
-      let (a, b) = if source < target {
-        (source.clone(), target)
-      } else {
-        (target, source.clone())
-      };
-      edges
-        .entry((a.clone(), b.clone()))
-        .or_insert_with(|| GraphEdge {
-          id: format!("edge:{a}:{b}"),
-          source: a,
-          target: b,
-          kind,
-        });
-    }
-  }
-  WorkspaceGraph {
-    mode: GraphMode::Mindmap,
-    revision: revision(index),
-    nodes: nodes.into_values().collect(),
-    edges: edges.into_values().collect(),
-  }
-}
+pub use super::graph_projection::graph;
 
 #[derive(Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
@@ -209,24 +119,4 @@ fn blocks(file: &Document) -> Vec<MarkdownBlock> {
     }
   }
   blocks
-}
-
-fn preview_kind(path: &str) -> PreviewKind {
-  match std::path::Path::new(path)
-    .extension()
-    .and_then(|ext| ext.to_str())
-    .unwrap_or("")
-    .to_lowercase()
-    .as_str()
-  {
-    "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => PreviewKind::Image,
-    "pdf" => PreviewKind::Pdf,
-    "docx" => PreviewKind::Docx,
-    "mp3" | "wav" | "ogg" => PreviewKind::Audio,
-    "mp4" | "webm" => PreviewKind::Video,
-    "drawio" => PreviewKind::Drawio,
-    "excalidraw" => PreviewKind::Excalidraw,
-    "xlsx" | "xlsm" => PreviewKind::Spreadsheet,
-    _ => PreviewKind::Source,
-  }
 }

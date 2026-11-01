@@ -1,8 +1,7 @@
 use super::{core::CoreConfig, factory_error};
 use crate::{
-  ai::AiService, assets::AssetService, database::Database, git::GitState,
-  graph_layout::GraphLayoutStore, history::HistoryStore, link_preview::LinkPreviewService,
-  platform::updates::UpdateService, sync::SyncService,
+  ai::AiService, assets::AssetService, database::Database, git::GitState, history::HistoryStore,
+  link_preview::LinkPreviewService, platform::updates::UpdateService, sync::SyncService,
 };
 use fluxdi::{Error, Shared};
 use std::path::PathBuf;
@@ -14,14 +13,6 @@ pub(super) fn defaults<T: Default + Send + Sync + 'static>() -> Result<Shared<T>
 
 pub(super) fn history(database: Shared<Database>) -> Result<Shared<HistoryStore>, Error> {
   Ok(Shared::new(HistoryStore::new(database.pool.clone())))
-}
-
-pub(super) fn graph_layout(database: Shared<Database>) -> Result<Shared<GraphLayoutStore>, Error> {
-  Ok(Shared::new(GraphLayoutStore::new(database.pool.clone())))
-}
-
-pub(super) fn graph_compute() -> Result<Shared<crate::graph_compute::GraphComputeService>, Error> {
-  Ok(Shared::new(crate::graph_compute::GraphComputeService::new()))
 }
 
 pub(super) async fn ai(database: Shared<Database>) -> Result<Shared<AiService>, Error> {

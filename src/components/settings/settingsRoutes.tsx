@@ -127,10 +127,8 @@ export const settingsRoutes: SettingsRoute[] = [
     pageTargetId: 'settings-page-graph',
     icon: GitGraph,
     searchEntries: [
-      { labelKey: 'settings.graphMiniMap', targetId: 'settings-graph-minimap' },
-      { labelKey: 'settings.graphMiniMapPosition', targetId: 'settings-graph-minimap' },
-      { labelKey: 'settings.graphMiniMapSize', targetId: 'settings-graph-minimap' },
-      { labelKey: 'settings.graphContentMode', targetId: 'settings-graph-content' },
+      { labelKey: 'knowledgeGraph.showAttachments', targetId: 'settings-graph-relations' },
+      { labelKey: 'knowledgeGraph.showMissing', targetId: 'settings-graph-relations' },
     ],
     render: () => <GraphSettingsPage />,
   },

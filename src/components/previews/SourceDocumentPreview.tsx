@@ -39,7 +39,7 @@ type SourceDocumentPreviewProps = {
   path: string
   source: string
   title: string
-  presentation?: 'embedded' | 'full' | 'graph'
+  presentation?: 'embedded' | 'full'
 }
 
 const SourceDocumentPreview = ({

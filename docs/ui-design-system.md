@@ -55,9 +55,9 @@ startup and test counts are historical evidence, not current native acceptance.
 
 The 2026-10-14 migration covers loading/splash, standalone preview entries, shell
 and titlebar business components, tabs and status bars, terminal chrome, settings
-and theme previews, graph nodes, and workspace-map nodes. Layout and interaction
+and theme previews, graph controls and document relation panels. Layout and interaction
 utilities live with their consumers. Shared loading keyframes, palette tokens,
-native drag regions, xterm/React Flow integration, and global accessibility rules
+native drag regions, xterm/Sigma integration, and global accessibility rules
 remain focused stylesheets.
 
 Source/editor surfaces and shortcut styles shared with the concurrent Vim-mode

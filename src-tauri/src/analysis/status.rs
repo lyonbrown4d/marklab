@@ -26,11 +26,6 @@ impl AnalysisService {
     .bind(scope)
     .fetch_one(&mut *transaction)
     .await?;
-    let graph_bytes: i64 =
-      sqlx::query_scalar("SELECT coalesce(sum(bytes),0) FROM analysis_cache_graphs WHERE scope=?")
-        .bind(scope)
-        .fetch_one(&mut *transaction)
-        .await?;
     let (searchable_documents, search_index_bytes): (i64, i64) = sqlx::query_as(
             "SELECT count(*),coalesce(sum(length(cast(path AS BLOB))+length(cast(title AS BLOB))+length(cast(content AS BLOB))),0) FROM analysis_fts WHERE scope=?",
         ).bind(scope).fetch_one(&mut *transaction).await?;
@@ -38,7 +33,7 @@ impl AnalysisService {
     Ok(LogicalStorageStats {
       metadata_documents,
       searchable_documents,
-      metadata_bytes: document_bytes + graph_bytes,
+      metadata_bytes: document_bytes,
       search_index_bytes,
     })
   }

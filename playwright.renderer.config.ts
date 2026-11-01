@@ -16,7 +16,7 @@ export default defineConfig({
     ['json', { outputFile: 'test-results/renderer/results.json' }],
   ],
   webServer: {
-    command: 'pnpm exec vite preview --host 127.0.0.1 --port 4175 --strictPort',
+    command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort',
     url,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
@@ -34,6 +34,7 @@ export default defineConfig({
       name: 'smoke',
       testMatch: [
         '**/smoke.spec.ts',
+        '**/knowledge-graph.spec.ts',
         '**/layout.spec.ts',
         '**/publication-layout.spec.ts',
         '**/editor-integrations.spec.ts',

@@ -5,16 +5,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct AnalysisWorkspaceGraph {
   pub mode: GraphMode,
-  #[serde(default)]
   pub revision: String,
+  pub topology_key: String,
   pub nodes: Vec<GraphNode>,
   pub edges: Vec<GraphEdge>,
+  pub truncated: bool,
+  pub total_nodes: usize,
+  pub total_edges: usize,
 }
 pub use AnalysisGraphMode as GraphMode;
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum AnalysisGraphMode {
-  Mindmap,
+  Relations,
 }
 pub use AnalysisGraphNode as GraphNode;
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -77,9 +80,10 @@ pub struct AnalysisGraphEdge {
   pub source: String,
   pub target: String,
   pub kind: EdgeKind,
+  pub count: usize,
 }
 pub use AnalysisEdgeKind as EdgeKind;
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalysisEdgeKind {
   LinksTo,
@@ -141,4 +145,34 @@ pub struct AnalysisPublicationChapter {
   pub word_count: usize,
   pub estimated_pages: usize,
   pub excerpt: String,
+}
+
+pub use AnalysisWorkspaceGraphRequest as WorkspaceGraphRequest;
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[serde(deny_unknown_fields)]
+pub struct AnalysisWorkspaceGraphRequest {
+  #[serde(deserialize_with = "required_center_path")]
+  #[specta(type = Option<String>)]
+  pub center_path: Option<String>,
+  pub depth: u8,
+  pub direction: GraphDirection,
+  pub include_attachments: bool,
+  pub include_missing: bool,
+  pub max_nodes: usize,
+  pub max_edges: usize,
+}
+
+fn required_center_path<'de, D: serde::Deserializer<'de>>(
+  deserializer: D,
+) -> Result<Option<String>, D::Error> {
+  Option::deserialize(deserializer)
+}
+
+pub use AnalysisGraphDirection as GraphDirection;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum AnalysisGraphDirection {
+  Both,
+  Incoming,
+  Outgoing,
 }

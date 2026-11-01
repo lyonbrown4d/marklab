@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import type { WorkspaceTreeExistenceResult } from '@/types/workspaceTree'
 
@@ -21,7 +22,9 @@ const render = (ui: ReactElement) => {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
   return renderComponent(ui, {
     wrapper: ({ children }) => (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
     ),
   })
 }

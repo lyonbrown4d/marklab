@@ -19,12 +19,9 @@ type ExternalWebPreviewSurfaceProps = {
   capturePriority?: PreviewCapturePriority
   captureRequested?: boolean
   className?: string
-  dragHandleClassName?: string
-  interactionClassName?: string
   requested: boolean
   title?: string
   url: string
-  variant: 'editor' | 'graph'
 }
 
 const siteLabel = (url: string) => {
@@ -39,13 +36,10 @@ export const ExternalWebPreviewSurface = ({
   action,
   capturePriority = 'background',
   className,
-  dragHandleClassName,
-  interactionClassName,
   requested,
   captureRequested = requested,
   title,
   url,
-  variant,
 }: ExternalWebPreviewSurfaceProps) => {
   const openWebTab = useOpenWebTab()
   const { capture, metadata, retryPreview } = useExternalWebPreviewData({
@@ -65,7 +59,7 @@ export const ExternalWebPreviewSurface = ({
     <div
       className={cn(
         'group/link-card relative overflow-hidden rounded-xl border border-border/70 bg-background/90 text-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/30 hover:shadow-[0_10px_28px_hsl(var(--foreground)/0.08)] motion-reduce:transform-none',
-        variant === 'editor' ? 'my-3' : 'size-full min-h-0',
+        'my-3',
         className,
       )}
       data-external-web-preview={url}
@@ -73,39 +67,22 @@ export const ExternalWebPreviewSurface = ({
       {result?.kind === 'image' ? (
         <>
           <a
-            className={cn(
-              'relative block size-full no-underline',
-              !dragHandleClassName && interactionClassName,
-            )}
+            className="relative block size-full no-underline"
             href={result.url}
             rel="noopener noreferrer"
             target="_blank"
           >
             <img
               alt={fallbackTitle}
-              className={cn(
-                'w-full bg-muted/15 transition-transform duration-300 group-hover/link-card:scale-[1.005] motion-reduce:transform-none',
-                variant === 'graph' ? 'size-full object-cover' : 'max-h-[28rem] object-contain',
-              )}
+              className="max-h-[28rem] w-full bg-muted/15 object-contain transition-transform duration-300 group-hover/link-card:scale-[1.005] motion-reduce:transform-none"
               loading="lazy"
               referrerPolicy="no-referrer"
               src={toWebviewAssetUrl(result.src)}
             />
-            {variant === 'editor' ? (
-              <PreviewFooter
-                icon={<ImageIcon aria-hidden className="size-3.5" />}
-                label={siteLabel(result.url)}
-              />
-            ) : (
-              <span
-                className={cn(
-                  'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 text-xs font-medium text-white/80',
-                  dragHandleClassName,
-                )}
-              >
-                {siteLabel(result.url)}
-              </span>
-            )}
+            <PreviewFooter
+              icon={<ImageIcon aria-hidden className="size-3.5" />}
+              label={siteLabel(result.url)}
+            />
           </a>
           {action}
         </>
@@ -115,18 +92,15 @@ export const ExternalWebPreviewSurface = ({
           appUrl={appUrl}
           capture={capture.data}
           description={result?.kind === 'webpage' ? result.description : undefined}
-          dragHandleClassName={dragHandleClassName}
           failed={failed}
           fallbackTitle={fallbackTitle}
           hostname={hostname}
-          interactionClassName={interactionClassName}
           loading={requested && metadata.isPending}
           requested={requested}
           retryPreview={retryPreview}
           siteName={result?.kind === 'webpage' ? result.site_name || hostname : hostname}
           title={result?.kind === 'webpage' ? result.title || fallbackTitle : fallbackTitle}
           url={result?.kind === 'webpage' ? result.url : url}
-          variant={variant}
           onOpenInApp={() =>
             openWebTab(
               appUrl ?? webpageUrl,
@@ -144,11 +118,9 @@ type WebpagePreviewProps = {
   appUrl: string | null
   capture?: { height: number; src: string; width: number }
   description?: string | null
-  dragHandleClassName?: string
   failed: boolean
   fallbackTitle: string
   hostname: string
-  interactionClassName?: string
   loading: boolean
   onOpenInApp: () => void
   requested: boolean
@@ -156,7 +128,6 @@ type WebpagePreviewProps = {
   siteName: string
   title: string
   url: string
-  variant: 'editor' | 'graph'
 }
 
 const WebpagePreview = (props: WebpagePreviewProps) => {
@@ -165,18 +136,11 @@ const WebpagePreview = (props: WebpagePreviewProps) => {
     <div
       className={cn(
         'relative overflow-hidden',
-        props.variant === 'graph'
-          ? 'size-full min-h-0'
-          : props.capture
-            ? 'h-[clamp(11rem,32vw,20rem)]'
-            : 'min-h-28',
+        props.capture ? 'h-[clamp(11rem,32vw,20rem)]' : 'min-h-28',
       )}
     >
       <a
-        className={cn(
-          'absolute inset-0 block overflow-hidden bg-muted/25 no-underline outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-          !props.dragHandleClassName && props.interactionClassName,
-        )}
+        className="absolute inset-0 block overflow-hidden bg-muted/25 no-underline outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         href={props.url}
         rel="noopener noreferrer"
         target="_blank"
@@ -210,25 +174,14 @@ const WebpagePreview = (props: WebpagePreviewProps) => {
         <span
           className={cn(
             'absolute inset-x-0 bottom-0 block min-w-0 px-4 pb-3.5 pr-12',
-            props.dragHandleClassName,
             props.capture ? 'text-white' : 'text-foreground',
           )}
         >
           <PreviewCaption {...props} />
         </span>
       </a>
-      {props.failed ? (
-        <PreviewFailure
-          interactionClassName={props.interactionClassName}
-          onRetry={props.retryPreview}
-        />
-      ) : null}
-      {props.appUrl ? (
-        <PreviewOpenAction
-          interactionClassName={props.interactionClassName}
-          onOpen={props.onOpenInApp}
-        />
-      ) : null}
+      {props.failed ? <PreviewFailure onRetry={props.retryPreview} /> : null}
+      {props.appUrl ? <PreviewOpenAction onOpen={props.onOpenInApp} /> : null}
       {props.action}
     </div>
   )

@@ -75,7 +75,7 @@ describe('Tauri window lifecycle', () => {
     expect(await api.window.isMaximized()).toBe(false)
     await api.window.maximize()
     await api.window.unmaximize()
-    await api.window.minimize()
+    await expect(api.window.minimize()).resolves.toBeUndefined()
     expect(native.invoke.mock.calls).toEqual([
       ['window_get_maximized', { request: {} }],
       ['window_set_maximized', { request: { maximized: true } }],

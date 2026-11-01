@@ -3,7 +3,6 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource/jetbrains-mono/latin-400.css'
 import '@fontsource/jetbrains-mono/latin-500.css'
 import '@fontsource/jetbrains-mono/latin-600.css'
-import '@xyflow/react/dist/base.css'
 
 import App from '@/App'
 import AppToaster from '@/app/AppToaster'

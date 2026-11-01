@@ -182,19 +182,7 @@ export const renderEditor = (
     />,
   )
 
-export const renderEmbeddedEditor = () =>
-  render(
-    <MarkdownEditor
-      activePath="notes/example.md"
-      value="# Heading"
-      onChange={vi.fn()}
-      placeholder="Write"
-      slashLabels={slashLabels}
-      variant="embedded"
-    />,
-  )
-
-export const renderAutoFocusEmbeddedEditor = () => {
+export const renderAutoFocusEditor = () => {
   const renderValue = (value: string) => (
     <MarkdownEditor
       activePath="notes/example.md"
@@ -203,7 +191,6 @@ export const renderAutoFocusEmbeddedEditor = () => {
       placeholder="Write"
       slashLabels={slashLabels}
       value={value}
-      variant="embedded"
     />
   )
   const view = render(renderValue('# Heading'))

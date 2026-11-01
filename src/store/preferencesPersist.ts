@@ -18,10 +18,8 @@ export type PreferencesPersistedState = Pick<
   | 'autoSystemThemeSync'
   | 'customThemeId'
   | 'defaultFileView'
-  | 'graphContentMode'
-  | 'graphMiniMapEnabled'
-  | 'graphMiniMapPosition'
-  | 'graphMiniMapSize'
+  | 'graphShowAttachments'
+  | 'graphShowMissing'
   | 'hideMarkdownDefaultAppPrompt'
   | 'immersiveFocusIntensity'
   | 'immersiveFocusMode'
@@ -84,10 +82,8 @@ export const selectPreferencesPersistedState = (
   sourceCodeMiniMapEnabled: state.sourceCodeMiniMapEnabled,
   vimModeEnabled: state.vimModeEnabled,
   defaultFileView: state.defaultFileView,
-  graphMiniMapEnabled: state.graphMiniMapEnabled,
-  graphMiniMapPosition: state.graphMiniMapPosition,
-  graphMiniMapSize: state.graphMiniMapSize,
-  graphContentMode: state.graphContentMode,
+  graphShowAttachments: state.graphShowAttachments,
+  graphShowMissing: state.graphShowMissing,
   hideMarkdownDefaultAppPrompt: state.hideMarkdownDefaultAppPrompt,
   markdownAssetImportStrategy: state.markdownAssetImportStrategy,
   markdownContentWidth: state.markdownContentWidth,

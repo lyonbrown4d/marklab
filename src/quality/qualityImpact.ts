@@ -5,7 +5,7 @@ export type QualityImpactArea =
   | 'Native menus / windows'
   | 'Source editor / Monaco'
   | 'WYSIWYG / Plate'
-  | 'React Flow graph'
+  | 'Knowledge relation graph'
   | 'Settings / persisted preferences'
   | 'Keyboard shortcuts'
   | 'IPC / runtime services'

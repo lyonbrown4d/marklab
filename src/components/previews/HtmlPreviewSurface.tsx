@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n/useI18n'
 type HtmlPreviewSurfaceProps = {
   source: string
   title: string
-  presentation?: 'embedded' | 'full' | 'graph'
+  presentation?: 'embedded' | 'full'
 }
 
 const HtmlPreviewSurface = ({ source, title, presentation = 'full' }: HtmlPreviewSurfaceProps) => {

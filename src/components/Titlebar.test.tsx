@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
+// Resolve the real lazy dialog before measuring command interaction readiness.
+import '@/components/TitlebarCommandDialog'
 import i18n from '@/i18n/setup'
 import { writeClipboardText } from '@/runtime/clipboard'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -175,6 +177,8 @@ describe('Titlebar command palette', () => {
     const onOpenHeading = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenHeading }))
 
+    // The lazy dialog's fallback also has a combobox, but cannot accept input.
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled())
     await userEvent.type(screen.getByRole('combobox'), 'indexed')
     const indexedOptions = await screen.findAllByRole('option', { name: /Indexed Detail/i })
     await userEvent.click(indexedOptions[0])

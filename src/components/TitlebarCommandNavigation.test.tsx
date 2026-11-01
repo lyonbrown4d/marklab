@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, PropsWithChildren } from 'react'
 import Titlebar from '@/components/Titlebar'
+// Resolve the real lazy dialog before measuring navigation query readiness.
+import '@/components/TitlebarCommandDialog'
 import i18n from '@/i18n/setup'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'

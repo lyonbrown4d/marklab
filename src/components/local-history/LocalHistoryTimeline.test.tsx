@@ -94,6 +94,9 @@ vi.mock('@/i18n/useI18n', () => ({
   }),
 }))
 
+// These cases exercise restore/delete effects; load the real preview before their test clocks.
+await import('@/components/local-history/LocalHistoryPreviewDialog')
+
 const entry = {
   id: 'snapshot-1',
   path: 'README.md',

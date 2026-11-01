@@ -89,8 +89,9 @@ operation and offer a useful retry or recovery path.
   read-only state without duplicating title-bar information.
 - Search Everywhere is the unified route to files, workspace text, headings, commands,
   settings, and recent locations.
-- The workspace map is a first-class workspace view. Markdown nodes can become directly
-  editable, while only one heavy editor instance is active at a time.
+- The relationship graph is a first-class workspace view. Nodes represent documents and
+  directed edges represent Markdown references. Selecting a node previews it; opening it
+  navigates to the document editor. The document inspector provides a bounded local graph.
 - AI is an explicit user capability. Local and remote providers can coexist; automatic AI
   suggestions are opt-in. Local lexical and language-service completion remains independent.
 

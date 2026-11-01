@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useGraphData } from '@/app/useGraphData'
 import { fsApi, type FsGraph } from '@/services/fsApi'
 
@@ -18,7 +19,11 @@ vi.mock('@/services/fsApi', async () => {
 })
 
 const graph = (label: string): FsGraph => ({
-  mode: 'mindmap',
+  mode: 'relations',
+  topology_key: label,
+  truncated: false,
+  total_nodes: 1,
+  total_edges: 0,
   revision: label,
   nodes: [
     {
@@ -50,6 +55,7 @@ const deferred = <T,>() => {
 describe('useGraphData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    usePreferencesStore.setState({ graphShowAttachments: false, graphShowMissing: true })
   })
 
   it('does not share workspace graph queries between workspaces with identical indexes', async () => {
@@ -58,46 +64,44 @@ describe('useGraphData', () => {
       .mockResolvedValueOnce(graph('second'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      ({ workspaceKey }) => useGraphData('workspace', workspaceKey, 'none'),
+      ({ workspaceKey }) => useGraphData('workspace', workspaceKey),
       { initialProps: { workspaceKey: 'directory:C:/one' }, wrapper: createWrapper(queryClient) },
     )
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('first'))
+    await waitFor(() => expect(result.current.graph.nodes[0]?.label).toBe('first'))
 
     rerender({ workspaceKey: 'directory:C:/two' })
 
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('second'))
+    await waitFor(() => expect(result.current.graph.nodes[0]?.label).toBe('second'))
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledTimes(2)
   })
 
   it('loads the workspace graph without requesting a renderer-side index', async () => {
     vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('early'))
     const queryClient = createQueryClient()
-    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one', 'none'), {
+    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one'), {
       wrapper: createWrapper(queryClient),
     })
 
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('early'))
+    await waitFor(() => expect(result.current.graph.nodes[0]?.label).toBe('early'))
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
   })
 
-  it('changes content presentation without refetching graph topology', async () => {
-    vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('stable'))
+  it('uses a separate bounded query when graph filters change', async () => {
+    vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValue(graph('stable'))
     const queryClient = createQueryClient()
-    const { result, rerender } = renderHook(
-      ({ contentMode }) => useGraphData('workspace', 'directory:C:/one', contentMode),
-      {
-        initialProps: { contentMode: 'none' as const } as {
-          contentMode: 'none' | 'summary' | 'full'
-        },
-        wrapper: createWrapper(queryClient),
-      },
-    )
+    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one'), {
+      wrapper: createWrapper(queryClient),
+    })
     await waitFor(() => expect(result.current.graph.nodes).toHaveLength(1))
-
-    rerender({ contentMode: 'summary' })
-
-    expect(result.current.graph.nodes[0]?.data.contentMode).toBe('summary')
-    expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
+    act(() => usePreferencesStore.getState().setGraphShowAttachments(true))
+    await waitFor(() => expect(fsApi.getWorkspaceGraph).toHaveBeenCalledTimes(2))
+    expect(fsApi.getWorkspaceGraph).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        center_path: null,
+        include_attachments: true,
+        max_nodes: 10_000,
+      }),
+    )
   })
 
   it('exposes errors and a stable retry for workspace graphs', async () => {
@@ -105,10 +109,9 @@ describe('useGraphData', () => {
       .mockRejectedValueOnce(new Error('graph unavailable'))
       .mockResolvedValueOnce(graph('ok'))
     const queryClient = createQueryClient()
-    const { result, rerender } = renderHook(
-      () => useGraphData('workspace', 'directory:C:/one', 'none'),
-      { wrapper: createWrapper(queryClient) },
-    )
+    const { result, rerender } = renderHook(() => useGraphData('workspace', 'directory:C:/one'), {
+      wrapper: createWrapper(queryClient),
+    })
     await waitFor(() => expect(result.current.error).toEqual(new Error('graph unavailable')))
     const retry = result.current.retry
 
@@ -118,7 +121,7 @@ describe('useGraphData', () => {
       await result.current.retry()
     })
 
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('ok'))
+    await waitFor(() => expect(result.current.graph.nodes[0]?.label).toBe('ok'))
     expect(result.current.error).toBeNull()
   })
 
@@ -129,7 +132,7 @@ describe('useGraphData', () => {
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise)
     const queryClient = createQueryClient()
-    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one', 'none'), {
+    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one'), {
       wrapper: createWrapper(queryClient),
     })
     expect(result.current.loading).toBe(true)
@@ -144,7 +147,7 @@ describe('useGraphData', () => {
     })
     await waitFor(() => expect(result.current.refreshing).toBe(true))
     expect(result.current.loading).toBe(false)
-    expect(result.current.graph.nodes[0]?.data.label).toBe('cached')
+    expect(result.current.graph.nodes[0]?.label).toBe('cached')
     act(() => second.resolve(graph('fresh')))
     await waitFor(() => expect(result.current.refreshing).toBe(false))
   })

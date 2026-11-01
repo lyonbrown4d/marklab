@@ -11,8 +11,6 @@ use crate::{
   error::BackendResult,
   export::ExportService,
   git::GitState,
-  graph_compute::GraphComputeService,
-  graph_layout::GraphLayoutStore,
   history::HistoryStore,
   language::LanguageService,
   link_preview::LinkPreviewService,
@@ -42,10 +40,6 @@ static_module! {
         external cache_dir: PathBuf;
         #[scope(root)]
         history: HistoryStore = factories::history(database);
-        #[scope(root)]
-        graph_layout: GraphLayoutStore = factories::graph_layout(database);
-        #[scope(root)]
-        graph_compute: GraphComputeService = factories::graph_compute();
         #[scope(root)]
         async ai: AiService = factories::ai(database);
         #[scope(root)]
@@ -83,8 +77,6 @@ pub(crate) struct DesktopServices {
   registry: WorkspaceRegistry,
   analysis: AnalysisService,
   history: HistoryStore,
-  graph_layout: GraphLayoutStore,
-  graph_compute: GraphComputeService,
   ai: AiService,
   sync: SyncService,
   preview: LinkPreviewService,
@@ -121,8 +113,6 @@ impl DesktopServices {
     let registry = graph.registry().await.map_err(graph_error)?;
     let analysis = graph.analysis().await.map_err(graph_error)?;
     let history = graph.history().await.map_err(graph_error)?;
-    let graph_layout = graph.graph_layout().await.map_err(graph_error)?;
-    let graph_compute = graph.graph_compute().map_err(graph_error)?;
     let git = graph.git().await.map_err(graph_error)?;
     let ai = graph.ai().await.map_err(graph_error)?;
     let sync = graph.sync().await.map_err(graph_error)?;
@@ -147,8 +137,6 @@ impl DesktopServices {
       registry: take(registry)?,
       analysis: take(analysis)?,
       history: take(history)?,
-      graph_layout: take(graph_layout)?,
-      graph_compute: take(graph_compute)?,
       ai: take(ai)?,
       sync: take(sync)?,
       preview: take(preview)?,
@@ -172,8 +160,6 @@ impl DesktopServices {
     app.manage(self.registry);
     app.manage(self.analysis);
     app.manage(self.history);
-    app.manage(self.graph_layout);
-    app.manage(self.graph_compute);
     app.manage(self.ai);
     app.manage(self.sync);
     app.manage(self.preview);

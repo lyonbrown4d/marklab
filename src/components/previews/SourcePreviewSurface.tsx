@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { sourceLanguageForPath } from '@/logic/sourceLanguages'
-import { cn } from '@/lib/utils'
 import { writeClipboardText } from '@/runtime/clipboard'
 import { fsApi } from '@/services/fsApi'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
@@ -34,14 +33,11 @@ const SpreadsheetPreviewSurface = lazy(
 export const MAX_SOURCE_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 export const MAX_SOURCE_PREVIEW_CHARACTERS = 200_000
 export const MAX_SOURCE_PREVIEW_LINES = 2_000
-export const GRAPH_SOURCE_PREVIEW_BYTES = 16 * 1024
-export const GRAPH_SOURCE_PREVIEW_CHARACTERS = 8_000
-export const GRAPH_SOURCE_PREVIEW_LINES = 40
 
 type SourcePreviewSurfaceProps = {
   src?: string
   path: string
-  presentation?: 'embedded' | 'full' | 'graph'
+  presentation?: 'embedded' | 'full'
   title: string
 }
 
@@ -75,22 +71,27 @@ const SourcePreviewSurface = ({
   const rootKind = useLayoutContext((state) => state.rootKind)
   const rootPath = useLayoutContext((state) => state.rootPath)
   const language = sourceLanguageForPath(path)
-  const graphPresentation = presentation === 'graph'
-  const delimitedDocument = isDelimitedFilePath(path) && !graphPresentation
-  const byteLimit = graphPresentation ? GRAPH_SOURCE_PREVIEW_BYTES : MAX_SOURCE_PREVIEW_BYTES
-  const maxCharacters = graphPresentation
-    ? GRAPH_SOURCE_PREVIEW_CHARACTERS
-    : MAX_SOURCE_PREVIEW_CHARACTERS
-  const maxLines = graphPresentation ? GRAPH_SOURCE_PREVIEW_LINES : MAX_SOURCE_PREVIEW_LINES
+  const delimitedDocument = isDelimitedFilePath(path)
   const [copyState, setCopyState] = useState<CopyState>({ path, status: 'idle' })
   const currentCopyStatus = copyState.path === path ? copyState.status : 'idle'
   const sourceQuery = useQuery({
-    queryKey: ['source-preview', rootKind, rootPath, path, byteLimit, ...(src ? [src] : [])],
+    queryKey: [
+      'source-preview',
+      rootKind,
+      rootPath,
+      path,
+      MAX_SOURCE_PREVIEW_BYTES,
+      ...(src ? [src] : []),
+    ],
     queryFn: async () => {
       const preview = src
-        ? await readPreviewTextAsset(src, byteLimit)
-        : await fsApi.readTextPreview(path, byteLimit)
-      const rendered = previewLines(preview.content, maxCharacters, maxLines)
+        ? await readPreviewTextAsset(src, MAX_SOURCE_PREVIEW_BYTES)
+        : await fsApi.readTextPreview(path, MAX_SOURCE_PREVIEW_BYTES)
+      const rendered = previewLines(
+        preview.content,
+        MAX_SOURCE_PREVIEW_CHARACTERS,
+        MAX_SOURCE_PREVIEW_LINES,
+      )
       return {
         ...preview,
         ...rendered,
@@ -151,12 +152,7 @@ const SourcePreviewSurface = ({
   if (!data) return null
 
   const renderableDiagram = !isMermaidFilePath(path) || canRenderMermaidSource(data.content)
-  if (
-    hasSourceDocumentPreview(path) &&
-    !data.truncated &&
-    !graphPresentation &&
-    renderableDiagram
-  ) {
+  if (hasSourceDocumentPreview(path) && !data.truncated && renderableDiagram) {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
         <SourceDocumentPreview
@@ -181,10 +177,7 @@ const SourcePreviewSurface = ({
   return (
     <article
       aria-label={t('preview.sourceLabel', { title })}
-      className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm',
-        graphPresentation ? 'h-full min-h-0' : 'min-h-[20rem]',
-      )}
+      className="flex min-h-[20rem] flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm"
       onClick={stopChromeEvent}
       onDoubleClick={stopChromeEvent}
       onPointerDown={stopChromeEvent}

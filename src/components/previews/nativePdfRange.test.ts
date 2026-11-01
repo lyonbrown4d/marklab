@@ -49,7 +49,12 @@ describe('native PDF range transport', () => {
     range.requestDataRange(length - 512 * 1024, length)
     await vi.waitFor(() => expect(requests).toHaveLength(4))
     await vi.waitFor(() => expect(delivered).toHaveBeenCalledOnce())
-    expect(delivered).toHaveBeenCalledWith(length - 512 * 1024, new Uint8Array(512 * 1024))
+    const [begin, bytes] = delivered.mock.calls[0]!
+    expect(begin).toBe(length - 512 * 1024)
+    expect(bytes).toBeInstanceOf(Uint8Array)
+    expect(bytes).toHaveLength(512 * 1024)
+    // Check every delivered byte without recursively matching half a million array entries.
+    expect(bytes?.every((byte) => byte === 0)).toBe(true)
     expect(failed).not.toHaveBeenCalled()
     expect(
       requests.every(

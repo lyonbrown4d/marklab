@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
 import { useLatest } from 'ahooks'
-import {
-  EmbeddedPreviewBody,
-  type EmbeddedPreviewVariant,
-} from '@/components/previews/EmbeddedPreviewBody'
+import { EmbeddedPreviewBody } from '@/components/previews/EmbeddedPreviewBody'
 import { EmbeddedPreviewDialog } from '@/components/previews/EmbeddedPreviewDialog'
 import { EmbeddedPreviewHeader } from '@/components/previews/EmbeddedPreviewHeader'
 import {
@@ -24,7 +21,6 @@ type EmbeddedFilePreviewProps = {
   documentPath: string | null
   target: string
   title?: string
-  variant?: EmbeddedPreviewVariant
 }
 
 type ResolvedState = {
@@ -47,7 +43,6 @@ export const EmbeddedFilePreview = ({
   documentPath,
   target,
   title,
-  variant = 'document',
 }: EmbeddedFilePreviewProps) => {
   const { t } = useI18n()
   const cardRef = useRef<HTMLElement | null>(null)
@@ -93,16 +88,6 @@ export const EmbeddedFilePreview = ({
   const stopEditorChromeEvent = useCallback((event: SyntheticEvent) => {
     event.stopPropagation()
   }, [])
-  const handlePointerDown = useCallback(
-    (event: SyntheticEvent) => {
-      const targetElement = event.target instanceof Element ? event.target : null
-      const graphDragHandle = targetElement?.closest('.embedded-preview-drag-handle')
-      const interactiveControl = targetElement?.closest('.nodrag')
-      if (variant === 'graph' && graphDragHandle && !interactiveControl) return
-      event.stopPropagation()
-    },
-    [variant],
-  )
   const requestResolve = useCallback(() => setResolveRequested(true), [])
 
   const refreshTarget = useCallback(async () => {
@@ -110,8 +95,7 @@ export const EmbeddedFilePreview = ({
     const request = ++resolutionRequest.current
     const isCurrent = () =>
       mounted.current && latestKey.current === key && resolutionRequest.current === request
-    // Keep a valid preview mounted while refreshing its asset URL. Unmounting
-    // the graph PDF gate here would discard the user's pending activation.
+    // Keep a valid preview mounted while refreshing its asset URL.
     setResolvedState((current) =>
       current.key === key && current.target && !current.failed
         ? current
@@ -198,20 +182,17 @@ export const EmbeddedFilePreview = ({
       ref={cardRef}
       className={cn(
         'embedded-preview-card group overflow-hidden rounded-lg border border-border/80 bg-background/85 text-foreground shadow-sm transition-colors [contain-intrinsic-size:0_320px] [content-visibility:auto] hover:border-primary/35',
-        variant === 'graph' && 'h-full min-h-0',
         className,
       )}
       contentEditable={false}
       data-marklab-editor-chrome="embedded-preview"
-      data-preview-variant={variant}
       onClick={stopEditorChromeEvent}
       onDoubleClick={stopEditorChromeEvent}
       onFocusCapture={requestResolve}
-      onPointerDown={handlePointerDown}
+      onPointerDown={stopEditorChromeEvent}
       onPointerEnter={requestResolve}
     >
       <EmbeddedPreviewHeader
-        dragHandle={variant === 'graph'}
         failed={failed}
         kind={kind}
         labels={{
@@ -241,7 +222,6 @@ export const EmbeddedFilePreview = ({
           displayTitle={displayTitle}
           failed={failed}
           failedLabel={t('preview.inlineFailed')}
-          graphPdfLoadLabel={t('preview.graphPdfLoad')}
           loadingLabel={t('preview.inlineLoading')}
           pendingLabel={t('preview.inlinePending')}
           retryLabel={t('actions.retry')}
@@ -250,7 +230,6 @@ export const EmbeddedFilePreview = ({
           shouldResolve={shouldResolve}
           status={status}
           target={target}
-          variant={variant}
         />
       ) : null}
       <EmbeddedPreviewDialog

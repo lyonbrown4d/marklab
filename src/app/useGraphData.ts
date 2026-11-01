@@ -1,49 +1,44 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { buildGraphFromKnowledgeGraph, type GraphData } from '@/logic/graph'
 import { fsApi, type FsGraph } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
-import type { GraphContentMode } from '@/store/appTypes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { workspaceGraphQueryKey, workspaceGraphRequest } from '@/logic/knowledgeGraphRequest'
 
-const EMPTY_GRAPH: GraphData = { nodes: [], edges: [], layoutKey: 'empty' }
+const EMPTY_GRAPH: FsGraph = {
+  mode: 'relations',
+  revision: '',
+  topology_key: 'empty',
+  nodes: [],
+  edges: [],
+  truncated: false,
+  total_nodes: 0,
+  total_edges: 0,
+}
 
-export const useGraphData = (
-  mode: 'workspace' | null,
-  workspaceKey: string,
-  contentMode: GraphContentMode,
-) => {
-  const desktopAvailable = isDesktopRuntime()
-  const enabled = Boolean(mode)
-
-  const workspaceGraphQuery = useQuery<FsGraph>({
-    queryKey: ['workspace-graph', workspaceKey],
-    queryFn: () => fsApi.getWorkspaceGraph(),
-    enabled: mode === 'workspace' && desktopAvailable,
+export const useGraphData = (mode: 'workspace' | null, workspaceKey: string) => {
+  const includeAttachments = usePreferencesStore((state) => state.graphShowAttachments)
+  const includeMissing = usePreferencesStore((state) => state.graphShowMissing)
+  const request = workspaceGraphRequest(includeAttachments, includeMissing)
+  const query = useQuery({
+    queryKey: workspaceGraphQueryKey(workspaceKey, request),
+    queryFn: () => fsApi.getWorkspaceGraph(request),
+    enabled: mode === 'workspace' && isDesktopRuntime(),
     staleTime: 2_000,
-    placeholderData: (previousData, previousQuery) =>
-      previousQuery?.queryKey[1] === workspaceKey ? previousData : undefined,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === workspaceKey ? previous : undefined,
   })
-  const { refetch: refetchWorkspaceGraph } = workspaceGraphQuery
-
-  const graph = useMemo(() => {
-    if (!enabled) return EMPTY_GRAPH
-
-    if (mode === 'workspace' && workspaceGraphQuery.data) {
-      return buildGraphFromKnowledgeGraph(workspaceGraphQuery.data, contentMode)
-    }
-
-    return EMPTY_GRAPH
-  }, [contentMode, enabled, mode, workspaceGraphQuery.data])
-
-  const loading =
-    mode === 'workspace' && workspaceGraphQuery.isFetching && !workspaceGraphQuery.data
-  const refreshing =
-    mode === 'workspace' && workspaceGraphQuery.isFetching && Boolean(workspaceGraphQuery.data)
-  const error = mode === 'workspace' ? (workspaceGraphQuery.error ?? null) : null
+  const { refetch } = query
   const retry = useCallback(() => {
-    if (mode === 'workspace') return refetchWorkspaceGraph()
+    if (mode === 'workspace') return refetch()
     return Promise.resolve()
-  }, [mode, refetchWorkspaceGraph])
+  }, [mode, refetch])
 
-  return { graph, loading, error, retry, refreshing }
+  return {
+    graph: mode ? (query.data ?? EMPTY_GRAPH) : EMPTY_GRAPH,
+    loading: mode === 'workspace' && query.isFetching && !query.data,
+    refreshing: mode === 'workspace' && query.isFetching && Boolean(query.data),
+    error: mode === 'workspace' ? (query.error ?? null) : null,
+    retry,
+  }
 }

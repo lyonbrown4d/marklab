@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -140,7 +141,9 @@ const renderFocusHandoff = () => {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <FocusHandoffHarness />
+      <MemoryRouter>
+        <FocusHandoffHarness />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }

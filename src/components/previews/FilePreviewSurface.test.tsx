@@ -27,22 +27,17 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 describe('FilePreviewSurface', () => {
-  it('routes Excel snapshots through the native spreadsheet preview and keeps graph nodes cheap', async () => {
+  it('routes Excel snapshots through the native spreadsheet preview', async () => {
     const props = {
       kind: 'spreadsheet' as const,
       path: 'report.xlsx',
       src: 'marklab-asset://local/v1/snapshot',
       title: 'report.xlsx',
     }
-    const view = render(<FilePreviewSurface {...props} snapshot />)
+    render(<FilePreviewSurface {...props} snapshot />)
     const table = await screen.findByTestId('spreadsheet-preview')
     expect(table).toHaveAttribute('data-path', 'report.xlsx')
     expect(table).toHaveAttribute('data-source', props.src)
-    view.rerender(<FilePreviewSurface {...props} presentation="graph" />)
-    expect(screen.queryByTestId('spreadsheet-preview')).not.toBeInTheDocument()
-    expect(
-      view.container.querySelector('[data-slot="graph-preview-placeholder"]'),
-    ).toBeInTheDocument()
   })
   it('routes source resources through the bounded source preview', async () => {
     render(
@@ -59,33 +54,17 @@ describe('FilePreviewSurface', () => {
     expect(preview).toHaveTextContent('example.ts')
   })
 
-  it('uses real native image content for graph previews', () => {
+  it('uses real native image content for previews', () => {
     render(
       <FilePreviewSurface
         kind="image"
         path="images/cover.png"
-        presentation="graph"
         src="asset://images/cover.png"
         title="cover.png"
       />,
     )
 
     expect(screen.getByRole('img')).toHaveAttribute('src', 'asset://images/cover.png')
-  })
-
-  it('uses a lightweight placeholder for heavyweight graph previews', () => {
-    const { container } = render(
-      <FilePreviewSurface
-        kind="docx"
-        path="docs/brief.docx"
-        presentation="graph"
-        src="asset://docs/brief.docx"
-        title="brief.docx"
-      />,
-    )
-
-    expect(container.querySelector('[data-slot="graph-preview-placeholder"]')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('uses a shared empty state for unsupported preview kinds', () => {

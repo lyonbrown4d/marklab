@@ -10,7 +10,7 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
 - `src/services/*` and the typed `src/runtime/*` adapter own desktop calls and
   scoped event subscriptions. Commands validate requests and root ownership;
   external child webviews have no desktop capability.
-- Monaco owns source editing; Plate owns rich editing; React Flow owns graph
+- Monaco owns source editing; Plate owns rich editing; Sigma.js owns relation graph
   interaction and layout. Native edit routing respects actual focus and Vim ownership.
 - Zustand owns renderer preferences. Rust's settings allowlist and per-window
   session rules control persistence.
@@ -47,7 +47,7 @@ covered by its own real service tests, rather than counted as frontend coverage.
 | Native menus / windows           | double dispatch, focus, close/quit or splash races             | native lifecycle/menu and focused edit tests; native window smoke              |
 | Source editor / Monaco           | duplicate edits, option or navigation drift                    | source editor and focused edit tests                                           |
 | WYSIWYG / Plate                  | paste/drop, serialization, readiness or performance regression | editor integration, preview/zoom and renderer performance tests                |
-| React Flow graph                 | node mapping, drag/selection or model drift                    | graph logic, workspace map and style tests                                     |
+| Knowledge relation graph         | node mapping, drag/selection or model drift                    | graph logic, workspace map and style tests                                     |
 | Settings / persisted preferences | missing field, defaults or session isolation                   | settings allowlist contract, Rust settings/session tests and affected controls |
 | Keyboard shortcuts               | missing defaults, scope or settings drift                      | shortcut catalog, settings and editor/map tests                                |
 | IPC / runtime services           | DTO mismatch, broad capabilities or stale events               | typed runtime/service and native capability tests                              |

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -203,10 +203,13 @@ describe('CodeBlockElement language intelligence', () => {
   it('renders PlantUML fences and applies source edits as one undoable change', async () => {
     const source = '@startuml\nAlice -> Bob\n@enduml'
     const { editor, container } = renderCodeBlock({ language: 'puml', source })
+    // Await lazy module loading separately from the DOM query's shorter deadline.
+    await act(() => vi.dynamicImportSettled())
     await screen.findByTestId('plantuml-preview')
     expect(container.querySelector('code[data-language="puml"]')).not.toBeVisible()
     const original = structuredClone(editor.children)
     fireEvent.click(screen.getByRole('button', { name: 'Edit PlantUML source' }))
+    await act(() => vi.dynamicImportSettled())
     fireEvent.change(await screen.findByRole('textbox', { name: 'Expanded code editor' }), {
       target: { value: '@startuml\nAlice -> Carol\n@enduml' },
     })

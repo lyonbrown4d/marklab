@@ -124,31 +124,29 @@ describe('writing-first layout preferences', () => {
     })
   })
 
-  it('stores the graph minimap corner and compact size', () => {
+  it('persists relation graph filters', async () => {
     const store = usePreferencesStore.getState()
-
-    expect(store.graphMiniMapPosition).toBe('bottom-right')
-    expect(store.graphMiniMapSize).toBe('regular')
-    store.setGraphMiniMapPosition('top-left')
-    store.setGraphMiniMapSize('compact')
-
-    expect(usePreferencesStore.getState()).toMatchObject({
-      graphMiniMapPosition: 'top-left',
-      graphMiniMapSize: 'compact',
-    })
-  })
-
-  it('rehydrates graph minimap presentation preferences', async () => {
+    expect(store.graphShowAttachments).toBe(false)
+    expect(store.graphShowMissing).toBe(true)
+    store.setGraphShowAttachments(true)
+    store.setGraphShowMissing(false)
+    expect(storage.setItem).toHaveBeenLastCalledWith(
+      'marklab.preferences',
+      expect.objectContaining({
+        state: expect.objectContaining({
+          graphShowAttachments: true,
+          graphShowMissing: false,
+        }),
+      }),
+    )
     storage.getItem.mockReturnValue({
-      state: { graphMiniMapPosition: 'top-right', graphMiniMapSize: 'compact' },
+      state: { graphShowAttachments: true, graphShowMissing: false },
       version: 2,
     })
-
     await usePreferencesStore.persist.rehydrate()
-
     expect(usePreferencesStore.getState()).toMatchObject({
-      graphMiniMapPosition: 'top-right',
-      graphMiniMapSize: 'compact',
+      graphShowAttachments: true,
+      graphShowMissing: false,
     })
   })
 

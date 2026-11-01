@@ -1,6 +1,5 @@
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { describe, expectTypeOf, it } from 'vitest'
 import {
-  markdownEditorVariants,
   type MarkdownEditorHandle,
   type MarkdownEditorProps,
   type MarkdownEditorStatus,
@@ -8,10 +7,6 @@ import {
 } from '@/components/editor/markdownEditorTypes'
 
 describe('markdownEditorTypes', () => {
-  it('exposes the supported editor variants without an editor-engine dependency', () => {
-    expect(markdownEditorVariants).toEqual(['page', 'embedded'])
-  })
-
   it('keeps the public editor contract strongly typed', () => {
     expectTypeOf<MarkdownEditorHandle>().toEqualTypeOf<{
       focus: () => void

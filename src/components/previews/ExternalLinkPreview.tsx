@@ -61,7 +61,6 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
         requested={requested}
         title={title}
         url={url}
-        variant="editor"
       />
     </article>
   )

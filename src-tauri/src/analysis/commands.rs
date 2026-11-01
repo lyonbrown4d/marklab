@@ -81,12 +81,17 @@ pub async fn fs_get_workspace_graph(
   window: WebviewWindow,
   registry: State<'_, WorkspaceRegistry>,
   analysis: State<'_, AnalysisService>,
-  request: EmptyRequest,
+  request: graph::WorkspaceGraphRequest,
 ) -> BackendResult<std::sync::Arc<graph::WorkspaceGraph>> {
-  let _ = request;
-  project(&window, &registry, &analysis, "graph", (), |index, ()| {
-    Ok(graph::graph(index))
-  })
+  super::graph_query::validate(&request)?;
+  project(
+    &window,
+    &registry,
+    &analysis,
+    "graph",
+    request,
+    graph::graph,
+  )
   .await
 }
 #[tauri::command]

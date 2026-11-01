@@ -1,10 +1,11 @@
 import { createStore } from 'zustand/vanilla'
+import type { GraphCameraState } from '@/features/knowledge-graph/types'
 
 export type FocusWorkspaceMapNodeRequest = {
   nodeId: string
   workspaceKey: string
   viewId?: string
-  viewport?: { x: number; y: number; zoom: number }
+  viewport?: GraphCameraState
 }
 
 type WorkspaceMapNavigationState = {

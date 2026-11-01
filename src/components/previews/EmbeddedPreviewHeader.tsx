@@ -11,11 +11,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { PreviewFileKind } from '@/logic/fileTypes'
-import { cn } from '@/lib/utils'
 
 type EmbeddedPreviewHeaderProps = {
   failed: boolean
-  dragHandle?: boolean
   kind: PreviewFileKind
   onExpand: () => void
   onOpenInSystem: () => void
@@ -48,7 +46,6 @@ const ActionLabel = ({ children }: { children: string }) => (
 
 export const EmbeddedPreviewHeader = ({
   failed,
-  dragHandle = false,
   kind,
   labels,
   onExpand,
@@ -62,10 +59,7 @@ export const EmbeddedPreviewHeader = ({
 
   return (
     <header
-      className={cn(
-        'flex min-h-10 items-center gap-2 border-b border-border/70 bg-card/80 px-2.5 py-1.5',
-        dragHandle && 'embedded-preview-drag-handle cursor-grab active:cursor-grabbing',
-      )}
+      className="flex min-h-10 items-center gap-2 border-b border-border/70 bg-card/80 px-2.5 py-1.5"
       data-slot="embedded-preview-header"
     >
       <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -75,7 +69,7 @@ export const EmbeddedPreviewHeader = ({
           {labels.kind}
         </Badge>
       </div>
-      <div className="nodrag nopan flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         {pathAvailable ? (
           <Button
             type="button"

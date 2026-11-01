@@ -61,7 +61,17 @@ export const nativePerformanceScenario = async (
       runtime.commands.invoke('fs_search_workspace', { query: '规则', limit: 100 }),
     )
     if (!search.result.length) throw new Error('The real workspace search returned no matches')
-    const graph = await timed(() => runtime.commands.invoke('fs_get_workspace_graph'))
+    const graph = await timed(() =>
+      runtime.commands.invoke('fs_get_workspace_graph', {
+        center_path: null,
+        depth: 1,
+        direction: 'both',
+        include_attachments: false,
+        include_missing: true,
+        max_nodes: 10000,
+        max_edges: 30000,
+      }),
+    )
     if (graph.result.nodes.length < plan.markdown.length)
       throw new Error('The workspace graph omitted documents')
     const documentOpens = []
@@ -119,7 +129,10 @@ export const nativePerformanceScenario = async (
       )
       if (!open) throw new Error('Graph control is unavailable')
       open.click()
-      await wait(() => document.querySelector('.react-flow') !== null, 'Graph did not render')
+      await wait(
+        () => document.querySelector('[data-testid="knowledge-graph"]') !== null,
+        'Graph did not render',
+      )
       document
         .querySelector<HTMLButtonElement>(
           '[data-app-focus-zone="titlebar"] button:has(svg.lucide-files)',

@@ -41,6 +41,7 @@ type InspectorTabValue = (typeof inspectorTabs)[number]['value']
 export type SidebarBacklink = BacklinkReference
 
 type RightSidebarContentProps = {
+  workspaceKey: string
   activePath: string | null
   targetPath: string | null
   targetLabel: string
@@ -79,6 +80,7 @@ type RightSidebarCollapsedProps = {
 }
 
 export const RightSidebarContent = ({
+  workspaceKey,
   targetPath,
   targetLabel,
   outline,
@@ -202,6 +204,7 @@ export const RightSidebarContent = ({
           </TabsContent>
           <TabsContent value="knowledge" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarKnowledgePanel
+              workspaceKey={workspaceKey}
               targetPath={targetPath}
               targetLabel={targetLabel}
               knowledge={knowledge}

@@ -2,6 +2,7 @@ import type { DesktopCommandArgs, DesktopCommandResults } from '@/generated/desk
 import { z } from 'zod'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 export * from '@/services/fsBufferSchemas'
+export * from '@/services/fsGraphSchemas'
 
 export const fsRootInfoSchema = z.object({
   kind: z.enum(['internal', 'external', 'single']),
@@ -137,102 +138,6 @@ export const workspaceOccurrenceSearchCancelResultSchema = z
   .object({ requestId: z.string(), cancelled: z.boolean() })
   .strict() satisfies z.ZodType<WorkspaceOccurrenceSearchCancelResult>
 
-export const fsMarkdownBlockSchema = z.discriminatedUnion('kind', [
-  z.object({ id: z.string(), kind: z.literal('paragraph'), text: z.string() }),
-  z.object({ id: z.string(), kind: z.literal('blockquote'), text: z.string() }),
-  z.object({ id: z.string(), kind: z.literal('code'), text: z.string(), language: z.string() }),
-]) satisfies z.ZodType<FsMarkdownBlock>
-
-const graphPreviewNodeFields = {
-  id: z.string(),
-  label: z.string(),
-  path: z.string(),
-  source_path: z.string(),
-  target: z.string(),
-  preview_kind: z.enum([
-    'audio',
-    'docx',
-    'drawio',
-    'excalidraw',
-    'image',
-    'pdf',
-    'source',
-    'spreadsheet',
-    'video',
-  ]),
-}
-export const fsGraphNodeSchema = z.discriminatedUnion('kind', [
-  z.object({
-    id: z.string(),
-    kind: z.literal('file'),
-    label: z.string(),
-    path: z.string(),
-    group: z.object({ key: z.string(), label: z.string(), source: z.literal('path') }),
-  }),
-  z.object({ ...graphPreviewNodeFields, kind: z.literal('preview') }),
-  z.object({ ...graphPreviewNodeFields, kind: z.literal('missing') }),
-]) satisfies z.ZodType<FsGraphNode>
-
-export const fsGraphEdgeSchema = z.object({
-  id: z.string(),
-  source: z.string(),
-  target: z.string(),
-  kind: z.enum(['links_to', 'references_heading', 'previews']),
-}) satisfies z.ZodType<FsGraphEdge>
-
-export const fsGraphSchema = z.object({
-  mode: z.literal('mindmap'),
-  revision: z.string(),
-  nodes: z.array(fsGraphNodeSchema),
-  edges: z.array(fsGraphEdgeSchema),
-}) satisfies z.ZodType<FsGraph>
-
-export const workspaceGraphNodeDetailsRequestSchema = z
-  .object({
-    node_ids: z.array(z.string().min(1).max(1_024)).min(1).max(256),
-    mode: z.enum(['summary', 'full']),
-    max_nodes: z.number().int().min(1).max(64).nullish(),
-    revision: z.string().min(1),
-  })
-  .strict() satisfies z.ZodType<WorkspaceGraphNodeDetailsRequest>
-
-export const workspaceGraphPreviewSchema = z
-  .object({
-    html: z.string().max(32_768),
-    math: z
-      .array(
-        z
-          .object({
-            id: z.string().regex(/^graph-math-\d{1,2}$/),
-            expression: z.string().max(1_680),
-            displayMode: z.boolean(),
-          })
-          .strict(),
-      )
-      .max(64),
-  })
-  .strict() satisfies z.ZodType<WorkspaceGraphPreview>
-
-export type WorkspaceGraphPreview =
-  DesktopCommandResults['fs_get_workspace_graph_node_details']['items'][number]['preview']
-
-export const workspaceGraphNodeDetailsResultSchema = z
-  .object({
-    items: z.array(
-      z
-        .object({
-          id: z.string(),
-          content: z.string(),
-          preview: workspaceGraphPreviewSchema,
-          content_blocks: z.array(fsMarkdownBlockSchema).optional(),
-        })
-        .strict(),
-    ),
-    revision: z.string().min(1),
-    truncated: z.boolean(),
-  })
-  .strict() satisfies z.ZodType<WorkspaceGraphNodeDetailsResult>
-
 export const markdownAssetImportStrategySchema = z.enum([
   'copy-to-document-assets',
   'preserve-path',
@@ -261,10 +166,6 @@ export type FsSnapshot = DesktopCommandResults['fs_get_snapshot']
 export type FsPathMetadata = DesktopCommandResults['fs_get_path_metadata']
 export type FsAssetCapability = DesktopCommandResults['assets_issue_capability']
 export type FsTextPreview = DesktopCommandResults['workspace_read_text_preview']
-export type WorkspaceGraphNodeDetailsRequest =
-  DesktopCommandArgs['fs_get_workspace_graph_node_details']['request']
-export type WorkspaceGraphNodeDetailsResult =
-  DesktopCommandResults['fs_get_workspace_graph_node_details']
 export type BackgroundTaskStatus = DesktopCommandResults['fs_get_background_tasks'][number]
 export type FsSearchResult = DesktopCommandResults['fs_search_workspace'][number]
 export type WorkspaceOccurrenceSearchOptions =
@@ -275,12 +176,6 @@ export type WorkspaceOccurrenceSearchResultSet =
   DesktopCommandResults['fs_search_workspace_occurrences']
 export type WorkspaceOccurrenceSearchCancelResult =
   DesktopCommandResults['fs_cancel_workspace_occurrence_search']
-export type FsMarkdownBlock = NonNullable<
-  WorkspaceGraphNodeDetailsResult['items'][number]['content_blocks']
->[number]
-export type FsGraphNode = FsGraph['nodes'][number]
-export type FsGraphEdge = FsGraph['edges'][number]
-export type FsGraph = DesktopCommandResults['fs_get_workspace_graph']
 export type MarkdownAssetImportStrategy =
   DesktopCommandArgs['fs_import_markdown_asset']['request']['strategy']
 export type FsMarkdownAssetImportResult = DesktopCommandResults['fs_import_markdown_asset']

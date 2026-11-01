@@ -115,22 +115,22 @@ describe('quality impact rules', () => {
 
   it.each([
     'src/pages/WorkspaceGraphPage.tsx',
-    'src/components/GraphRichNodes.tsx',
-    'src/components/GraphWebNode.tsx',
-    'src/logic/workspaceMapGraph.ts',
-    'src/logic/workspaceGraphRevision.ts',
-  ])('routes the retained workspace graph file %s to React Flow checks', (file) => {
+    'src/features/knowledge-graph/KnowledgeGraphCanvas.tsx',
+    'src/features/knowledge-graph/graphologyAdapter.ts',
+    'src/logic/knowledgeGraphRequest.ts',
+    'src/components/DocumentRelationsGraph.tsx',
+  ])('routes the retained workspace graph file %s to relation graph checks', (file) => {
     const impacts = analyzeChangedFiles([file])
 
-    expect(impacts.map((impact) => impact.area)).toContain('React Flow graph')
+    expect(impacts.map((impact) => impact.area)).toContain('Knowledge relation graph')
   })
 
-  it('routes current workspace-map keyboard changes without legacy graph shortcut paths', () => {
-    const impacts = analyzeChangedFiles(['src/pages/workspace-map/useWorkspaceMapKeyboard.ts'])
+  it('routes relation graph keyboard changes without legacy graph shortcut paths', () => {
+    const impacts = analyzeChangedFiles(['src/features/knowledge-graph/KnowledgeGraphCanvas.tsx'])
     const shortcuts = impacts.find((impact) => impact.area === 'Keyboard shortcuts')
     const shortcutRule = qualityImpactRulesData.find((rule) => rule.area === 'Keyboard shortcuts')
 
-    expect(shortcuts?.checks).toContain('workspace map/editor shortcut tests')
+    expect(shortcuts?.checks).toContain('knowledge graph/editor shortcut tests')
     expect(shortcutRule?.patterns).not.toEqual(
       expect.arrayContaining([
         '^src/pages/useGraphKeyboardActions',
@@ -149,9 +149,11 @@ describe('quality impact rules', () => {
   })
 
   it('normalizes Windows-style paths before matching rules', () => {
-    const impacts = analyzeChangedFiles(['src\\pages\\graph\\GraphToolbar.tsx'])
+    const impacts = analyzeChangedFiles([
+      'src\\features\\knowledge-graph\\KnowledgeGraphCanvas.tsx',
+    ])
 
-    expect(impacts.map((impact) => impact.area)).toContain('React Flow graph')
+    expect(impacts.map((impact) => impact.area)).toContain('Knowledge relation graph')
   })
 
   it('prints a standard fallback for low-risk unmatched changes', () => {

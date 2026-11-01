@@ -1,231 +1,125 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceGraphPage from '@/pages/WorkspaceGraphPage'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { testGraph } from '@/features/knowledge-graph/testGraph'
+import { navigationHistoryStore } from '@/features/navigation/navigationHistory'
+import {
+  requestWorkspaceMapNodeFocus,
+  workspaceMapNavigationStore,
+} from '@/utils/workspaceMapNavigation'
+import type { KnowledgeGraphCanvasProps } from '@/features/knowledge-graph/types'
 
-vi.mock('@/pages/workspace-map/WorkspaceMapEditorPortal', () => ({
-  WorkspaceMapEditorPortalProvider: ({ children }: { children: ReactNode }) => children,
-}))
-
-const contextRef = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
-
+const state = vi.hoisted(() => ({ context: {} as Record<string, unknown>, active: true }))
 vi.mock('@/pages/useLayoutContext', () => ({
-  useLayoutContext: (selector: (state: never) => unknown) => selector(contextRef.value as never),
+  useLayoutContext: (selector: (state: never) => unknown) => selector(state.context as never),
 }))
-
-vi.mock('@/pages/workspace-map/WorkspaceMapCanvas', () => ({
-  WorkspaceMapCanvas: (props: {
-    activePath: string | null
-    editorLoadState: { status: string; content?: string; message?: string }
-    graph: { nodes: Array<{ id: string; type?: string }> }
-    onActivateEditor: (path: string) => void
-    onCloseEditor: () => void
-    onRetryEditor: () => void
-  }) => (
-    <div
-      data-testid="map-canvas"
-      data-active-path={props.activePath ?? ''}
-      data-editor-content={props.editorLoadState.content}
-      data-editor-state={props.editorLoadState.status}
-    >
-      <span>{props.graph.nodes.map((node) => `${node.id}:${node.type}`).join(',')}</span>
-      <button onClick={() => props.onActivateEditor('notes/b.md')}>activate b</button>
-      <button onClick={props.onCloseEditor}>close map editor</button>
-      <button onClick={props.onRetryEditor}>retry editor</button>
+vi.mock('keepalive-for-react', () => ({
+  useKeepAliveContext: () => ({ cacheKey: 'graph', active: state.active }),
+}))
+vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('@/features/knowledge-graph/KnowledgeGraphCanvas', () => ({
+  KnowledgeGraphCanvas: (props: KnowledgeGraphCanvasProps) => (
+    <div data-active={props.active} data-testid="canvas">
+      <button onClick={() => props.onSelectNode('file:a.md')}>select alpha</button>
+      <button onClick={() => props.onOpenNode('file:a.md')}>open alpha</button>
+      <button onClick={() => props.onSelectNode('missing:c.md')}>select missing</button>
+      <button onClick={() => props.onOpenNode('missing:c.md')}>open missing</button>
+      <button onClick={() => props.onFocusConsumed?.()}>consume</button>
+      <output>{props.focusRequest?.nodeId}</output>
     </div>
   ),
 }))
-
-vi.mock('@/pages/useDocumentStats', () => ({
-  useDocumentStats: (value: string, enabled: boolean) => ({
-    characters: enabled ? value.replace(/\s/g, '').length : 0,
-    lines: enabled ? value.split('\n').length : 0,
-    words: enabled ? value.trim().split(/\s+/).length : 0,
-  }),
-}))
-
-vi.mock('@/components/EditorDocumentStatus', () => ({
-  EditorDocumentStatus: (props: {
-    activePath: string
-    stats: { lines: number; words: number; characters: number }
-    value: string
-    viewMode: string
-  }) => (
-    <output data-testid="document-status">
-      {props.activePath}:{props.viewMode}:{props.stats.lines}:{props.stats.words}:
-      {props.stats.characters}:{props.value}
-    </output>
+vi.mock('@/features/knowledge-graph/KnowledgeGraphDetails', () => ({
+  KnowledgeGraphDetails: (props: { node: { label: string }; onClose: () => void }) => (
+    <aside aria-label="details">
+      {props.node.label}
+      <button onClick={props.onClose}>close details</button>
+    </aside>
   ),
 }))
 
-vi.mock('@/i18n/useI18n', () => ({
-  useI18n: () => ({ t: (key: string) => key }),
-}))
-
-const graph = {
-  nodes: [
-    {
-      id: 'file:notes/a.md',
-      type: 'file',
-      data: { label: 'a', path: 'notes/a.md' },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: 'heading:a',
-      type: 'heading',
-      data: { label: 'A', path: 'notes/a.md' },
-      position: { x: 0, y: 0 },
-    },
-  ],
-  edges: [],
-  layoutKey: 'workspace',
-}
-
-const LocationState = () => {
-  const location = useLocation()
-  return (
-    <>
-      <output data-testid="search">{location.search}</output>
-      <output data-testid="location-state">{JSON.stringify(location.state)}</output>
-    </>
-  )
-}
-
-const renderPage = (entry = '/workspace/graph') => {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <WorkspaceGraphPage />
-      <LocationState />
-    </MemoryRouter>,
-    {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      ),
-    },
-  )
-}
-
 beforeEach(() => {
-  contextRef.value = {
-    currentView: 'wysiwyg',
-    editorReadOnlyMode: false,
-    editorValue: '# A',
-    files: [
-      { kind: 'file', path: 'notes/a.md' },
-      { kind: 'file', path: 'notes/b.md' },
-    ],
-    graph,
-    rootKind: 'directory',
-    rootPath: 'C:/workspace',
-    graphEditorPath: null,
+  state.active = true
+  state.context = {
+    graph: testGraph(),
+    rootKind: 'external',
+    rootPath: '/workspace',
     graphError: null,
     graphLoading: false,
-    graphMiniMapEnabled: true,
     graphRefreshing: false,
     graphRetry: vi.fn(),
-    fileContents: {},
-    loadingPaths: {},
-    onEditorChange: vi.fn(),
     onOpenFile: vi.fn(),
-    saveStates: {},
-    showEditorStatusBar: false,
   }
+  navigationHistoryStore.getState().reset('external:/workspace')
+  workspaceMapNavigationStore.setState({ request: null })
 })
 
 describe('WorkspaceGraphPage', () => {
-  it('maps the workspace graph to file-level nodes and updates the edit query', () => {
-    renderPage('/workspace/graph?sidebar=graph')
-
-    expect(screen.getByTestId('map-canvas')).toHaveTextContent('file:notes/a.md:file')
-    expect(screen.getByTestId('map-canvas')).not.toHaveTextContent('heading:a')
-    fireEvent.click(screen.getByRole('button', { name: 'activate b' }))
-    expect(screen.getByTestId('search')).toHaveTextContent('sidebar=graph')
-    expect(screen.getByTestId('search')).toHaveTextContent('edit=notes%2Fb.md')
+  it('keeps selection independent from document editing and refuses to open missing targets', () => {
+    render(<WorkspaceGraphPage />)
+    fireEvent.click(screen.getByText('select alpha'))
+    expect(screen.getByRole('complementary', { name: 'details' })).toHaveTextContent('Alpha')
+    expect(state.context.onOpenFile).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('open alpha'))
+    expect(state.context.onOpenFile).toHaveBeenCalledWith('a.md')
+    fireEvent.click(screen.getByText('select missing'))
+    fireEvent.click(screen.getByText('open missing'))
+    expect(screen.getByRole('complementary')).toHaveTextContent('Missing')
+    expect(state.context.onOpenFile).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByText('close details'))
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
   })
-
-  it('renders loading, error with retry, empty, and non-blocking refreshing states', () => {
-    contextRef.value.graphLoading = true
-    const view = renderPage()
-    expect(screen.getByText('workspaceMap.loadingDocument')).toBeInTheDocument()
-
-    contextRef.value.graphLoading = false
-    contextRef.value.graphError = new Error('failed')
-    contextRef.value.graph = { nodes: [], edges: [] }
-    view.rerender(
-      <MemoryRouter>
-        <WorkspaceGraphPage />
-      </MemoryRouter>,
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.retry' }))
-    expect(contextRef.value.graphRetry).toHaveBeenCalledOnce()
-
-    contextRef.value.graphError = null
-    view.rerender(
-      <MemoryRouter>
-        <WorkspaceGraphPage />
-      </MemoryRouter>,
-    )
-    expect(screen.getByText('workspaceMap.empty')).toBeInTheDocument()
-
-    contextRef.value.graph = graph
-    contextRef.value.graphRefreshing = true
-    view.rerender(
-      <MemoryRouter>
-        <WorkspaceGraphPage />
-      </MemoryRouter>,
-    )
-    expect(screen.getByTestId('map-canvas')).toBeInTheDocument()
-    expect(screen.getByText('workspaceMap.refreshing')).toBeInTheDocument()
+  it('retains graph content through refresh errors, supports retry and represents initial states', () => {
+    state.context.graphError = new Error('refresh failed')
+    const view = render(<WorkspaceGraphPage />)
+    expect(screen.getByTestId('canvas')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('knowledgeGraph.retry'))
+    expect(state.context.graphRetry).toHaveBeenCalledOnce()
+    state.context.graph = { ...testGraph(), nodes: [], edges: [] }
+    state.context.graphError = null
+    state.context.graphLoading = true
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.getByRole('status')).toHaveTextContent('knowledgeGraph.loading')
+    state.context.graphLoading = false
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.getByRole('status')).toHaveTextContent('knowledgeGraph.empty')
+    state.context.graphError = new Error('initial failed')
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.getByRole('alert')).toHaveTextContent('knowledgeGraph.loadFailed')
   })
-
-  it('keeps a retained graph visible when refresh fails and offers retry', () => {
-    contextRef.value.graphError = new Error('refresh failed')
-
-    renderPage()
-
-    expect(screen.getByTestId('map-canvas')).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toHaveTextContent('workspaceMap.loadFailed')
-    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.retry' }))
-    expect(contextRef.value.graphRetry).toHaveBeenCalledOnce()
+  it('reports an absent target after a bounded graph finishes refreshing and can dismiss the request', () => {
+    state.context.graph = { ...testGraph(), truncated: true, total_nodes: 20_000 }
+    state.context.graphRefreshing = true
+    const pending = { workspaceKey: 'external:/workspace', nodeId: 'file:outside-limit.md' }
+    requestWorkspaceMapNodeFocus(pending)
+    const view = render(<WorkspaceGraphPage />)
+    expect(screen.queryByText('knowledgeGraph.targetUnavailable')).not.toBeInTheDocument()
+    state.context.graphRefreshing = false
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.getByRole('alert')).toHaveTextContent('knowledgeGraph.targetUnavailable')
+    expect(workspaceMapNavigationStore.getState().request).toBe(pending)
+    expect(screen.queryByText('file:outside-limit.md')).not.toBeInTheDocument()
+    expect(state.context.onOpenFile).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'knowledgeGraph.close' }))
+    expect(workspaceMapNavigationStore.getState().request).toBeNull()
+    expect(screen.queryByText('knowledgeGraph.targetUnavailable')).not.toBeInTheDocument()
   })
-
-  it('does not expose an editor as ready when opening the document failed', () => {
-    contextRef.value.graphEditorPath = 'notes/a.md'
-    contextRef.value.showEditorStatusBar = true
-    contextRef.value.saveStates = {
-      'notes/a.md': { status: 'error', message: 'disk unavailable' },
-    }
-
-    renderPage('/workspace/graph?edit=notes%2Fa.md')
-
-    expect(screen.getByTestId('map-canvas')).toHaveAttribute('data-editor-state', 'error')
-    expect(screen.getByTestId('map-canvas')).not.toHaveAttribute('data-editor-content')
-    expect(screen.queryByTestId('document-status')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'retry editor' }))
-    expect(screen.getByTestId('location-state')).toHaveTextContent('editorLoadGeneration')
-  })
-
-  it('treats a loaded empty document as an editable ready state', () => {
-    contextRef.value.graphEditorPath = 'notes/a.md'
-    contextRef.value.fileContents = { 'notes/a.md': '' }
-
-    renderPage('/workspace/graph?edit=notes%2Fa.md')
-
-    expect(screen.getByTestId('map-canvas')).toHaveAttribute('data-editor-state', 'ready')
-    expect(screen.getByTestId('map-canvas')).toHaveAttribute('data-editor-content', '')
-  })
-
-  it('does not duplicate the global document status for the embedded editor', () => {
-    contextRef.value.graphEditorPath = 'notes/a.md'
-    contextRef.value.editorValue = 'one two\nthree'
-    contextRef.value.fileContents = { 'notes/a.md': 'one two\nthree' }
-    contextRef.value.showEditorStatusBar = true
-
-    renderPage('/workspace/graph?edit=notes%2Fa.md')
-
-    expect(screen.queryByTestId('document-status')).not.toBeInTheDocument()
+  it('consumes only matching workspace focus requests and discards stale workspace selection', () => {
+    requestWorkspaceMapNodeFocus({
+      workspaceKey: 'external:/workspace',
+      nodeId: 'file:b.md',
+      viewport: { x: 0.2, y: 0.4, ratio: 0.8, angle: 0 },
+    })
+    const view = render(<WorkspaceGraphPage />)
+    expect(screen.getByText('file:b.md')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('consume'))
+    expect(workspaceMapNavigationStore.getState().request).toBeNull()
+    fireEvent.click(screen.getByText('select alpha'))
+    state.context.rootPath = '/other'
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    state.active = false
+    view.rerender(<WorkspaceGraphPage />)
+    expect(screen.getByTestId('canvas')).toHaveAttribute('data-active', 'false')
   })
 })

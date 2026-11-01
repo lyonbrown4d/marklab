@@ -4,7 +4,6 @@ import { z } from 'zod'
 
 import { getDesktopRuntime } from '@/runtime/desktop'
 import { invoke } from '@/runtime/ipc'
-import { parseWorkspaceGraphNodeDetails } from '@/services/fsGraphCompatibility'
 import {
   backgroundTaskStatusSchema,
   fsAssetCapabilitySchema,
@@ -13,6 +12,8 @@ import {
   fsBufferUpdateRequestSchema,
   fsBufferUpdateResultSchema,
   fsGraphSchema,
+  workspaceGraphRequestSchema,
+  workspaceGraphNodeDetailsResultSchema,
   fsMarkdownAssetImportResultSchema,
   fsMarkdownAssetResolveResultSchema,
   fsPathMetadataSchema,
@@ -30,6 +31,7 @@ import {
   type FsBufferUpdateRequest,
   type FsBufferSyncStatus,
   type FsGraph,
+  type WorkspaceGraphRequest,
   type FsSearchResult,
   type WorkspaceOccurrenceSearchResultSet,
   type WorkspaceGraphNodeDetailsRequest,
@@ -65,14 +67,17 @@ export const fsApi = {
     const result = await getDesktopRuntime().workspace.readTextPreview(path, limit)
     return fsTextPreviewSchema.parse(result)
   },
-  async getWorkspaceGraph(): Promise<FsGraph> {
-    const result = await invoke('fs_get_workspace_graph')
+  async getWorkspaceGraph(request: WorkspaceGraphRequest): Promise<FsGraph> {
+    const result = await invoke(
+      'fs_get_workspace_graph',
+      workspaceGraphRequestSchema.parse(request),
+    )
     return fsGraphSchema.parse(result)
   },
   async getWorkspaceGraphNodeDetails(request: WorkspaceGraphNodeDetailsRequest) {
     const payload = workspaceGraphNodeDetailsRequestSchema.parse(request)
     const result = await invoke('fs_get_workspace_graph_node_details', payload)
-    return parseWorkspaceGraphNodeDetails(result)
+    return workspaceGraphNodeDetailsResultSchema.parse(result)
   },
   async searchWorkspace(query: string, limit = 20): Promise<FsSearchResult[]> {
     const result = await invoke('fs_search_workspace', { query, limit })

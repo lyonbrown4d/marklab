@@ -1,4 +1,4 @@
-use super::projections::{CachedProjection, Projection};
+use super::projections::Projection;
 use super::{
   AnalysisService, Index,
   document::Document,
@@ -69,11 +69,6 @@ impl AnalysisService {
     let result = self
       .queries
       .try_get_with(key, async {
-        if T::KIND == "graph"
-          && let Some(value) = self.disk_graph(&index).await
-        {
-          return Ok(CachedProjection::Graph(Arc::new(value)));
-        }
         let computed = {
           let _permit = self.workers.clone().acquire_owned().await.map_err(|_| {
             BackendError::new("ANALYSIS_FAILED", "Analysis workers are unavailable")
@@ -85,12 +80,6 @@ impl AnalysisService {
               .map_err(|error| BackendError::new("ANALYSIS_FAILED", error.to_string()))??,
           )
         };
-        if T::KIND == "graph"
-          && self.epoch.load(Ordering::Acquire) == epoch
-          && let Err(error) = self.persist_graph(&index, graph_value(&computed)?).await
-        {
-          log::warn!("Analysis graph cache write skipped: {}", error.code);
-        }
         Ok(T::into_cached(computed))
       })
       .await
@@ -100,17 +89,5 @@ impl AnalysisService {
     }
     T::from_cached(&result)
       .ok_or_else(|| BackendError::new("ANALYSIS_FAILED", "Projection cache type mismatch"))
-  }
-}
-
-fn graph_value<T: Projection>(
-  value: &Arc<T>,
-) -> BackendResult<Arc<super::graph_types::WorkspaceGraph>> {
-  match T::into_cached(value.clone()) {
-    CachedProjection::Graph(graph) => Ok(graph),
-    _ => Err(BackendError::new(
-      "ANALYSIS_FAILED",
-      "Invalid graph cache projection",
-    )),
   }
 }

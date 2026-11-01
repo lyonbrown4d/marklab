@@ -10,7 +10,7 @@ describe('workspace map navigation requests', () => {
   it('retains a typed request until the workspace map can consume it', () => {
     const request = {
       nodeId: 'notes/Home.md',
-      viewport: { x: 12, y: 24, zoom: 0.8 },
+      viewport: { x: 12, y: 24, ratio: 0.8, angle: 0 },
       workspaceKey: 'workspace:a',
       viewId: 'community:a',
     }

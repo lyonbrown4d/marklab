@@ -1,7 +1,3 @@
-export const markdownEditorVariants = ['page', 'embedded'] as const
-
-export type MarkdownEditorVariant = (typeof markdownEditorVariants)[number]
-
 export type MarkdownEditorSlashLabels = {
   advancedGroup: string
   bold: string
@@ -70,7 +66,6 @@ export type MarkdownEditorProps = {
   onStatusChange?: (status: MarkdownEditorStatus) => void
   onWorkspaceLink?: (target: string, documentPath: string | null) => void
   readOnly?: boolean
-  variant?: MarkdownEditorVariant
 }
 
 export type MarkdownEditorHandle = {

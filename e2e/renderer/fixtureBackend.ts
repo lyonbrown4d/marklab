@@ -10,6 +10,8 @@ import { createFixtureAssets } from './fixtureAssets.js'
 import { readFixtureSpreadsheet } from './fixtureSpreadsheet.js'
 // eslint-disable-next-line no-restricted-imports -- Test-only native publication analysis DTO.
 import { readFixturePublication } from './fixturePublication.js'
+// eslint-disable-next-line no-restricted-imports -- Explicit test-only graph fixture state.
+import { createFixtureGraph } from './fixtureGraph.js'
 
 type Payload = Record<string, unknown>
 const record = (value: unknown): Payload => {
@@ -32,6 +34,7 @@ export const createFixtureBackend = async (
   let file = initialFile
   let generation = 1
   let treeRevision = 0
+  const graph = createFixtureGraph()
   const phases: RendererReadySignal[] = []
   const diagnostics: Payload[] = []
   const aiProviders: PublicAiProvider[] = []
@@ -76,6 +79,7 @@ export const createFixtureBackend = async (
     generation += 1
     treeRevision = 0
     buffers.clear()
+    graph.clear()
     assets.clear()
     return seed()
   }
@@ -104,6 +108,10 @@ export const createFixtureBackend = async (
       }
       case 'lifecycle_get_launch_info':
         return { args: [], cwd: root, deepLinks: [] }
+      case 'fs_get_workspace_graph':
+        return graph.get()
+      case 'fs_get_workspace_graph_node_details':
+        return graph.getDetails()
       case 'fs_get_workspace_publication_plan':
         return readFixturePublication(
           (await entries())
@@ -197,8 +205,14 @@ export const createFixtureBackend = async (
           readonly: false,
         }
       }
-      case 'workspace_read_text_preview':
-        return { content: (await buffers.snapshot(text(request.path))).content, truncated: false }
+      case 'workspace_read_text_preview': {
+        const content = Buffer.from((await buffers.snapshot(text(request.path))).content)
+        const limit = typeof request.limit_bytes === 'number' ? request.limit_bytes : 8192
+        return {
+          content: content.subarray(0, limit).toString('utf8'),
+          truncated: content.length > limit,
+        }
+      }
       case 'settings_persist_get': {
         const key = text(request.key)
         if (settings.has(key)) return settings.get(key)
@@ -267,7 +281,19 @@ export const createFixtureBackend = async (
         throw new Error(`Unimplemented renderer fixture command: ${command}`)
     }
   }
-  return { aiProviders, aiRequests, assets, bind, buffers, diagnostics, invoke, phases, seed }
+  return {
+    aiProviders,
+    aiRequests,
+    assets,
+    bind,
+    buffers,
+    diagnostics,
+    invoke,
+    phases,
+    seed,
+    setGraph: graph.set,
+    setGraphDetails: graph.setDetails,
+  }
 }
 
 export type FixtureBackend = Awaited<ReturnType<typeof createFixtureBackend>>

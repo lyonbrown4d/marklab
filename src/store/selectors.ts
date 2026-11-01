@@ -33,8 +33,6 @@ export const useLayoutStoreSlice = () =>
       silentSave: state.silentSave,
       showEditorStatusBar: state.showEditorStatusBar,
       defaultFileView: state.defaultFileView,
-      graphMiniMapEnabled: state.graphMiniMapEnabled,
-      graphContentMode: state.graphContentMode,
       editorReadOnlyMode: state.editorReadOnlyMode,
       markdownAssetImportStrategy: state.markdownAssetImportStrategy,
       shortcutOverrides: state.shortcutOverrides,

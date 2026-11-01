@@ -41,7 +41,7 @@ const CommandWorkspaceSection = ({
           <CommandItem
             onFocus={preloadGraphView}
             onMouseEnter={preloadGraphView}
-            value="workspace graph knowledge graph mindmap react flow"
+            value="workspace graph knowledge relations references"
             onSelect={() => onAction('workspace.open_graph')}
           >
             <GitGraph className="size-4" />

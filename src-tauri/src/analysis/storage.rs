@@ -77,9 +77,7 @@ impl AnalysisService {
             sqlx::query("CREATE VIRTUAL TABLE IF NOT EXISTS analysis_fts USING fts5(scope UNINDEXED,path UNINDEXED,title,content,tokenize='unicode61')").execute(&self.pool).await?;
             sqlx::query("CREATE TABLE IF NOT EXISTS analysis_cache_workspaces(scope TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,last_access INTEGER NOT NULL,bytes INTEGER NOT NULL)").execute(&self.pool).await?;
             sqlx::query("CREATE TABLE IF NOT EXISTS analysis_cache_documents(scope TEXT NOT NULL,path TEXT NOT NULL,hash TEXT NOT NULL,payload TEXT NOT NULL,payload_hash TEXT NOT NULL,bytes INTEGER NOT NULL CHECK(bytes>=0),PRIMARY KEY(scope,path))").execute(&self.pool).await?;
-            sqlx::query("CREATE TABLE IF NOT EXISTS analysis_cache_graphs(scope TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,payload TEXT NOT NULL,payload_hash TEXT NOT NULL,bytes INTEGER NOT NULL CHECK(bytes>=0))").execute(&self.pool).await?;
             sqlx::query("DELETE FROM analysis_cache_documents WHERE scope NOT IN (SELECT scope FROM analysis_cache_workspaces)").execute(&self.pool).await?;
-            sqlx::query("DELETE FROM analysis_cache_graphs WHERE scope NOT IN (SELECT scope FROM analysis_cache_workspaces)").execute(&self.pool).await?;
             // Retire the preliminary per-launch UUID scopes; they can never be hydrated.
             sqlx::query("DELETE FROM analysis_fts WHERE scope NOT IN (SELECT scope FROM analysis_cache_workspaces)").execute(&self.pool).await?;
             self.prune_disk().await?;
@@ -210,12 +208,11 @@ impl AnalysisService {
       }
     }
     let bytes: i64 = sqlx::query_scalar(
-            "SELECT (SELECT COALESCE(SUM(bytes),0) FROM analysis_cache_documents WHERE scope=?)+(SELECT COALESCE(SUM(bytes),0) FROM analysis_cache_graphs WHERE scope=?)",
-        )
-        .bind(&index.scope)
-        .bind(&index.scope)
-        .fetch_one(&mut *transaction)
-        .await?;
+      "SELECT COALESCE(SUM(bytes),0) FROM analysis_cache_documents WHERE scope=?",
+    )
+    .bind(&index.scope)
+    .fetch_one(&mut *transaction)
+    .await?;
     sqlx::query("INSERT INTO analysis_cache_workspaces(scope,fingerprint,last_access,bytes)VALUES(?,?,?,?) ON CONFLICT(scope)DO UPDATE SET fingerprint=excluded.fingerprint,last_access=excluded.last_access,bytes=excluded.bytes").bind(&index.scope).bind(&index.fingerprint).bind(index.indexed_at).bind(bytes).execute(&mut *transaction).await?;
     transaction.commit().await?;
     self.prune_disk().await
@@ -242,10 +239,6 @@ impl AnalysisService {
         .execute(&mut *transaction)
         .await?;
       sqlx::query("DELETE FROM analysis_fts WHERE scope=?")
-        .bind(&scope)
-        .execute(&mut *transaction)
-        .await?;
-      sqlx::query("DELETE FROM analysis_cache_graphs WHERE scope=?")
         .bind(&scope)
         .execute(&mut *transaction)
         .await?;

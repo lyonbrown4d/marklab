@@ -211,17 +211,6 @@
   scroll-padding-block: 30vh 42vh;
 }
 
-.markdown-editor--embedded {
-  padding: 1.25rem 1.5rem 2.5rem;
-  font-size: 0.94rem;
-}
-
-.markdown-editor--embedded > [data-slate-node='element'],
-.markdown-editor--embedded > .plate-block-draggable,
-.markdown-editor--embedded > [data-slate-chunk='true'] {
-  width: min(100%, 680px);
-}
-
 @media (max-width: 640px) {
   .markdown-editor {
     padding-inline: 1rem;

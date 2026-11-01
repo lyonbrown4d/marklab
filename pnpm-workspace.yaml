@@ -4,7 +4,7 @@ minimumReleaseAge: 0
 overrides:
   'react-devtools>electron': 45.1.0
   'react-devtools>cross-spawn': 7.0.6
-  '@excalidraw/excalidraw>sass': 1.107.0
+  '@excalidraw/excalidraw>sass': 1.107.1
   '@excalidraw/excalidraw>nanoid': 3.3.20
   '@excalidraw/mermaid-to-excalidraw>nanoid': 5.1.16
   '@codemirror/view': 6.43.15

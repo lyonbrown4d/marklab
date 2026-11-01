@@ -81,9 +81,6 @@ On macOS, build the debug E2E app as above, then profile a workspace copy:
 
 ```sh
 node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki"
-node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --all
-node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --canvas-baseline
-node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --baseline
 ```
 
 The script reads the source and copies it into an owned temporary fixture, skipping
@@ -92,43 +89,26 @@ directories and removes the copy after service teardown; it does not edit the
 source workspace. Keep the graphical session unlocked and the graph window
 visible while sampling.
 
-For comparison, preserve an E2E-enabled CEF baseline app at
-`src-tauri/target/debug/bundle/macos/Marklab E2E-baseline.app` before rebuilding
-the current app. Preserve the complete app, including its CEF framework/helpers. `--baseline` sets the test-only `MARKLAB_E2E_BASELINE=1` selector for that
-fixed app name; the normal run selects `Marklab E2E.app`. The profiler runs only
-`wikiPerformance.spec.ts`, rather than the full acceptance group.
-`--canvas-baseline` selects the separately preserved `Marklab E2E-uninstrumented.app`
-bundle. Both baseline selectors require an app built with the same CEF automation
-contract. Historical Tauri 2/WebKit binaries require their original harness and
-cannot be attached through ChromeDriver. The normal
-run opens the default community; `--all` explicitly selects the whole workspace.
-Keep both baselines unchanged while rebuilding the current executable.
+The profiler runs only `wikiPerformance.spec.ts` against the rebuilt `Marklab E2E.app`.
+It expects the Sigma relation graph; historical card/community builds require their
+original harness. The current view is bounded by the native graph request limits.
 
-The `WIKI_GRAPH_PROFILE` console record includes graph payload timing and size,
-graph opening time, animation-frame intervals during scripted pan/zoom, rendered
-DOM counts, and initial, first-layout, active, and settled memory samples. The RSS
-field retains the aggregate RSS of newly observed CEF `Helper (Renderer)` processes.
-On macOS, physical footprint is sampled for that same PID set with Apple's
-`footprint` tool (two-second timeout per PID, at most two concurrent reads).
-Any failed read makes the physical aggregate `null`; the record includes a failure
-count and availability reason. The same sampling includes the newly launched native
-app process and their combined physical footprint. This sum excludes CEF GPU,
-network and other helper services. These are separate snapshots, not a continuous peak or total
-system memory measurement.
-Compare runs under the same conditions;
-these measurements do not establish native OS input correctness. Failure
-artifacts can contain content from the copied workspace.
+The `WIKI_GRAPH_PROFILE` record includes topology query time and payload size,
+first graph display time, animation-frame intervals during pointer pan and zoom,
+canvas/DOM counts, and initial, first-layout, active and hidden-view memory snapshots.
+These snapshots are not continuous peak measurements. Use the same workspace,
+window size and hardware when comparing runs; old measurements below describe
+their original implementations only.
 
-After rebuilding, the independent community acceptance entry is:
+After rebuilding, the independent relation graph acceptance entry is:
 
 ```sh
-node --experimental-strip-types scripts/test-graph-communities.ts
+node --experimental-strip-types scripts/test-graph-relations.ts
 ```
 
-It creates 111 linked Markdown files in an owned fixture and exercises the real
-Rust partition command, bounded community tabs, All, cross-community search,
-one mounted Canvas, and Plate undo/redo and autosave after a tab round trip.
-The original workspace and production application data are not used.
+It creates 111 linked Markdown files in an owned fixture, opens the production graph,
+selects and opens a document, verifies native buffer updates and autosave, then returns
+to the graph. The original workspace and production application data are not used.
 
 ### 2026-10-19 macOS comparison (Tauri 2/WebKit)
 

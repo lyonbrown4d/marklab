@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import type { FileViewKind } from '@/store/appTypes'
+import type { GraphCameraState } from '@/features/knowledge-graph/types'
 
 type NavigationFileLocation = {
   kind: 'file'
@@ -25,7 +26,7 @@ type NavigationGraphLocation = {
   kind: 'graph'
   nodeId: string
   viewId?: string
-  viewport?: { x: number; y: number; zoom: number }
+  viewport?: GraphCameraState
 }
 
 export type NavigationLocation =
@@ -55,7 +56,7 @@ const locationKey = (location: NavigationLocation) => {
     return `source:${location.path}:${location.line}:${location.column}:${location.endColumn ?? ''}`
   }
   const viewport = location.viewport
-  return `graph:${location.nodeId}:${JSON.stringify(location.viewId ?? null)}:${viewport?.x ?? ''}:${viewport?.y ?? ''}:${viewport?.zoom ?? ''}`
+  return `graph:${location.nodeId}:${JSON.stringify(location.viewId ?? null)}:${viewport?.x ?? ''}:${viewport?.y ?? ''}:${viewport?.ratio ?? ''}:${viewport?.angle ?? ''}`
 }
 
 const isGenericViewOf = (current: NavigationLocation, next: NavigationLocation) => {

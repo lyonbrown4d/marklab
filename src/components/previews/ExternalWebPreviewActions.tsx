@@ -4,22 +4,12 @@ import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { useI18n } from '@/i18n/useI18n'
-import { cn } from '@/lib/utils'
 
-export const PreviewFailure = ({
-  interactionClassName,
-  onRetry,
-}: {
-  interactionClassName?: string
-  onRetry: () => void
-}) => {
+export const PreviewFailure = ({ onRetry }: { onRetry: () => void }) => {
   const { t } = useI18n()
   return (
     <span
-      className={cn(
-        'absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border/70 bg-background/90 p-1 pl-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm',
-        interactionClassName,
-      )}
+      className="absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border/70 bg-background/90 p-1 pl-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm"
       role="alert"
     >
       <span>{t('preview.externalFailed')}</span>
@@ -37,13 +27,7 @@ export const PreviewFailure = ({
   )
 }
 
-export const PreviewOpenAction = ({
-  interactionClassName,
-  onOpen,
-}: {
-  interactionClassName?: string
-  onOpen: () => void
-}) => {
+export const PreviewOpenAction = ({ onOpen }: { onOpen: () => void }) => {
   const { t } = useI18n()
   return (
     <TooltipProvider delayDuration={250}>
@@ -51,10 +35,7 @@ export const PreviewOpenAction = ({
         <TooltipTrigger asChild>
           <Button
             aria-label={t('preview.openInApp')}
-            className={cn(
-              'absolute right-2 top-2 size-7 rounded-md border-border/70 bg-background/80 text-muted-foreground opacity-85 shadow-sm backdrop-blur-sm transition-[opacity,color,transform] hover:text-foreground group-hover/link-card:opacity-100 motion-reduce:transform-none',
-              interactionClassName,
-            )}
+            className="absolute right-2 top-2 size-7 rounded-md border-border/70 bg-background/80 text-muted-foreground opacity-85 shadow-sm backdrop-blur-sm transition-[opacity,color,transform] hover:text-foreground group-hover/link-card:opacity-100 motion-reduce:transform-none"
             size="icon"
             type="button"
             variant="outline"

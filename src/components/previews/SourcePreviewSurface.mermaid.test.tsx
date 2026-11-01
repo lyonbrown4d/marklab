@@ -19,7 +19,7 @@ vi.mock('@/components/previews/SpreadsheetPreviewSurface', () => ({
 }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 
-const preview = (presentation: 'full' | 'embedded' | 'graph' = 'full') =>
+const preview = (presentation: 'full' | 'embedded' = 'full') =>
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
@@ -61,7 +61,6 @@ describe('standalone Mermaid file previews', () => {
 
   it.each([
     { presentation: 'full' as const, content: 'graph TD\nA --> B', truncated: true },
-    { presentation: 'graph' as const, content: 'graph TD\nA --> B', truncated: false },
     { presentation: 'full' as const, content: 'x'.repeat(128 * 1024 + 1), truncated: false },
   ])(
     'keeps bounded source readable when rendering is unsuitable',

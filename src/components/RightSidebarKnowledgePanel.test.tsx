@@ -5,6 +5,8 @@ import i18n from '@/i18n/setup'
 import type { KnowledgeInsights, KnowledgeMissingReference } from '@/logic/knowledge'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
+vi.mock('@/components/DocumentRelationsGraph', () => ({ DocumentRelationsGraph: () => null }))
+
 beforeEach(async () => {
   localStorage.clear()
   usePreferencesStore.setState({ locale: 'en-US' })
@@ -54,6 +56,7 @@ describe('RightSidebarKnowledgePanel', () => {
 
     render(
       <RightSidebarKnowledgePanel
+        workspaceKey="internal:/workspace"
         targetPath="target.md"
         targetLabel="target"
         knowledge={knowledge}
@@ -103,6 +106,7 @@ describe('RightSidebarKnowledgePanel', () => {
 
     render(
       <RightSidebarKnowledgePanel
+        workspaceKey="internal:/workspace"
         targetPath="target.md"
         targetLabel="target"
         knowledge={knowledge}

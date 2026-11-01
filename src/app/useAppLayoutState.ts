@@ -14,7 +14,6 @@ import { useWorkspaceRecoveryBridge } from '@/app/useWorkspaceRecoveryBridge'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
-import { useWorkspaceMapEditorRoute } from '@/app/useWorkspaceMapEditorRoute'
 import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
 import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useAppLayoutGraphState } from '@/app/useAppLayoutGraphState'
@@ -47,8 +46,6 @@ export const useAppLayoutState = () => {
     silentSave,
     showEditorStatusBar,
     defaultFileView,
-    graphMiniMapEnabled,
-    graphContentMode,
     editorReadOnlyMode,
     shortcutOverrides,
     toggleSidebar,
@@ -118,13 +115,8 @@ export const useAppLayoutState = () => {
   const { onOpenFileView } = workspaceTabActions
   const workspaceKey = `${rootKind}:${rootPath}`
   const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
-  const { editorPath: graphEditorPath } = useWorkspaceMapEditorRoute({
-    enabled: Boolean(graphWorkspaceMatch),
-    entries,
-  })
   const editorBufferPath =
-    graphEditorPath ??
-    (currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null)
+    currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null
   const activePathUnavailable = Boolean(
     editorBufferPath && unavailableTreePaths.includes(editorBufferPath),
   )
@@ -228,7 +220,6 @@ export const useAppLayoutState = () => {
   })
   const graphState = useAppLayoutGraphState({
     entries,
-    graphContentMode,
     graphWorkspace: Boolean(graphWorkspaceMatch),
     workspaceKey,
   })
@@ -247,7 +238,6 @@ export const useAppLayoutState = () => {
     saveStates,
     activePath: currentFilePath,
     editorBufferPath,
-    graphEditorPath,
     activeResourcePath,
     sidebarCollapsed,
     rightSidebarCollapsed,
@@ -255,8 +245,6 @@ export const useAppLayoutState = () => {
     silentSave,
     showEditorStatusBar,
     defaultFileView,
-    graphMiniMapEnabled,
-    graphContentMode,
     editorReadOnlyMode:
       editorReadOnlyMode || activePathUnavailable || editorBuffer.pathMutationPending,
     shortcutOverrides,

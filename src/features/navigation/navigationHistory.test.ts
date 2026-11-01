@@ -47,7 +47,7 @@ describe('navigationHistoryStore', () => {
     const graphLocation: NavigationLocation = {
       kind: 'graph',
       nodeId: 'docs/guide.md',
-      viewport: { x: 12, y: 24, zoom: 1.5 },
+      viewport: { x: 12, y: 24, ratio: 1.5, angle: 0 },
     }
     const history = navigationHistoryStore.getState()
     history.visit(graphLocation)
@@ -58,7 +58,7 @@ describe('navigationHistoryStore', () => {
 
   it('updates the current graph location with its measured viewport without adding history noise', () => {
     const history = navigationHistoryStore.getState()
-    const viewport = { x: 12, y: 24, zoom: 1.5 }
+    const viewport = { x: 12, y: 24, ratio: 1.5, angle: 0 }
     history.visit({ kind: 'graph', nodeId: 'docs/guide.md' })
     history.visit({ kind: 'graph', nodeId: 'docs/guide.md', viewport })
     history.visit({ kind: 'graph', nodeId: 'docs/guide.md' })
@@ -81,7 +81,7 @@ describe('navigationHistoryStore', () => {
     'isolates %s viewport history by view while retaining legacy records',
     (nodeId) => {
       const history = navigationHistoryStore.getState()
-      const viewport = { x: 12, y: 24, zoom: 0.75 }
+      const viewport = { x: 12, y: 24, ratio: 0.75, angle: 0 }
       const first = { kind: 'graph' as const, nodeId, viewId: 'community:a', viewport }
       const second = { kind: 'graph' as const, nodeId, viewId: 'community:b' }
       const legacy = { kind: 'graph' as const, nodeId }

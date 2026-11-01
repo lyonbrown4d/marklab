@@ -1,17 +1,13 @@
 import AppAlert from '@/components/AppAlert'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
-import { GraphPdfPreviewGate } from '@/components/previews/GraphPdfPreviewGate'
 import { Button } from '@/components/ui/button'
 import type { EmbeddedPreviewResolvedTarget } from '@/components/previews/embeddedPreviewSource'
-
-export type EmbeddedPreviewVariant = 'document' | 'graph'
 
 type EmbeddedPreviewBodyProps = {
   displayTitle: string
   failed: boolean
   failedLabel: string
-  graphPdfLoadLabel: string
   loadingLabel: string
   pendingLabel: string
   retryLabel: string
@@ -20,14 +16,12 @@ type EmbeddedPreviewBodyProps = {
   shouldResolve: boolean
   status: string
   target: string
-  variant: EmbeddedPreviewVariant
 }
 
 export const EmbeddedPreviewBody = ({
   displayTitle,
   failed,
   failedLabel,
-  graphPdfLoadLabel,
   loadingLabel,
   pendingLabel,
   retryLabel,
@@ -36,7 +30,6 @@ export const EmbeddedPreviewBody = ({
   shouldResolve,
   status,
   target,
-  variant,
 }: EmbeddedPreviewBodyProps) => {
   if (failed) {
     return (
@@ -47,17 +40,6 @@ export const EmbeddedPreviewBody = ({
         <Button size="sm" variant="outline" onClick={() => void refreshTarget()}>
           {retryLabel}
         </Button>
-      </div>
-    )
-  }
-
-  if (variant === 'graph' && !resolved) {
-    return (
-      <div
-        className="flex min-h-24 items-center justify-center bg-muted/25 px-3 text-center text-xs text-muted-foreground"
-        data-slot="embedded-preview-placeholder"
-      >
-        {shouldResolve ? loadingLabel : pendingLabel}
       </div>
     )
   }
@@ -78,39 +60,13 @@ export const EmbeddedPreviewBody = ({
     )
   }
 
-  if (variant === 'graph' && resolved.kind === 'pdf') {
-    return (
-      <div
-        className="h-[calc(100%-2.5rem)] min-h-0 overflow-hidden bg-muted/20 p-2"
-        onWheel={(event) => {
-          if (!event.ctrlKey && !event.metaKey) event.stopPropagation()
-        }}
-      >
-        <span className="sr-only">{status}</span>
-        <GraphPdfPreviewGate
-          label={graphPdfLoadLabel}
-          path={resolved.path ?? target}
-          readonly={resolved.readonly}
-          refreshTarget={refreshTarget}
-          src={resolved.src}
-          title={displayTitle}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div
-      className={`${variant === 'graph' ? 'h-[calc(100%-2.5rem)]' : ''} min-h-0 overflow-hidden bg-muted/20 p-2`}
-      onWheel={(event) => {
-        if (variant === 'graph' && !event.ctrlKey && !event.metaKey) event.stopPropagation()
-      }}
-    >
+    <div className="min-h-0 overflow-hidden bg-muted/20 p-2">
       <span className="sr-only">{status}</span>
       <FilePreviewSurface
         kind={resolved.kind}
         path={resolved.path ?? target}
-        presentation={variant === 'graph' ? 'graph' : 'embedded'}
+        presentation="embedded"
         readonly={resolved.readonly}
         src={resolved.src}
         title={displayTitle}

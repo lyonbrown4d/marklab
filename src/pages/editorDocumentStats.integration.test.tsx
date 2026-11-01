@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { KeepAlive } from 'keepalive-for-react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppStatusBarProvider, EditorStatusBarSlot } from '@/components/EditorStatusBar'
 import SourceCodePage from '@/pages/SourceCodePage'
@@ -101,18 +102,20 @@ const StatsLayout = ({
     <WysiwygEditorPage {...sharedProps} onOpenFile={vi.fn()} value={value} />
   )
   return (
-    <AppStatusBarProvider activePath="note.md" viewMode={source ? 'source' : 'wysiwyg'}>
-      {cached ? (
-        <KeepAlive activeCacheKey={source ? 'source' : 'rich'} max={2}>
-          {editor}
-        </KeepAlive>
-      ) : (
-        editor
-      )}
-      <footer aria-label="Status bar">
-        <EditorStatusBarSlot label="Document status" />
-      </footer>
-    </AppStatusBarProvider>
+    <MemoryRouter>
+      <AppStatusBarProvider activePath="note.md" viewMode={source ? 'source' : 'wysiwyg'}>
+        {cached ? (
+          <KeepAlive activeCacheKey={source ? 'source' : 'rich'} max={2}>
+            {editor}
+          </KeepAlive>
+        ) : (
+          editor
+        )}
+        <footer aria-label="Status bar">
+          <EditorStatusBarSlot label="Document status" />
+        </footer>
+      </AppStatusBarProvider>
+    </MemoryRouter>
   )
 }
 

@@ -15,7 +15,7 @@ type DeadExportTarget = {
 export const expectedPlateMarkdownWorkerVersions = {
   '@platejs/date': '53.0.0',
   '@platejs/markdown': '53.3.18',
-  platejs: '53.3.18',
+  platejs: '53.5.2',
 } as const
 
 type PlatePackageName = keyof typeof expectedPlateMarkdownWorkerVersions

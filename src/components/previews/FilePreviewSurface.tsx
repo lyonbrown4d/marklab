@@ -22,7 +22,7 @@ const PdfPreviewSurface = lazy(() =>
 type FilePreviewSurfaceProps = {
   kind: PreviewFileKind
   path: string
-  presentation?: 'embedded' | 'full' | 'graph'
+  presentation?: 'embedded' | 'full'
   readonly?: boolean
   snapshot?: boolean
   onOpenInSystem?: () => void
@@ -53,26 +53,6 @@ const FilePreviewSurface = ({
           src={snapshot ? src : undefined}
         />
       </Suspense>
-    )
-  }
-
-  if (
-    presentation === 'graph' &&
-    (kind === 'docx' || kind === 'drawio' || kind === 'excalidraw' || kind === 'spreadsheet')
-  ) {
-    return (
-      <div
-        className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-3 text-center"
-        data-slot="graph-preview-placeholder"
-      >
-        <div className="min-w-0">
-          <FileText className="mx-auto mb-2 size-5 text-muted-foreground" aria-hidden="true" />
-          <div className="truncate text-xs font-medium text-foreground">{title}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t(`preview.kind.${kind}`)}
-          </div>
-        </div>
-      </div>
     )
   }
 
@@ -130,13 +110,8 @@ const FilePreviewSurface = ({
   if (kind === 'pdf') {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-        <div
-          className={`${presentation === 'graph' ? 'h-full overflow-auto p-1' : 'h-full p-3'} rounded-xl border border-border bg-background`}
-        >
-          <PdfPreviewSurface
-            fileUrl={src}
-            mode={presentation === 'graph' ? 'graph' : presentation === 'full' ? 'modal' : 'inline'}
-          />
+        <div className="h-full rounded-xl border border-border bg-background p-3">
+          <PdfPreviewSurface fileUrl={src} mode={presentation === 'full' ? 'modal' : 'inline'} />
         </div>
       </Suspense>
     )
@@ -148,9 +123,8 @@ const FilePreviewSurface = ({
         <img
           src={src}
           alt={t('preview.imageAlt', { name: title })}
-          className={`${presentation === 'graph' ? 'max-h-full' : presentation === 'embedded' ? 'max-h-[32rem]' : 'max-h-[calc(100vh-9rem)]'} max-w-full rounded-xl border border-border bg-card object-contain shadow-sm`}
+          className={`${presentation === 'embedded' ? 'max-h-[32rem]' : 'max-h-[calc(100vh-9rem)]'} max-w-full rounded-xl border border-border bg-card object-contain shadow-sm`}
           draggable={false}
-          loading={presentation === 'graph' ? 'lazy' : undefined}
         />
       </div>
     )
@@ -160,7 +134,7 @@ const FilePreviewSurface = ({
     return (
       <div className="flex min-h-full items-center justify-center">
         <video
-          className={`${presentation === 'graph' ? 'max-h-full' : presentation === 'embedded' ? 'max-h-[32rem]' : 'max-h-[calc(100vh-9rem)]'} max-w-full rounded-xl border border-border bg-black shadow-sm`}
+          className={`${presentation === 'embedded' ? 'max-h-[32rem]' : 'max-h-[calc(100vh-9rem)]'} max-w-full rounded-xl border border-border bg-black shadow-sm`}
           controls
           preload="metadata"
           src={src}

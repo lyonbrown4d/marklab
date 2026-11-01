@@ -58,7 +58,6 @@
       "^src/components/MarkdownEditor",
       "^src/components/plate/",
       "^src/components/editor/",
-      "^src/components/markdown/",
       "^src/components/previews/(DiagramPreviewDialog|EmbeddedPreviewDialog|MermaidPreview|ZoomableVisualViewport)",
       "^src/styles/plate-editor",
       "^src/styles/source-editor",
@@ -75,21 +74,18 @@
     ]
   },
   {
-    "area": "React Flow graph",
-    "risk": "default node renderer fallback, drag/selection conflict, or graph model drift",
+    "area": "Knowledge relation graph",
+    "risk": "directed reference drift, cross-workspace cache leaks, or renderer resource lifecycle regression",
     "patterns": [
-      "^src/components/GraphRichNodes",
-      "^src/components/GraphWebNode",
+      "^src/features/knowledge-graph/",
       "^src/logic/graph",
-      "^src/logic/workspaceGraphRevision",
-      "^src/logic/workspaceMapGraph",
+      "^src/logic/knowledgeGraphRequest",
       "^src/pages/WorkspaceGraphPage",
-      "^src/pages/graph",
-      "^src/pages/workspace-map",
-      "^src/styles/app/_graph",
+      "^src/components/DocumentRelationsGraph",
+      "^src/components/knowledge/",
       "^src/styles/graph"
     ],
-    "checks": ["graph logic tests", "workspace map tests", "graph interaction style tests"]
+    "checks": ["graph logic tests", "knowledge graph tests", "graph interaction style tests"]
   },
   {
     "area": "Settings / persisted preferences",
@@ -99,7 +95,8 @@
       "^src/components/settings/",
       "^src/components/SettingsDialog",
       "^src/store/preferences",
-      "^src/store/usePreferencesStore"
+      "^src/store/usePreferencesStore",
+      "^src/store/graphPreferences"
     ],
     "checks": [
       "Rust settings/session isolation tests",
@@ -114,7 +111,7 @@
     "patterns": [
       "^src/logic/shortcuts",
       "^src/app/useKeyboardShortcuts",
-      "^src/pages/workspace-map/useWorkspaceMapKeyboard",
+      "^src/features/knowledge-graph/KnowledgeGraph",
       "^src/components/settings/Shortcut",
       "^src/components/settings/ShortcutsSettingsPage",
       "^src/components/editor/editorCommandCatalog",
@@ -123,7 +120,7 @@
     "checks": [
       "shortcut catalog tests",
       "shortcut settings tests",
-      "workspace map/editor shortcut tests",
+      "knowledge graph/editor shortcut tests",
       "pnpm typecheck"
     ]
   },

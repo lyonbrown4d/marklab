@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 
+import { workspaceGraphQueryKey, workspaceGraphRequest } from '@/logic/knowledgeGraphRequest'
 import { preloadWorkspaceGraph } from '@/app/preloadWorkspaceGraph'
 import { fsApi } from '@/services/fsApi'
 
@@ -13,7 +14,17 @@ describe('preloadWorkspaceGraph', () => {
     let finish!: () => void
     vi.mocked(fsApi.getWorkspaceGraph).mockReturnValueOnce(
       new Promise((resolve) => {
-        finish = () => resolve({ revision: '1', mode: 'mindmap', nodes: [], edges: [] })
+        finish = () =>
+          resolve({
+            revision: '1',
+            mode: 'relations',
+            topology_key: 'empty',
+            truncated: false,
+            total_nodes: 0,
+            total_edges: 0,
+            nodes: [],
+            edges: [],
+          })
       }),
     )
     const queryClient = new QueryClient({
@@ -26,9 +37,15 @@ describe('preloadWorkspaceGraph', () => {
     await Promise.all([first, second])
 
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
-    expect(queryClient.getQueryData(['workspace-graph', 'external:D:/wiki'])).toEqual({
+    expect(
+      queryClient.getQueryData(workspaceGraphQueryKey('external:D:/wiki', workspaceGraphRequest())),
+    ).toEqual({
       revision: '1',
-      mode: 'mindmap',
+      mode: 'relations',
+      topology_key: 'empty',
+      truncated: false,
+      total_nodes: 0,
+      total_edges: 0,
       nodes: [],
       edges: [],
     })

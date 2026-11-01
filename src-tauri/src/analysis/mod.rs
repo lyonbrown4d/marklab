@@ -4,7 +4,8 @@ pub mod commands;
 pub mod document;
 mod graph;
 mod graph_preview;
-mod graph_storage;
+mod graph_projection;
+mod graph_query;
 mod graph_types;
 mod projections;
 mod publication;
@@ -36,3 +37,6 @@ mod cache_tests;
 
 #[cfg(test)]
 mod storage_tests;
+
+#[cfg(test)]
+mod graph_tests;

@@ -75,7 +75,7 @@ describe('fsApi graph node details', () => {
     }
   })
 
-  it('accepts older node details without a preview for escaped text fallback', async () => {
+  it('rejects node details without the required native preview', async () => {
     nativeIpc.invoke.mockResolvedValue({
       items: [{ id: 'file:a.md', content: '**Legacy**' }],
       revision: 'r1',
@@ -87,8 +87,6 @@ describe('fsApi graph node details', () => {
         node_ids: ['file:a.md'],
         revision: 'r1',
       }),
-    ).resolves.toMatchObject({
-      items: [{ content: '**Legacy**', preview: { html: '', math: [] } }],
-    })
+    ).rejects.toThrow()
   })
 })

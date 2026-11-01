@@ -14,6 +14,7 @@ import {
   typeAtEditorEnd,
   waitForRustMarker,
 } from './nativeHarness.js'
+import { workspaceGraphRequest } from '../../src/logic/knowledgeGraphRequest.js'
 /* eslint-enable no-restricted-imports */
 
 const fixture = fixturePaths()
@@ -41,8 +42,8 @@ describe('native background resource lifecycle', () => {
     await waitForRustMarker(marker, file)
 
     await switchView('network')
-    await browser.$('.react-flow').waitForDisplayed({ timeout: 90_000 })
-    const graph = await invokeNative('fs_get_workspace_graph')
+    await browser.$('[data-testid="knowledge-graph"]').waitForDisplayed({ timeout: 90_000 })
+    const graph = await invokeNative('fs_get_workspace_graph', workspaceGraphRequest())
     assert.ok(graph.revision, 'Real Rust topology did not expose its revision')
     assert.ok(graph.nodes.some((node) => node.id === `file:${file}`))
     const details = await invokeNative('fs_get_workspace_graph_node_details', {

@@ -20,7 +20,6 @@ const legacyOversizedFiles: string[] = [
   'src/components/ui/sidebar.tsx',
   'src/components/useRightSidebarData.ts',
   'src/i18n/resources.ts',
-  'src/logic/markdownBlocks.ts',
   'src/services/fsApi.ts',
 ]
 

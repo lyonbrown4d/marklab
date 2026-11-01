@@ -57,7 +57,7 @@ describe('useNavigationHistory', () => {
       kind: 'graph' as const,
       nodeId: 'one.md',
       viewId: 'community-a',
-      viewport: { x: 12, y: 20, zoom: 1 },
+      viewport: { x: 12, y: 20, ratio: 1, angle: 0 },
     }
     act(() => result.current.visit(scoped))
     rerender({ enabled: true })

@@ -21,7 +21,7 @@ export type SpreadsheetPreviewSurfaceProps = {
   source?: string
   src?: string
   title: string
-  presentation?: 'embedded' | 'full' | 'graph'
+  presentation?: 'embedded' | 'full'
 }
 
 const EMPTY_COLUMN_WIDTHS: ColumnWidths = new Map()

@@ -2,7 +2,6 @@ import type { GraphData } from '@/logic/graph'
 import type {
   FileEntry,
   FileViewKind,
-  GraphContentMode,
   RootKind,
   ThemeMode,
   ViewMode,
@@ -20,7 +19,6 @@ export type LayoutContext = {
   graphError: unknown
   graphRetry: () => Promise<unknown>
   graphRefreshing: boolean
-  graphEditorPath: string | null
   editorBufferPath: string | null
   onEditorChange: EditorChangeHandler
   onOpenFile: (path: string) => void
@@ -37,8 +35,6 @@ export type LayoutContext = {
   rootKind: RootKind
   recentProjects: string[]
   showEditorStatusBar: boolean
-  graphMiniMapEnabled: boolean
-  graphContentMode: GraphContentMode
   editorReadOnlyMode: boolean
   onCloseActiveTab: () => void
   onCloseTab?: (tabId: string, expectedRoot?: string) => void

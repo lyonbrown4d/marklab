@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EventTarget, Options } from '@tauri-apps/api/event'
 import { createEventHub, invokeWorkspaceCommand, nativeEvents } from '@/runtime/tauri/transport'
 import { createGitApi } from '@/runtime/tauri/git'
+import { fsBufferStatusSchema } from '@/services/fsApiSchemas'
 
 const native = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -236,7 +237,6 @@ it('keeps native readiness attempts private and rejects older workspace seeds', 
 })
 
 it('adapts real Rust buffer status DTOs and rejects late events from another workspace', async () => {
-  const { fsBufferStatusSchema } = await import('@/services/fsApiSchemas')
   const hub = createEventHub()
   const receive = vi.fn((payload: unknown) => fsBufferStatusSchema.parse(payload))
   hub.on('fs-buffer-status', receive)

@@ -111,23 +111,6 @@ describe('MarkdownPdfPreview', () => {
     await waitFor(() => expect(screen.getAllByTestId('pdf-page')).toHaveLength(4))
   })
 
-  it('renders only the first page without thumbnail navigation in graph mode', async () => {
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        disconnect = vi.fn()
-        observe = vi.fn()
-        unobserve = vi.fn()
-      },
-    )
-
-    render(<PdfPreviewSurface fileUrl="marklab-asset://local/v1/pdf-capability" mode="graph" />)
-
-    expect(await screen.findByTestId('pdf-page')).toHaveTextContent('1')
-    expect(screen.getAllByTestId('pdf-page')).toHaveLength(1)
-    expect(screen.queryByRole('navigation', { name: 'PDF pages' })).not.toBeInTheDocument()
-  })
-
   it('only mounts a bounded thumbnail window for long PDF documents', async () => {
     documentFixture.numPages = 200
     vi.stubGlobal(

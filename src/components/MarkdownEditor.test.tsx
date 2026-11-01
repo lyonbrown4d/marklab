@@ -7,9 +7,8 @@ import {
   aiAvailabilityMock,
   inlineAiComposerHookMock,
   inlineAiMock,
-  renderAutoFocusEmbeddedEditor,
+  renderAutoFocusEditor,
   renderEditor,
-  renderEmbeddedEditor,
   resetMarkdownEditorMocks,
   slashLabels,
 } from '@/components/MarkdownEditor.testFixtures'
@@ -196,15 +195,6 @@ describe('MarkdownEditor playground baseline', () => {
     )
   })
 
-  it('scopes embedded presentation without creating a second editor path', () => {
-    preferencesMock.markdownContentWidth = 'full'
-    renderEmbeddedEditor()
-
-    expect(screen.getAllByTestId('markdown-editor')).toHaveLength(1)
-    expect(screen.getByTestId('markdown-editor')).toHaveClass('markdown-editor--embedded')
-    expect(screen.getByTestId('markdown-editor')).not.toHaveClass('[--markdown-content-width:100%]')
-  })
-
   it('keeps large documents on one chunked Plate editor path', () => {
     const value = '# Large document\n\n' + 'paragraph\n\n'.repeat(401)
 
@@ -236,8 +226,8 @@ describe('MarkdownEditor playground baseline', () => {
     expect(document.activeElement).toBe(screen.getByTestId('markdown-editor'))
   })
 
-  it('focuses once after an embedded editor reports ready', async () => {
-    const view = renderAutoFocusEmbeddedEditor()
+  it('focuses once after the document editor reports ready', async () => {
+    const view = renderAutoFocusEditor()
 
     await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('markdown-editor')))
     view.rerenderValue('# Updated')

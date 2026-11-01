@@ -15,6 +15,7 @@ import {
   type PlateEditorSurfaceHandle,
 } from '@/components/plate/PlateEditorSurface'
 import { usePlateEditorContextMenu } from '@/components/plate/usePlateEditorContextMenu'
+import { useMarkdownEditorPosition } from '@/components/editor/useMarkdownEditorPosition'
 import { usePlateFocusHeading } from '@/components/plate/usePlateFocusHeading'
 import { usePlateInlineAiComposer } from '@/components/plate/usePlateInlineAiComposer'
 import type { PlateSelectionToolbarLabels } from '@/components/plate/selection/PlateSelectionToolbar'
@@ -69,7 +70,20 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const { data: aiProviders } = useAiProvidersQuery(interactionActive && !props.readOnly)
   const aiAvailable = aiProviders?.some((provider) => provider.available) ?? false
   const restoreEditorFocus = useCallback(() => surfaceRef.current?.focus(), [])
-  usePlateFocusHeading(props.activePath, getEditor, props.workspaceKey)
+  useMarkdownEditorPosition({
+    activePath: props.activePath,
+    workspaceKey: props.workspaceKey,
+    active: interactionActive,
+    ready: status.phase === 'ready',
+    rootRef,
+    getEditor,
+  })
+  usePlateFocusHeading(
+    props.activePath,
+    getEditor,
+    props.workspaceKey,
+    interactionActive && status.phase === 'ready',
+  )
   const openLinkInput = useCallback(() => surfaceRef.current?.openLinkInput(), [])
   const contextMenu = usePlateEditorContextMenu({
     activePath: props.activePath,
@@ -173,10 +187,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           autoFocus={props.autoFocus}
           className={cn(
             'markdown-editor flex-1',
-            props.variant !== 'embedded' &&
-              markdownContentWidth === 'full' &&
-              '[--markdown-content-width:100%]',
-            props.variant === 'embedded' && 'markdown-editor--embedded',
+            markdownContentWidth === 'full' && '[--markdown-content-width:100%]',
             props.readOnly && 'is-readonly-editor',
             !props.readOnly && immersiveFocusMode && 'is-focus-editor',
             !props.readOnly && immersiveFocusMode && `is-focus-scope-${immersiveFocusScope}`,

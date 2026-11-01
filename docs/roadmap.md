@@ -146,51 +146,32 @@ Validation:
 - LSP tests for missing-file and missing-anchor quick fixes.
 - Avoid mounting extra expensive editor plugins just to power the inspector.
 
-### 2. Graph View V2
+### 2. Document relation graph
 
-Goal: make the graph useful for navigation, diagnosis, and knowledge discovery,
-not just visualization.
+The graph is a navigation surface derived from Markdown references. Sigma.js and
+Graphology replace the React Flow document-card canvas; ForceAtlas2 runs in a
+finite-lived Worker. Documents open in the ordinary editor instead of graph nodes.
 
-Scope:
+Current implementation scope (runtime and performance acceptance still required):
 
-- Add a graph inspector for selected nodes.
-- Show inbound links, outbound links, backlinks snippets, headings, tags,
-  frontmatter, modified time, and related files.
-- Add graph filters for current file neighborhood, folder, tags, orphan notes,
-  broken links, and file kind.
-- Add hover previews with title, path, summary, and key metadata.
-- Add graph search for files, headings, tags, and related nodes.
-- Add layout presets for local neighborhood, folder clusters, tag clusters, and
-  recent activity.
+- Directed references retain occurrence counts and relation kinds.
+- The global graph has title/path search, selection, document preview and opening.
+- The document inspector queries a bounded one/two-hop neighborhood with direction
+  filters and an optional pinned center. It does not download the entire graph.
+- Attachments and missing targets are explicit graph filters.
+- Graph camera and bounded node positions are separate from Markdown content.
+- Markdown editing retains the existing buffer, completion and navigation services.
 
-Validation:
+Native analysis owns parsing, path validation, dirty-buffer input and request-scoped
+projections. Graph topology has a content-independent key; reference details and
+publication queries continue to use the shared index. Native card layout/community
+commands and the single-result graph disk cache have been removed.
 
-- Unit tests for graph data derivation and filters.
-- UI tests for node selection, hover preview, and filter state.
-- Keep large graph rendering incremental and avoid eager workspace-wide React
-  rerenders.
-
-Native analysis boundary:
-
-- Markdown parsing, workspace graph derivation, outline graph derivation,
-  diagnostics, and search are pure projections from document content plus known
-  workspace paths, so they run in the Rust analysis/language services behind typed commands.
-- Rust analysis should output a stable canonical Markdown graph snapshot: files,
-  headings, links, anchors, source ranges, content blocks, and semantic edge
-  kinds such as `contains`, `links_to`, and `references_heading`.
-- Rust analysis must not output ReactFlow-specific layout, viewport, curve,
-  selection, hover, or animation data; those are renderer responsibilities.
-- Rust workspace services keep ownership of workspace root state, filesystem reads,
-  dirty-buffer merging, known path collection, path validation, and DTO
-  conversion between Rust domain results and renderer-facing command DTOs.
-- CPU-heavy assembly and parsing use bounded blocking jobs outside the async
-  event loop. Reuse the Rust document parser instead of adding a parallel parser.
-- Regression coverage should preserve heading-link graph semantics, outline
-  hierarchy, heading content ranges, parsed outline content blocks, dirty-buffer
-  outline input, document/known-path handoff, and explicit native graph errors.
-- Renderer services orchestrate typed analysis calls; workspace-wide parsing and
-  indexing remain native. Editor serialization and its Markdown worker retain
-  their separate rendering responsibility.
+Validation covers graph topology, bounded traversal, cache isolation, renderer
+lifecycle, selection/open behavior, document position restoration and keyboard
+navigation. Native UI and large-workspace performance runs must be reported with
+the actual environment and results; replacing the renderer alone does not establish
+new performance guarantees.
 
 ### 3. All Pages
 

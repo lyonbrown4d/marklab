@@ -6,31 +6,8 @@
   .command-trigger,
   .resize-handle,
   .resize-handle::after,
-  .tab-item,
-  .graph-node-shell,
-  .graph-node-shell::before,
-  .graph-node-handle,
-  .react-flow__edge-path,
-  .react-flow__arrowhead polyline,
-  .react-flow__controls,
-  .react-flow__controls-button {
+  .tab-item {
     animation: none;
     transition: none;
-  }
-
-  .graph-node-shell:hover,
-  .graph-node-shell:focus-visible,
-  .react-flow__node:focus-visible .graph-node-shell {
-    transform: none;
-  }
-
-  .graph-node-shell[data-graph-node-selected='true'] .graph-node-handle,
-  .graph-node-shell--selected .graph-node-handle,
-  .react-flow__node.selected .graph-node-shell .graph-node-handle {
-    transform: translateY(-50%);
-  }
-
-  .react-flow__controls-button:active {
-    transform: none;
   }
 }

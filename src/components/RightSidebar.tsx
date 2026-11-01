@@ -212,6 +212,7 @@ const RightSidebarExpanded = ({
       ) : null}
       <div className="min-h-0 flex-1">
         <RightSidebarContent
+          workspaceKey={workspaceKey}
           activePath={activePath}
           targetPath={targetPath}
           targetLabel={targetLabel}
