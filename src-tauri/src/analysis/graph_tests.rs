@@ -17,7 +17,7 @@ pub(super) fn request() -> WorkspaceGraphRequest {
   }
 }
 
-fn index(files: &[(&str, &str)], assets: &[&str]) -> Index {
+pub(super) fn index(files: &[(&str, &str)], assets: &[&str]) -> Index {
   let mut files: BTreeMap<_, _> = files
     .iter()
     .map(|(path, text)| {
@@ -47,6 +47,13 @@ fn index(files: &[(&str, &str)], assets: &[&str]) -> Index {
   }
 }
 
+pub(super) fn project_graph(
+  index: &Index,
+  request: WorkspaceGraphRequest,
+) -> crate::error::BackendResult<graph::WorkspaceGraph> {
+  graph::graph(index, request, &super::graph_layout::cache())
+}
+
 fn ids(value: &graph::WorkspaceGraph) -> BTreeSet<&str> {
   value
     .nodes
@@ -71,10 +78,10 @@ fn directed_relations_preserve_reciprocal_links_reference_kinds_and_occurrence_c
     ],
     &[],
   );
-  assert_eq!(graph::graph(&index, request()).unwrap().total_nodes, 2);
+  assert_eq!(project_graph(&index, request()).unwrap().total_nodes, 2);
   let mut query = request();
   query.include_missing = false;
-  let value = graph::graph(&index, query).unwrap();
+  let value = project_graph(&index, query).unwrap();
   let counts: BTreeMap<_, _> = value
     .edges
     .iter()
@@ -116,7 +123,7 @@ fn delimiter_substrings_in_workspace_paths_cannot_collide_relation_ids() {
     ],
     &[],
   );
-  let value = graph::graph(&index, request()).unwrap();
+  let value = project_graph(&index, request()).unwrap();
   assert_eq!(value.edges.len(), 2);
   assert_eq!(
     value
@@ -145,23 +152,23 @@ fn local_depth_and_direction_select_only_reachable_neighbors() {
   query.center_path = Some("a.md".into());
   query.direction = GraphDirection::Incoming;
   assert_eq!(
-    ids(&graph::graph(&index, query.clone()).unwrap()),
+    ids(&project_graph(&index, query.clone()).unwrap()),
     BTreeSet::from(["file:a.md", "file:c.md"])
   );
   query.direction = GraphDirection::Outgoing;
   assert_eq!(
-    ids(&graph::graph(&index, query.clone()).unwrap()),
+    ids(&project_graph(&index, query.clone()).unwrap()),
     BTreeSet::from(["file:a.md", "file:b.md"])
   );
   query.depth = 2;
   assert_eq!(
-    ids(&graph::graph(&index, query.clone()).unwrap()),
+    ids(&project_graph(&index, query.clone()).unwrap()),
     BTreeSet::from(["file:a.md", "file:b.md", "file:d.md"])
   );
   query.depth = 1;
   query.direction = GraphDirection::Both;
   assert_eq!(
-    ids(&graph::graph(&index, query).unwrap()),
+    ids(&project_graph(&index, query).unwrap()),
     BTreeSet::from(["file:a.md", "file:b.md", "file:c.md"])
   );
 }
@@ -181,7 +188,7 @@ fn truncation_keeps_center_and_edge_endpoints_and_reports_eligible_scope_totals(
   query.center_path = Some("z.md".into());
   query.max_nodes = 2;
   query.max_edges = 1;
-  let value = graph::graph(&index, query).unwrap();
+  let value = project_graph(&index, query).unwrap();
   assert_eq!((value.total_nodes, value.total_edges), (4, 3));
   assert_eq!(ids(&value), BTreeSet::from(["file:z.md", "file:a.md"]));
   assert!(value.truncated);
@@ -205,9 +212,9 @@ fn filters_control_attachments_missing_targets_and_exclude_external_unsafe_paths
     &["cover.png"],
   );
   let mut query = request();
-  assert_eq!(graph::graph(&index, query.clone()).unwrap().total_nodes, 6);
+  assert_eq!(project_graph(&index, query.clone()).unwrap().total_nodes, 6);
   query.include_attachments = false;
-  let value = graph::graph(&index, query.clone()).unwrap();
+  let value = project_graph(&index, query.clone()).unwrap();
   assert_eq!(
     ids(&value),
     BTreeSet::from(["file:a.md", "missing:missing.md", "missing:MissingWiki.md"])
@@ -215,7 +222,7 @@ fn filters_control_attachments_missing_targets_and_exclude_external_unsafe_paths
   query.include_missing = false;
   query.include_attachments = true;
   assert_eq!(
-    ids(&graph::graph(&index, query).unwrap()),
+    ids(&project_graph(&index, query).unwrap()),
     BTreeSet::from(["file:a.md", "preview:cover.png"])
   );
 }
@@ -231,14 +238,14 @@ fn topology_identity_changes_only_with_visible_relations_and_counts() {
     &[],
   );
   changed.revision = 9;
-  let before = graph::graph(&first, request()).unwrap();
-  let after = graph::graph(&changed, request()).unwrap();
+  let before = project_graph(&first, request()).unwrap();
+  let after = project_graph(&changed, request()).unwrap();
   assert_ne!(before.revision, after.revision);
   assert_eq!(before.topology_key, after.topology_key);
   let repeated = index(&[("a.md", "[B](b.md) [Again](b.md)"), ("b.md", "")], &[]);
   assert_ne!(
     before.topology_key,
-    graph::graph(&repeated, request()).unwrap().topology_key
+    project_graph(&repeated, request()).unwrap().topology_key
   );
 }
 
@@ -251,25 +258,25 @@ fn query_rejects_unsafe_paths_invalid_budgets_unknown_fields_and_missing_centers
     let mut query = request();
     query.center_path = Some(path.into());
     assert_eq!(
-      graph::graph(&index, query).unwrap_err().code,
+      project_graph(&index, query).unwrap_err().code,
       "INVALID_REQUEST"
     );
   }
   let mut query = request();
   query.max_nodes = 0;
   assert_eq!(
-    graph::graph(&index, query).unwrap_err().code,
+    project_graph(&index, query).unwrap_err().code,
     "INVALID_REQUEST"
   );
   let mut query = request();
   query.depth = 3;
   assert_eq!(
-    graph::graph(&index, query).unwrap_err().code,
+    project_graph(&index, query).unwrap_err().code,
     "INVALID_REQUEST"
   );
   let mut query = request();
   query.center_path = Some("unknown.md".into());
-  assert_eq!(graph::graph(&index, query).unwrap_err().code, "NOT_FOUND");
+  assert_eq!(project_graph(&index, query).unwrap_err().code, "NOT_FOUND");
   let mut wire = serde_json::to_value(request()).unwrap();
   wire["legacy"] = true.into();
   assert!(serde_json::from_value::<WorkspaceGraphRequest>(wire).is_err());
@@ -283,13 +290,13 @@ async fn request_keyed_projection_cache_does_not_reuse_other_graph_scopes() {
   let (_directory, workspace, service) = super::tests::fixture().await;
   let index = service.index(workspace).await.unwrap();
   let global = service
-    .project_cached(index.clone(), "graph", request(), graph::graph)
+    .project_cached(index.clone(), "graph", request(), project_graph)
     .await
     .unwrap();
   let mut query = request();
   query.center_path = Some("orphan.md".into());
   let local = service
-    .project_cached(index, "graph", query, graph::graph)
+    .project_cached(index, "graph", query, project_graph)
     .await
     .unwrap();
   assert_eq!(local.total_nodes, 1);

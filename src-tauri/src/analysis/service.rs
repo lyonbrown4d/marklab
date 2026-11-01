@@ -52,6 +52,7 @@ pub struct AnalysisService {
   pub(super) cached: Cache<IndexKey, Arc<Index>>,
   pub(super) documents: Cache<DocumentKey, Arc<Document>>,
   pub(super) queries: Cache<QueryKey, super::projections::CachedProjection>,
+  pub(super) graph_layouts: super::graph_layout::LayoutCache,
   pub(super) schema: OnceCell<()>,
   pub(super) build: Mutex<()>,
   pub(super) epoch: AtomicU64,
@@ -90,6 +91,7 @@ impl AnalysisService {
         )
         .time_to_live(Duration::from_secs(5 * 60))
         .build(),
+      graph_layouts: super::graph_layout::cache(),
       schema: OnceCell::new(),
       build: Mutex::new(()),
       epoch: AtomicU64::new(1),
@@ -154,6 +156,7 @@ impl AnalysisService {
     self.cached.invalidate_all();
     self.queries.invalidate_all();
     self.documents.invalidate_all();
+    self.graph_layouts.invalidate_all();
     self.cached.run_pending_tasks().await;
     self.queries.run_pending_tasks().await;
     self.documents.run_pending_tasks().await;

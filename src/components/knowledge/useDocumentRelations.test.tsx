@@ -19,6 +19,7 @@ const graph = (path: string): FsGraph => ({
   nodes: [
     {
       id: `file:${path}`,
+      position: { x: 0, y: 0 },
       kind: 'file',
       path,
       label: path,

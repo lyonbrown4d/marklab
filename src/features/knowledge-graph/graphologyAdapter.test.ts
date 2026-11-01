@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createKnowledgeTopology,
   readGraphPalette,
-  topologyPositions,
   type GraphPalette,
 } from '@/features/knowledge-graph/graphologyAdapter'
 import { testGraph } from '@/features/knowledge-graph/testGraph'
@@ -15,6 +14,7 @@ const palette: GraphPalette = {
   muted: '#555555',
   edge: '#666666',
   primary: '#777777',
+  background: '#ffffff',
 }
 
 describe('Graphology domain adapter', () => {
@@ -42,6 +42,7 @@ describe('Graphology domain adapter', () => {
         foreground: 'rgb(100, 116, 139)',
         muted: 'rgb(100, 116, 139)',
         edge: 'rgb(100, 116, 139)',
+        background: 'rgb(100, 116, 139)',
       })
       container.style.removeProperty('--primary')
       expect(readGraphPalette(container).primary).toBe('rgb(255, 0, 0)')
@@ -67,10 +68,8 @@ describe('Graphology domain adapter', () => {
     expect(graph.source('a-b')).toBe('file:a.md')
     expect(graph.target('a-b')).toBe('file:b.md')
     expect(graph.getEdgeAttribute('a-b', 'weight')).toBe(3)
-    expect(topologyPositions(graph)['file:a.md']).toEqual({ x: 10, y: 20 })
-    Object.values(topologyPositions(graph)).forEach((point) =>
-      expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true),
-    )
+    expect(graph.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
+    expect(graph.getNodeAttributes('missing:c.md')).toMatchObject(testGraph().nodes[2].position)
   })
   it('omits dangling edges and supports parallel edges and self links', () => {
     const data = testGraph()

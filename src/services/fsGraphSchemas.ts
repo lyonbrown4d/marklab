@@ -35,6 +35,7 @@ export const fsMarkdownBlockSchema = z.discriminatedUnion('kind', [
 
 const graphPreviewNodeFields = {
   id: z.string(),
+  position: z.object({ x: z.number(), y: z.number() }),
   label: z.string(),
   path: z.string(),
   source_path: z.string(),
@@ -54,6 +55,7 @@ const graphPreviewNodeFields = {
 export const fsGraphNodeSchema = z.discriminatedUnion('kind', [
   z.object({
     id: z.string(),
+    position: z.object({ x: z.number(), y: z.number() }),
     kind: z.literal('file'),
     label: z.string(),
     path: z.string(),

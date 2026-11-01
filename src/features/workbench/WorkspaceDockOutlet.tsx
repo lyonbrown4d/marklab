@@ -27,6 +27,7 @@ import {
   setWorkbenchSurface,
 } from '@/features/workbench/workbenchState'
 import { registerWorkspaceDock } from '@/features/workbench/workbenchCommands'
+import { sameDockRoute } from '@/features/workbench/dockRoutes'
 
 type Props = { context: LayoutContext; workspaceKey: string; tabs: WorkspaceTab[] }
 type PanelState = { active: boolean; visible: boolean }
@@ -66,10 +67,12 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
   const bootstrapRoute =
     route === '/' && context.activeTab ? pathToWorkspaceTabRoute(context.activeTab) : route
   const [initialTabs] = useState(() => {
-    const routes = [...new Set([...tabs.map(pathToWorkspaceTabRoute), bootstrapRoute])]
+    const routes = [...new Set(tabs.map(pathToWorkspaceTabRoute))]
+    if (!routes.some((candidate) => sameDockRoute(candidate, bootstrapRoute)))
+      routes.push(bootstrapRoute)
     return routes.map(describe)
   })
-  const initialActiveId = initialTabs.find((tab) => tab.route === bootstrapRoute)?.id
+  const initialActiveId = initialTabs.find((tab) => sameDockRoute(tab.route, bootstrapRoute))?.id
 
   const flushPane = useCallback(
     async (id: string | null) => {
@@ -95,10 +98,10 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
           // Visible groups are never evicted; retain only eight visited hidden panes.
           setRetained((previous) => [tab.id, ...previous.filter((id) => id !== tab.id)].slice(0, 8))
           const document = documentAtRoute(tab.route)
-          if (latest.current.route !== tab.route) expectedRoute.current = tab.route
+          if (!sameDockRoute(latest.current.route, tab.route)) expectedRoute.current = tab.route
           // A restored URL can already match while bootstrap still selected another file.
           if (document) latest.current.context.onOpenFileView(document.path, document.view)
-          else if (latest.current.route !== tab.route) navigate(tab.route)
+          else if (!sameDockRoute(latest.current.route, tab.route)) navigate(tab.route)
         })
         .catch((error: unknown) => {
           if (epoch !== activation.current) return
@@ -112,19 +115,19 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
 
   useEffect(() => {
     if (!ready || !dock.current) return
-    if (restoredRoute.current && restoredRoute.current !== route) return
+    if (restoredRoute.current && !sameDockRoute(restoredRoute.current, route)) return
     restoredRoute.current = null
     if (route !== '/') {
       for (const tab of dock.current.getTabs()) {
         if (tab.route === '/') dock.current.close(tab.id)
       }
     }
-    if (expectedRoute.current === route) {
+    if (sameDockRoute(expectedRoute.current, route)) {
       expectedRoute.current = null
       return
     }
-    if (dock.current.getActiveTab()?.route === route) return
-    const existing = dock.current.getTabs().find((tab) => tab.route === route)
+    if (sameDockRoute(dock.current.getActiveTab()?.route, route)) return
+    const existing = dock.current.getTabs().find((tab) => sameDockRoute(tab.route, route))
     if (existing) dock.current.activate(existing.id)
     else dock.current.open(describe(route))
   }, [describe, ready, route])
@@ -151,7 +154,7 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
         .getTabs()
         .find(
           (tab) =>
-            tab.route === nextRoute &&
+            sameDockRoute(tab.route, nextRoute) &&
             handle.getGroupId(tab.id) === targetGroup &&
             (!beside || secondary),
         )
@@ -231,7 +234,9 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
               // Supersede an earlier bootstrap navigation even if this URL already matches.
               navigate(active.route, {
                 replace: true,
-                state: latest.current.route === active.route ? latest.current.routeState : null,
+                state: sameDockRoute(latest.current.route, active.route)
+                  ? latest.current.routeState
+                  : null,
               })
             }
             // Empty native layouts must not reopen a stale URL.
@@ -246,7 +251,10 @@ export const WorkspaceDockOutlet = ({ context, workspaceKey, tabs }: Props) => {
           setRetained((previous) => previous.filter((id) => id !== tab.id))
           flushers.current.delete(tab.id)
           const document = documentAtRoute(tab.route)
-          if (document && !dock.current?.getTabs().some((other) => other.route === tab.route))
+          if (
+            document &&
+            !dock.current?.getTabs().some((other) => sameDockRoute(other.route, tab.route))
+          )
             context.onCloseTab?.(`file:${document.view}:${document.path}`)
         }}
         onTabsChanged={(all, visible) =>

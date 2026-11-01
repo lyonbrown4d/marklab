@@ -1,7 +1,17 @@
-import type { Locator, Page } from '@playwright/test'
 import fs from 'node:fs/promises'
 /* eslint-disable no-restricted-imports -- Production renderer acceptance reuses test-only fixtures. */
 import { test, expect } from './rendererTest.js'
+import {
+  tabs,
+  visiblePanes,
+  activeEditor,
+  tabMenu,
+  append,
+  openFromExplorer,
+  pointerDrag,
+  revealDockTabs,
+  expectFloatingDisclosure,
+} from './workbenchDriver.js'
 import { flushRendererFixture } from './rendererHarness.js'
 import {
   attachLayoutFixtureDiagnostics,
@@ -25,46 +35,11 @@ test.use({
 test.beforeEach(async ({ session: { page } }) => trackWorkbenchRoutes(page))
 test.afterEach(async ({ session }, info) => attachLayoutFixtureDiagnostics(session, info))
 
-const tabs = (page: Page, name: string) =>
-  page.locator('.dv-tab').filter({ has: page.locator(`[title="${name}"]`) })
-const visiblePanes = (page: Page) => page.locator('[data-workbench-pane]:visible')
-const activeEditor = (page: Page) =>
-  page.locator('[data-workbench-pane][data-pane-active="true"]').getByTestId('markdown-editor')
-const tabMenu = async (page: Page, tab: Locator, action: string) => {
-  await tab.click({ button: 'right' })
-  await page.getByRole('menuitem', { name: action, exact: true }).click()
-}
-const append = async (page: Page, text: string) => {
-  const editor = activeEditor(page)
-  await expect(editor).toHaveAttribute('contenteditable', 'true')
-  await editor.focus()
-  await expect(editor).toBeFocused()
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
-  await page.keyboard.type(text)
-  await expect(editor).toContainText(text)
-}
-const openFromExplorer = async (page: Page, name: string) => {
-  const explorer = page.getByRole('region', { name: 'Files', exact: true })
-  if (!(await explorer.isVisible())) await page.keyboard.press('ControlOrMeta+Shift+L')
-  await explorer.getByRole('button', { name, exact: true }).click()
-  await expect(activeEditor(page)).toContainText(name.replace('.md', ''))
-}
-const pointerDrag = async (
-  page: Page,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-) => {
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  await page.mouse.move(from.x + 12, from.y + 8, { steps: 4 })
-  await page.mouse.move(to.x, to.y, { steps: 20 })
-  await page.mouse.up()
-}
-
 test("splits right and down, restores native layout and saves shared document content to each file's own path", async ({
   session: { page, backend },
 }, info) => {
   await expect(visiblePanes(page)).toHaveCount(1)
+  await expectFloatingDisclosure(page)
   await tabMenu(page, tabs(page, 'Alpha.md'), 'Split Right')
   await expect(visiblePanes(page)).toHaveCount(2)
   await expectDockContentFits(page)
@@ -151,8 +126,9 @@ test("splits right and down, restores native layout and saves shared document co
 
   await tabMenu(page, tabs(page, 'Beta.md').last(), 'Close All in Group')
   await expect(visiblePanes(page)).toHaveCount(2)
+  await revealDockTabs(tabs(page, 'Beta.md'))
   await tabs(page, 'Beta.md')
-    .getByRole('button', { name: /^Close Tab Beta\.md$/i })
+    .getByRole('button', { name: /^Close Tab /i })
     .click()
   await expect(tabs(page, 'Beta.md')).toHaveCount(0)
   await openFromExplorer(page, 'Beta.md')
@@ -167,6 +143,7 @@ test('native tab dragging creates and moves groups, and resizing preserves unsav
   await openFromExplorer(page, 'Beta.md')
   await append(page, ' Dragged draft.')
   const beta = tabs(page, 'Beta.md')
+  await revealDockTabs(beta)
   const source = (await beta.boundingBox())!
   const pane = (await visiblePanes(page).boundingBox())!
   await pointerDrag(
@@ -198,6 +175,8 @@ test('native tab dragging creates and moves groups, and resizing preserves unsav
     contentType: 'image/png',
   })
 
+  await revealDockTabs(tabs(page, 'Alpha.md'))
+  await revealDockTabs(beta)
   const target = (await tabs(page, 'Alpha.md').boundingBox())!
   const moved = (await beta.boundingBox())!
   await pointerDrag(
@@ -227,6 +206,9 @@ test('splits real source editors down and right alongside WYSIWYG, sharing edits
     .click()
   const sourceEditors = page.locator('.monaco-editor:visible')
   await expect(sourceEditors).toHaveCount(1)
+  await expect(
+    page.getByRole('button', { name: 'Show open files: Alpha · Source', exact: true }),
+  ).toBeVisible()
   const activeTab = () => page.locator('.dv-groupview.dv-active-group .dv-tab.dv-active-tab')
   await tabMenu(page, activeTab(), 'Split Down')
   await expect(sourceEditors).toHaveCount(2)
@@ -260,9 +242,8 @@ test('splits real source editors down and right alongside WYSIWYG, sharing edits
     body: await page.screenshot({ path: info.outputPath('workbench-source-four-panes.png') }),
     contentType: 'image/png',
   })
-  await activeTab()
-    .getByRole('button', { name: /^Close Tab Alpha\.md$/i })
-    .click()
+  const closingSource = await revealDockTabs(activeTab())
+  await closingSource.getByRole('button', { name: /^Close Tab /i }).click()
   await expect(sourceEditors).toHaveCount(2)
   await sourceEditors
     .last()

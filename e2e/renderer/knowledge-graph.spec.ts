@@ -34,14 +34,19 @@ const graphFixture = (): FsGraph => ({
   total_nodes: 13,
   total_edges: 12,
   nodes: [
-    ...['Alpha', 'Beta', 'Gamma'].map((label) => ({
+    ...['Alpha', 'Beta', 'Gamma'].map((label, index) => ({
+      position: { x: -index * 2, y: -index },
       id: `file:${label}.md`,
       kind: 'file' as const,
       label,
       path: `${label}.md`,
       group: { key: '.', label: '.', source: 'path' as const },
     })),
-    ...attachments.map(({ preview_kind, path }) => ({
+    ...attachments.map(({ preview_kind, path }, index) => ({
+      position: {
+        x: 4 * Math.cos((index * Math.PI * 2) / attachments.length),
+        y: 4 * Math.sin((index * Math.PI * 2) / attachments.length),
+      },
       id: `preview:${preview_kind}`,
       kind: 'preview' as const,
       label: `${preview_kind} attachment`,
@@ -52,6 +57,7 @@ const graphFixture = (): FsGraph => ({
     })),
     {
       id: 'missing:Missing.md',
+      position: { x: -1, y: -4 },
       kind: 'missing',
       label: 'Missing',
       path: 'Missing.md',

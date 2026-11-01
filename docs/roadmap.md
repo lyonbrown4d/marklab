@@ -149,7 +149,8 @@ Validation:
 ### 2. Document relation graph
 
 The graph is a navigation surface derived from Markdown references. Sigma 4 and
-Graphology render the topology; ForceAtlas2 runs in a finite-lived Worker. The
+Graphology render the topology; Rust computes base node coordinates with fjadra
+inside the bounded analysis worker pool and caches them by workspace and topology. The
 official `@sigma/node-image` pictogram program renders shared file-kind icons.
 
 Current implementation scope (native runtime and performance acceptance still required):
@@ -180,11 +181,13 @@ Current implementation scope (native runtime and performance acceptance still re
 - The document inspector queries a bounded one/two-hop neighborhood with direction
   filters and an optional pinned center. It does not download the entire graph.
 - Attachments and missing targets are explicit graph filters.
-- Graph camera and bounded node positions are separate from Markdown content.
+- Graph camera and bounded manual node overrides are separate from Markdown content.
+  Resetting the layout restores native base coordinates. Screen-space label
+  placement remains in the renderer so it follows text metrics, zoom and pane size.
 - Markdown editing retains the existing buffer, completion and navigation services.
 
-Native analysis owns parsing, path validation, dirty-buffer input and request-scoped
-projections. Graph topology has a content-independent key; reference details and
+Native analysis owns parsing, path validation, dirty-buffer input, topology layout
+and request-scoped projections. Graph topology has a content-independent key; reference details and
 publication queries continue to use the shared index. Native card layout/community
 commands and the single-result graph disk cache have been removed.
 

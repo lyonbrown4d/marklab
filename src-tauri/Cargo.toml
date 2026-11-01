@@ -94,6 +94,7 @@ rig-reqwest = { version = "=0.46.0", default-features = false, features = ["rust
 tauri-plugin-window-state = "=3.0.0-alpha.2"
 puml = { version = "=0.2.6", default-features = false }
 memchr = "2.8.3"
+fjadra = "=0.2.1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-runtime-cef = { version = "=3.0.0-alpha.6", features = ["unstable"] }

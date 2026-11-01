@@ -3,22 +3,79 @@
   color-scheme: inherit;
   --dv-background-color: hsl(var(--background));
   --dv-group-view-background-color: hsl(var(--background));
-  --dv-tabs-and-actions-container-background-color: hsl(var(--muted));
-  --dv-activegroup-visiblepanel-tab-background-color: hsl(var(--background));
-  --dv-activegroup-hiddenpanel-tab-background-color: hsl(var(--muted));
-  --dv-inactivegroup-visiblepanel-tab-background-color: hsl(var(--background));
-  --dv-inactivegroup-hiddenpanel-tab-background-color: hsl(var(--muted));
+  --dv-tabs-and-actions-container-background-color: transparent;
+  --dv-activegroup-visiblepanel-tab-background-color: hsl(var(--muted));
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-visiblepanel-tab-background-color: hsl(var(--muted));
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
   --dv-activegroup-visiblepanel-tab-color: hsl(var(--foreground));
   --dv-activegroup-hiddenpanel-tab-color: hsl(var(--muted-foreground));
   --dv-inactivegroup-visiblepanel-tab-color: hsl(var(--foreground));
   --dv-inactivegroup-hiddenpanel-tab-color: hsl(var(--muted-foreground));
-  --dv-tab-divider-color: hsl(var(--border));
+  --dv-tab-divider-color: transparent;
   --dv-separator-border: hsl(var(--border));
   --dv-sash-color: hsl(var(--border));
   --dv-active-sash-color: hsl(var(--primary));
   --dv-drag-over-background-color: color-mix(in srgb, hsl(var(--primary)) 15%, transparent);
   --dv-drag-over-border-color: hsl(var(--primary));
-  --dv-tabs-and-actions-container-height: 35px;
+  --dv-tabs-and-actions-container-height: 52px;
   --dv-font-family: inherit;
   --dv-border-radius: 0;
+}
+
+/* Keep the SDK header in layout: editor toolbars and native drag geometry must
+ * start below it. Only its inset floating surface is painted when disclosed. */
+.workbench-dock .dockview-theme-marklab .dv-tabs-and-actions-container {
+  position: relative;
+  width: min(100%, 56rem);
+  align-self: center;
+  padding: 10px 18px;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 4px 12px;
+    pointer-events: none;
+    border: 1px solid hsl(var(--border) / 0.65);
+    border-radius: 12px;
+    background: hsl(var(--background) / 0.92);
+    box-shadow: 0 10px 15px -3px hsl(var(--foreground) / 0.1);
+    backdrop-filter: blur(24px);
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+  }
+
+  &:has([data-dock-expanded='true'])::before {
+    opacity: 1;
+  }
+
+  > .dv-scrollable {
+    min-width: 0;
+    height: 32px;
+    transition: opacity 180ms ease-out;
+  }
+
+  &:has([data-dock-expanded='false']) {
+    > .dv-scrollable,
+    .dv-tabs-overflow-dropdown-default {
+      visibility: hidden;
+      pointer-events: none;
+      opacity: 0;
+    }
+  }
+
+  .dv-tab {
+    height: 32px;
+    max-width: 16rem;
+    border-radius: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workbench-dock .dv-tabs-and-actions-container::before,
+  .workbench-dock .dv-tabs-and-actions-container > .dv-scrollable {
+    transition: none;
+  }
 }

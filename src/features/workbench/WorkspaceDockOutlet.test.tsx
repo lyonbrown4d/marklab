@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { HashRouter, MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import type { LayoutContext } from '@/app/AppLayoutContext'
 import type {
   DockTab,
@@ -9,6 +9,7 @@ import type {
 } from '@/features/workbench/dockTypes'
 import { WorkspaceDockOutlet } from '@/features/workbench/WorkspaceDockOutlet'
 import { registerWorkspaceDock } from '@/features/workbench/workbenchCommands'
+import { pathToFileViewRoute } from '@/logic/routing'
 
 const dockState = vi.hoisted<{ tabs: DockTab[]; handle?: WorkspaceDockHandle; restored?: boolean }>(
   () => ({
@@ -170,4 +171,41 @@ it('synchronizes the restored file even when its URL already matches the current
   fireEvent.click(screen.getByRole('button', { name: 'Finish native restore' }))
   fireEvent.click(screen.getByRole('button', { name: 'Activate restored pane' }))
   await waitFor(() => expect(context.onOpenFileView).toHaveBeenCalledWith('missing.md', 'edit'))
+})
+
+it('reuses a native document pane when HashRouter encodes its multilingual route during activation', async () => {
+  const path = '05 🔬 实验记录：图标、长标题与标签碰撞.md'
+  const route = pathToFileViewRoute(path, 'edit')
+  dockState.restored = false
+  dockState.tabs = [
+    { id: 'existing-document', route, title: path, kind: 'document' },
+    { id: 'graph', route: '/workspace/graph', title: 'Map', kind: 'graph' },
+  ]
+  const RoutedOutlet = () => {
+    const navigate = useNavigate()
+    return (
+      <WorkspaceDockOutlet
+        context={{
+          ...context,
+          onOpenFileView: (nextPath, view) => navigate(pathToFileViewRoute(nextPath, view)),
+        }}
+        workspaceKey="external:/workspace"
+        tabs={[]}
+      />
+    )
+  }
+  window.location.hash = '#/workspace/graph'
+  render(
+    <HashRouter>
+      <RoutedOutlet />
+      <RouteProbe />
+    </HashRouter>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Finish native restore' }))
+  await waitFor(() => expect(registerWorkspaceDock).toHaveBeenCalled())
+  fireEvent.click(screen.getByRole('button', { name: 'Activate restored pane' }))
+  await waitFor(() => expect(decodeURI(screen.getByTestId('route').textContent ?? '')).toBe(route))
+  expect(dockState.handle?.getActiveTab()?.id).toBe('existing-document')
+  expect(dockState.handle?.open).not.toHaveBeenCalled()
+  window.location.hash = ''
 })

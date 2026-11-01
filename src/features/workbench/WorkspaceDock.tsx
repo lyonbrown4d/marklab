@@ -18,6 +18,7 @@ import {
 import 'dockview-react/dist/styles/dockview.css'
 import '@/features/workbench/workbench-dock.scss'
 import { DockTabHeader } from '@/features/workbench/DockTabHeader'
+import { DockGroupDisclosure } from '@/features/workbench/DockGroupDisclosure'
 import {
   createDockController,
   panelTab,
@@ -264,6 +265,7 @@ const DockWorkspace = ({
             components={components}
             theme={theme}
             defaultTabComponent={DockTabHeader}
+            rightHeaderActionsComponent={DockGroupDisclosure}
             onReady={onReady}
             defaultRenderer="onlyWhenVisible"
             dndStrategy="pointer"

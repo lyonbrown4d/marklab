@@ -104,6 +104,26 @@ export const expectDockContentFits = async (page: Page) => {
 
 export const attachLayoutFixtureDiagnostics = async (session: RendererSession, info: TestInfo) => {
   await attachWorkbenchRoutes(session.page, info)
+  await info.attach('workbench-native-groups.json', {
+    body: JSON.stringify(
+      await session.page.locator('.dv-groupview').evaluateAll((groups) =>
+        groups.map((group) => ({
+          label: group.getAttribute('aria-label'),
+          tabs: [...group.querySelectorAll('[data-tab-panel-id]')].map((tab) => ({
+            panelId: tab.getAttribute('data-tab-panel-id'),
+            selected: tab.getAttribute('aria-selected'),
+            title: tab.querySelector('[title]')?.getAttribute('title'),
+          })),
+          paneIds: [...group.querySelectorAll('[data-workbench-pane]')].map((pane) =>
+            pane.getAttribute('data-workbench-pane'),
+          ),
+        })),
+      ),
+      null,
+      2,
+    ),
+    contentType: 'application/json',
+  })
   await info.attach('native-layout-fixture.json', {
     body: JSON.stringify(
       {

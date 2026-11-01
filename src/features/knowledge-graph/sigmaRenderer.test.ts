@@ -7,15 +7,12 @@ import type { KnowledgeTopology } from '@/features/knowledge-graph/graphologyAda
 
 const mocks = vi.hoisted(() => ({
   kill: vi.fn(),
-  workerKill: vi.fn(),
-  start: vi.fn(),
   refresh: vi.fn(),
   resize: vi.fn(),
   events: new Map<string, (...args: never[]) => void>(),
   cameraEvents: new Map<string, (camera: GraphCameraState) => void>(),
   wheelEvents: new Map<string, (...args: never[]) => void>(),
   graph: null as KnowledgeTopology | null,
-  layoutGraph: null as KnowledgeTopology | null,
   camera: { x: 0.5, y: 0.5, ratio: 1, angle: 0 },
   options: null as {
     primitives: { nodes: { layers: { drawingMode: string }[] } }
@@ -40,8 +37,11 @@ vi.mock('sigma', () => ({
         getState: () => mocks.camera,
         getBoundedRatio: (ratio: number) => Math.min(8, Math.max(0.05, ratio)),
         setState: (next: Partial<GraphCameraState>) => {
+          const changed = Object.entries(next).some(
+            ([key, value]) => mocks.camera[key as keyof GraphCameraState] !== value,
+          )
           mocks.camera = { ...mocks.camera, ...next }
-          mocks.cameraEvents.get('updated')?.(mocks.camera)
+          if (changed) mocks.cameraEvents.get('updated')?.(mocks.camera)
         },
         on: (name: string, callback: (camera: GraphCameraState) => void) =>
           mocks.cameraEvents.set(name, callback),
@@ -62,6 +62,18 @@ vi.mock('sigma', () => ({
     graphToFramedGraph() {
       return { x: 0.2, y: 0.3 }
     }
+    graphToViewport() {
+      return { x: 120, y: 120 }
+    }
+    getDimensions() {
+      return { width: 640, height: 480 }
+    }
+    scaleSize(size: number) {
+      return size / Math.sqrt(mocks.camera.ratio)
+    }
+    off(name: string) {
+      mocks.events.delete(name)
+    }
     refresh = mocks.refresh
     resize = mocks.resize
     kill = mocks.kill
@@ -73,15 +85,6 @@ vi.mock('sigma/rendering', () => ({
   sdfSquare: () => ({ name: 'square' }),
 }))
 vi.mock('@sigma/node-image', () => ({ layerImage: (options: unknown) => options }))
-vi.mock('graphology-layout-forceatlas2/worker', () => ({
-  default: class {
-    constructor(graph: KnowledgeTopology) {
-      mocks.layoutGraph = graph
-    }
-    start = mocks.start
-    kill = mocks.workerKill
-  },
-}))
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -98,6 +101,9 @@ beforeEach(() => {
       disconnect = vi.fn()
     },
   )
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    measureText: (text: string) => ({ width: text.length * 32 }),
+  } as CanvasRenderingContext2D)
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -120,98 +126,101 @@ const setup = (graph = testGraph(), viewKey = 'workspace') => {
 }
 
 describe('Sigma4 graph renderer integration', () => {
-  it('runs a finite layout and releases renderer and worker resources on destruction', () => {
+  it('uses native coordinates immediately, never saves the native base, and releases resources', () => {
     const { renderer } = setup()
     expect(mocks.options?.settings.enableNodeDrag).toBe(true)
     expect(mocks.options?.settings.itemSizesReference).toBe('screen')
     expect(mocks.options?.primitives.nodes.layers[0].drawingMode).toBe('color')
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
     expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('markdown')
-    expect(mocks.wheelEvents.has('wheel')).toBe(true)
-    expect(mocks.start).toHaveBeenCalledOnce()
+    mocks.refresh.mockClear()
     vi.advanceTimersByTime(3000)
-    expect(mocks.workerKill).toHaveBeenCalledOnce()
+    expect(mocks.refresh).not.toHaveBeenCalled()
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
+    renderer.zoom(0.5)
     renderer.destroy()
     renderer.destroy()
     expect(mocks.kill).toHaveBeenCalledOnce()
     expect(mocks.wheelEvents.size).toBe(0)
-    expect(graphViewCache.getState().entries[0].topologyKey).toBe('topology-1')
-  })
-  it('rearranges cached positions, cancels an earlier run and stops the replacement without moving the camera', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
-    const initial = setup()
-    initial.renderer.focus({
-      nodeId: 'file:a.md',
-      viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 },
+    expect(graphViewCache.getState().entries[0]).toMatchObject({
+      topologyKey: 'topology-1',
+      manualOverrides: {},
+      camera: mocks.camera,
     })
-    initial.renderer.destroy()
-    mocks.start.mockClear()
-    mocks.workerKill.mockClear()
-    const restored = setup()
-    expect(mocks.start).not.toHaveBeenCalled()
-    restored.renderer.arrange()
-    mocks.layoutGraph?.setNodeAttribute('file:a.md', 'x', 42)
-    vi.advanceTimersByTime(400)
-    restored.renderer.arrange()
-    expect(mocks.workerKill).toHaveBeenCalledOnce()
-    expect(mocks.start).toHaveBeenCalledTimes(2)
-    mocks.layoutGraph?.setNodeAttribute('file:a.md', 'x', 84)
-    vi.advanceTimersByTime(250)
-    expect(mocks.workerKill).toHaveBeenCalledOnce()
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
-    vi.advanceTimersByTime(1000)
-    expect(mocks.workerKill).toHaveBeenCalledTimes(2)
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(84)
-    expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
-    expect(graphViewCache.getState().entries[0].positions['file:a.md'].x).toBe(84)
-    restored.renderer.destroy()
+    expect(graphViewCache.getState().entries[0].camera.ratio).toBe(0.5)
   })
-  it('publishes layout only once when reduced motion is preferred', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
-    const { renderer } = setup()
-    const initialX = mocks.graph?.getNodeAttribute('file:a.md', 'x')
-    expect(mocks.layoutGraph).not.toBe(mocks.graph)
-    mocks.layoutGraph?.setNodeAttribute('file:a.md', 'x', 42)
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(initialX)
-    expect(mocks.refresh).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(3000)
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
-    expect(mocks.refresh).toHaveBeenCalledOnce()
-    expect(mocks.workerKill).toHaveBeenCalledOnce()
+  it('persists an explicit fit even when the camera is already at its default position', () => {
+    const { renderer, onCameraChange } = setup()
+    expect(graphViewCache.getState().entries).toEqual([])
+    renderer.fit()
+    expect(onCameraChange).not.toHaveBeenCalled()
+    expect(graphViewCache.getState().entries[0]).toMatchObject({
+      manualOverrides: {},
+      camera: mocks.camera,
+    })
     renderer.destroy()
   })
-  it('keeps positions and camera through content refresh and restores the same topology without relayout', () => {
+  it('persists only explicit drags and applies them over a changed native base without moving the camera', () => {
     const { renderer } = setup()
-    mocks.graph?.setNodeAttribute('file:a.md', 'x', 42)
     renderer.focus({ nodeId: 'file:a.md', viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 } })
+    mocks.graph?.setNodeAttribute('file:a.md', 'x', 42)
+    mocks.graph?.setNodeAttribute('file:b.md', 'x', 999)
+    mocks.events.get('nodeDragEnd')?.({
+      node: 'file:a.md',
+      allDraggedNodes: ['file:a.md'],
+    } as never)
+    expect(graphViewCache.getState().entries[0].manualOverrides).toEqual({
+      'file:a.md': { x: 42, y: 0 },
+    })
     const updated = testGraph()
+    updated.nodes[0].position = { x: -50, y: 60 }
+    updated.nodes[1].position = { x: 300, y: 90 }
     updated.nodes[0].label = 'Renamed'
     updated.nodes[0].path = 'assets/renamed.png'
     renderer.updateContent(updated)
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'label')).toBe('Renamed')
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('image')
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
-    expect(mocks.camera.ratio).toBe(0.6)
-    renderer.destroy()
-    mocks.start.mockClear()
-    const restored = setup()
-    expect(mocks.start).not.toHaveBeenCalled()
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
+    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({
+      x: 42,
+      y: 0,
+      label: 'Renamed',
+      iconKind: 'image',
+    })
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject({ x: 300, y: 90 })
     expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
+    renderer.arrange()
+    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({ x: -50, y: 60 })
+    expect(graphViewCache.getState().entries[0].manualOverrides).toEqual({})
+    expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
+    renderer.destroy()
+    const restored = setup(updated)
+    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({ x: -50, y: 60 })
+    expect(mocks.camera.ratio).toBe(0.6)
     restored.renderer.destroy()
   })
-  it('preserves camera after topology changes within a view while isolating document views', () => {
+  it('retains manual positions across topology changes, prunes removed nodes, and isolates workspace and document views', () => {
     const initial = setup()
     initial.renderer.focus({
       nodeId: 'file:a.md',
       viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 },
     })
+    mocks.graph?.setNodeAttribute('file:a.md', 'x', 42)
+    mocks.events.get('nodeDragEnd')?.({
+      node: 'file:a.md',
+      allDraggedNodes: ['file:a.md'],
+    } as never)
     initial.renderer.destroy()
     const changed = setup({ ...testGraph(), topology_key: 'topology-2' })
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
     expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
     changed.renderer.destroy()
     const local = setup(testGraph(), 'document:a.md')
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(0)
     expect(mocks.camera).toMatchObject({ x: 0.5, y: 0.5, ratio: 1 })
     local.renderer.destroy()
+    const removed = testGraph()
+    removed.nodes = removed.nodes.slice(1)
+    const remaining = setup(removed)
+    remaining.renderer.destroy()
+    expect(graphViewCache.getState().entries[0].manualOverrides).toEqual({})
   })
   it('selects without opening, opens on double click and dims unrelated nodes', () => {
     const { renderer, onSelectNode, onOpenNode } = setup()
@@ -250,8 +259,11 @@ describe('Sigma4 graph renderer integration', () => {
     renderer.arrange()
     mocks.events.get('nodeDragStart')?.()
     mocks.graph?.setNodeAttribute('file:a.md', 'x', 9)
-    mocks.events.get('nodeDragEnd')?.()
-    expect(graphViewCache.getState().entries[0].positions['file:a.md'].x).toBe(9)
+    mocks.events.get('nodeDragEnd')?.({
+      node: 'file:a.md',
+      allDraggedNodes: ['file:a.md'],
+    } as never)
+    expect(graphViewCache.getState().entries[0].manualOverrides['file:a.md'].x).toBe(9)
     const previousPrimary = document.documentElement.style.getPropertyValue('--primary')
     document.documentElement.style.setProperty('--primary', '0 100% 50%')
     await Promise.resolve()
@@ -268,15 +280,5 @@ describe('Sigma4 graph renderer integration', () => {
     renderer.updateContent(testGraph())
     expect(renderer.focus({ nodeId: 'workspace' })).toBe(false)
     expect(mocks.camera.ratio).toBe(1)
-  })
-  it('keeps seeded icon nodes usable when the layout worker fails', () => {
-    mocks.start.mockImplementationOnce(() => {
-      throw new Error('Worker unavailable')
-    })
-    const { renderer } = setup()
-    expect(mocks.workerKill).toHaveBeenCalledOnce()
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('markdown')
-    renderer.focus({ nodeId: 'workspace' })
-    renderer.destroy()
   })
 })

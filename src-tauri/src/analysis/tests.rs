@@ -78,7 +78,8 @@ async fn analysis_queries_share_real_index_and_invalidate_on_dirty_buffer_change
   assert_eq!(insights.knowledge.incoming_count, 1);
   assert_eq!(insights.backlinks[0].source_path, "start.md");
   assert_eq!(insights.asset_report.workspace_missing_count, 1);
-  let topology = graph::graph(&first, super::graph_tests::request()).expect("graph");
+  let topology =
+    super::graph_tests::project_graph(&first, super::graph_tests::request()).expect("graph");
   assert!(
     topology
       .nodes

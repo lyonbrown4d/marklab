@@ -35,11 +35,12 @@ describe('Sigma lifecycle hook', () => {
     }
     const hook = renderHook((current) => useSigmaGraph(container, current), { initialProps: props })
     await waitFor(() => expect(state.create).toHaveBeenCalledOnce())
-    hook.rerender({ ...props, graph: { ...props.graph, revision: 'new-content' } })
+    const updated = testGraph()
+    updated.revision = 'new-content'
+    updated.nodes[0].position = { x: 123, y: 456 }
+    hook.rerender({ ...props, graph: updated })
     expect(state.create).toHaveBeenCalledOnce()
-    expect(state.updateContent).toHaveBeenLastCalledWith(
-      expect.objectContaining({ revision: 'new-content' }),
-    )
+    expect(state.updateContent).toHaveBeenLastCalledWith(updated)
     hook.rerender({ ...props, active: false })
     expect(state.destroy).toHaveBeenCalledOnce()
     expect(hook.result.current.renderer).toBeNull()

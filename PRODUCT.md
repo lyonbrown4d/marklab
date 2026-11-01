@@ -84,9 +84,10 @@ operation and offer a useful retry or recovery path.
 
 - The title bar contains compact workspace and view-level actions.
 - The left workspace drawer can preview on hover and pins open through explicit interaction.
-- Compact workspace tabs preserve recent-use navigation within resizable editor
-  groups. Split right or down, drag tabs to edges or between groups, and use
-  group-scoped close and move commands.
+- Floating workspace tabs preserve recent-use navigation within resizable editor
+  groups. Each group shows a compact active-title pill; hover reveals its tabs,
+  and clicking pins them open. Split right or down, drag tabs to edges or between
+  groups, and use group-scoped close and move commands.
 - Selecting a document in the graph opens the complete editor beside it, with the graph
   on the left by default. The editor becomes editable when its pane receives focus.
   Non-Markdown files use their ordinary workspace preview in the same groups.

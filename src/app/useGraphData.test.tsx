@@ -28,6 +28,7 @@ const graph = (label: string): FsGraph => ({
   nodes: [
     {
       id: `file:${label}`,
+      position: { x: 0, y: 0 },
       kind: 'file',
       label,
       path: `${label}.md`,

@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import type { IDockviewPanelHeaderProps } from 'dockview-react'
-import { FileText, Network, X } from 'lucide-react'
+import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -13,9 +14,12 @@ import {
 } from '@/components/ui/context-menu'
 import { DockContext } from '@/features/workbench/dockTypes'
 import { panelTab } from '@/features/workbench/dockController'
+import { DockTabIcon, getDockTabPresentation } from '@/features/workbench/dockTabPresentation'
+import { useI18n } from '@/i18n/useI18n'
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 export const DockTabHeader = ({ api, containerApi }: IDockviewPanelHeaderProps) => {
+  const { t } = useI18n()
   const context = useContext(DockContext)
   const [menuOpen, setMenuOpen] = useState(false)
   useNativeSurfaceOcclusion('workbench-tab-menu', menuOpen)
@@ -27,13 +31,18 @@ export const DockTabHeader = ({ api, containerApi }: IDockviewPanelHeaderProps) 
   const panel = containerApi.getPanel(api.id)
   const tab = panelTab(panel)
   const groups = menuOpen ? containerApi.groups.filter((group) => group !== panel?.group) : []
-  const Icon = tab?.kind === 'graph' ? Network : FileText
+  const { label } = getDockTabPresentation(tab, api.title ?? '', {
+    source: t('editor.modeSource'),
+    preview: t('editor.modePreview'),
+    diff: t('scm.diffTitle'),
+  })
   return (
     <ContextMenu onOpenChange={setMenuOpen}>
       <ContextMenuTrigger asChild>
         <div
-          className="group flex h-full max-w-64 min-w-0 items-center gap-2 px-3 text-xs"
+          className="group flex h-full max-w-64 min-w-0 items-center gap-1.5 px-2 text-xs"
           title={tab?.title ?? api.title}
+          aria-label={label}
           tabIndex={0}
           onKeyDown={(event) => {
             if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return
@@ -55,10 +64,12 @@ export const DockTabHeader = ({ api, containerApi }: IDockviewPanelHeaderProps) 
             }
           }}
         >
-          <Icon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="truncate">{tab?.title ?? api.title}</span>
-          <button
+          <DockTabIcon tab={tab} />
+          <span className="truncate">{label}</span>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label={`${labels.close} ${tab?.title ?? api.title ?? ''}`}
             className="ml-1 flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             onPointerDown={(event) => event.stopPropagation()}
@@ -68,7 +79,7 @@ export const DockTabHeader = ({ api, containerApi }: IDockviewPanelHeaderProps) 
             }}
           >
             <X aria-hidden className="size-3" />
-          </button>
+          </Button>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

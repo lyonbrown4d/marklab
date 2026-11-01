@@ -3,6 +3,9 @@ mod cache;
 pub mod commands;
 pub mod document;
 mod graph;
+mod graph_layout;
+#[cfg(test)]
+mod graph_layout_tests;
 mod graph_preview;
 mod graph_projection;
 mod graph_query;

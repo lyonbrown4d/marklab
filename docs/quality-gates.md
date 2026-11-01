@@ -10,8 +10,9 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
 - `src/services/*` and the typed `src/runtime/*` adapter own desktop calls and
   scoped event subscriptions. Commands validate requests and root ownership;
   external child webviews have no desktop capability.
-- Monaco owns source editing; Plate owns rich editing; Sigma.js owns relation graph
-  interaction and layout. Dockview owns workspace tab groups, splits, dragging and
+- Monaco owns source editing; Plate owns rich editing; Rust owns graph base node
+  layout. Sigma.js owns graph interaction and screen-space label placement.
+  Dockview owns workspace tab groups, splits, dragging and
   resizing. Native edit routing respects actual pane focus and Vim ownership.
 - One workspace buffer/save queue serves path-bound pane callbacks. Pane ownership
   guards stale same-file changes; recovery drafts remain copyable. Caret positions

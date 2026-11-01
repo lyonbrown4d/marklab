@@ -38,6 +38,7 @@ const graph: FsGraph = {
   nodes: [
     {
       id: 'file:linked.md',
+      position: { x: 0, y: 0 },
       kind: 'file',
       label: 'Linked',
       path: 'linked.md',
@@ -45,6 +46,7 @@ const graph: FsGraph = {
     },
     {
       id: 'missing:lost',
+      position: { x: 200, y: 0 },
       kind: 'missing',
       label: 'Lost',
       path: 'lost.md',

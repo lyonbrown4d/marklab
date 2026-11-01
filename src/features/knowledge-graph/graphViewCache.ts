@@ -12,7 +12,7 @@ const entrySchema = z.object({
   workspaceKey: z.string(),
   viewKey: z.string(),
   topologyKey: z.string(),
-  positions: z.record(z.string(), pointSchema),
+  manualOverrides: z.record(z.string(), pointSchema),
   camera: cameraSchema,
 })
 export type GraphViewSnapshot = z.infer<typeof entrySchema>
@@ -22,10 +22,10 @@ const MAX_SNAPSHOTS = 8
 
 const boundSnapshots = (entries: GraphViewSnapshot[]) => {
   let remaining = MAX_POSITIONS
-  return entries.slice(0, MAX_SNAPSHOTS).flatMap((entry) => {
-    const positions = Object.entries(entry.positions).slice(0, remaining)
-    remaining -= positions.length
-    return positions.length ? [{ ...entry, positions: Object.fromEntries(positions) }] : []
+  return entries.slice(0, MAX_SNAPSHOTS).map((entry) => {
+    const manualOverrides = Object.entries(entry.manualOverrides).slice(0, remaining)
+    remaining -= manualOverrides.length
+    return { ...entry, manualOverrides: Object.fromEntries(manualOverrides) }
   })
 }
 
@@ -56,7 +56,9 @@ const storage = createJSONStorage<CacheState>(() => ({
 export const graphViewCache = createStore<CacheState>()(
   persist<CacheState>(() => ({ entries: [] }), {
     name: 'marklab.knowledgeGraph.views',
-    version: 2,
+    // Earlier versions contained renderer-computed layouts, not explicit user drags.
+    version: 3,
+    migrate: () => ({ entries: [] }),
     storage,
     merge: (persisted, current) => {
       const parsed = z
@@ -67,32 +69,31 @@ export const graphViewCache = createStore<CacheState>()(
   }),
 )
 
-export const readGraphView = (workspaceKey: string, topologyKey: string, viewKey = 'workspace') => {
-  const entries = graphViewCache
+export const readGraphView = (workspaceKey: string, viewKey = 'workspace') =>
+  graphViewCache
     .getState()
-    .entries.filter((entry) => entry.workspaceKey === workspaceKey && entry.viewKey === viewKey)
-  const latest = entries[0]
-  const exact = entries.find((entry) => entry.topologyKey === topologyKey)
-  return exact && latest ? { ...exact, camera: latest.camera } : latest
-}
+    .entries.find((entry) => entry.workspaceKey === workspaceKey && entry.viewKey === viewKey)
 
 export const saveGraphView = (
   workspaceKey: string,
   topologyKey: string,
-  positions: Record<string, { x: number; y: number }>,
+  manualOverrides: Record<string, { x: number; y: number }>,
   camera: GraphCameraState,
   viewKey = 'workspace',
 ) => {
-  const parsed = entrySchema.safeParse({ workspaceKey, viewKey, topologyKey, positions, camera })
+  const parsed = entrySchema.safeParse({
+    workspaceKey,
+    viewKey,
+    topologyKey,
+    manualOverrides,
+    camera,
+  })
   if (!parsed.success) return
   graphViewCache.setState((state) => ({
     entries: boundSnapshots([
       parsed.data,
       ...state.entries.filter(
-        (entry) =>
-          entry.workspaceKey !== workspaceKey ||
-          entry.viewKey !== viewKey ||
-          entry.topologyKey !== topologyKey,
+        (entry) => entry.workspaceKey !== workspaceKey || entry.viewKey !== viewKey,
       ),
     ]),
   }))

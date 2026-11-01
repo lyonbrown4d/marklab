@@ -44,7 +44,7 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
     >
       <div
         aria-label={t('knowledgeGraph.canvas')}
-        className="absolute inset-0 overscroll-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="absolute inset-x-0 top-16 bottom-14 overscroll-contain outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             props.onSelectNode(null)
@@ -89,7 +89,7 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
         </Button>
         <Button
           aria-label={t('knowledgeGraph.arrange')}
-          disabled={!renderer || props.graph.nodes.length < 2 || props.graph.edges.length === 0}
+          disabled={!renderer}
           onClick={() => renderer?.arrange()}
           size="icon"
           variant="ghost"

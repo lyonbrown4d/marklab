@@ -82,9 +82,10 @@ describe('KnowledgeGraphCanvas', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '1199.md' } })
     expect(screen.getByRole('button', { name: /Document 1199/ })).toBeInTheDocument()
   })
-  it('disables rearrangement when the graph has no usable edges', () => {
+  it('can restore native positions for manually moved disconnected nodes', () => {
     renderCanvas({ graph: { ...testGraph(), edges: [] } })
-    expect(screen.getByRole('button', { name: 'knowledgeGraph.arrange' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'knowledgeGraph.arrange' }))
+    expect(state.arrange).toHaveBeenCalledOnce()
   })
   it('supports camera controls, clearing selection and reports bounded/truncated topology', () => {
     const { props } = renderCanvas({

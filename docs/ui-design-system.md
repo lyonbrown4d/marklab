@@ -51,6 +51,9 @@ This document records the current UI foundation decisions so future UI work uses
 ## Workspace editor groups and graph
 
 Dockview supplies the workspace's tab, group, resize, and pointer-drag behavior.
+Preserve the floating tab disclosure: a compact centered active-title pill, hover
+preview, explicit pinning, and Escape dismissal for each group. Keep the native
+tab strip and drag targets; the quiet inset surface must fit the group's width.
 Use its group model for right/down splits and tab moves; keep close commands
 scoped to the tab's group. The graph opens a selected existing file in the complete
 editor on its right without taking focus. The selected editor is read-only until
@@ -63,7 +66,12 @@ Plate overlays. Preserve visible focus, read-only states, and both themes when
 resizing, moving tabs, or restoring a saved layout.
 
 Graph nodes use eleven shared file-kind pictograms through Sigma's official image
-program. Pixel-wheel input pans; Ctrl pinch, Alt/Meta pixel-wheel input, and
+program. Rust supplies cached base coordinates; manual dragging overrides those
+coordinates until reset. Labels sit outside glyphs, use measured viewport collision checks, and
+show only names that fit without covering icons or each other. Ordinary long
+names abbreviate visually; selection and hover prioritize fuller names when
+space permits. Preserve complete titles and paths in search and document data.
+Pixel-wheel input pans; Ctrl pinch, Alt/Meta pixel-wheel input, and
 line/page wheel input zoom around the pointer. Camera changes use Sigma's
 coordinate conversions. Hidden/disposed surfaces cancel pending wheel work.
 

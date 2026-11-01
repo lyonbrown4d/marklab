@@ -10,6 +10,7 @@ export const testGraph = (): GraphData => ({
   nodes: [
     {
       id: 'file:a.md',
+      position: { x: 0, y: 0 },
       kind: 'file',
       label: 'Alpha',
       path: 'a.md',
@@ -17,6 +18,7 @@ export const testGraph = (): GraphData => ({
     },
     {
       id: 'file:b.md',
+      position: { x: 200, y: 40 },
       kind: 'file',
       label: 'Beta',
       path: 'b.md',
@@ -24,6 +26,7 @@ export const testGraph = (): GraphData => ({
     },
     {
       id: 'missing:c.md',
+      position: { x: -180, y: 80 },
       kind: 'missing',
       label: 'Missing',
       path: 'c.md',

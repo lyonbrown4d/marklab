@@ -17,6 +17,7 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
       GraphNode::File {
         id,
         label: document.title.clone(),
+        position: GraphPosition::default(),
         path: document.path.clone(),
         group: GraphGroup {
           key: folder.into(),
@@ -86,6 +87,7 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
             source_path: document.path.clone(),
             target: link.target.clone(),
             preview_kind: preview_kind(path),
+            position: GraphPosition::default(),
           }
         } else {
           GraphNode::Preview {
@@ -95,6 +97,7 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
             source_path: document.path.clone(),
             target: link.target.clone(),
             preview_kind: preview_kind(path),
+            position: GraphPosition::default(),
           }
         }
       });

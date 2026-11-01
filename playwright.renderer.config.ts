@@ -34,7 +34,7 @@ export default defineConfig({
       name: 'smoke',
       testMatch: [
         '**/smoke.spec.ts',
-        '**/knowledge-graph.spec.ts',
+        '**/knowledge-graph*.spec.ts',
         '**/workbench.spec.ts',
         '**/layout.spec.ts',
         '**/publication-layout.spec.ts',

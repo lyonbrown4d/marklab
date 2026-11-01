@@ -23,8 +23,9 @@ const graph = () => ({
   truncated: false,
   total_nodes: 2,
   total_edges: 1,
-  nodes: ['a.md', 'b.md'].map((path) => ({
+  nodes: ['a.md', 'b.md'].map((path, index) => ({
     id: `file:${path}`,
+    position: { x: index * 200, y: 0 },
     kind: 'file',
     label: path,
     path,
@@ -61,6 +62,34 @@ describe('fsApi graph contract', () => {
       { ...valid, total_nodes: 0 },
     ]) {
       nativeIpc.invoke.mockResolvedValue(payload)
+      await expect(fsApi.getWorkspaceGraph(request)).rejects.toThrow()
+    }
+  })
+  it('requires finite native coordinates on every node variant', async () => {
+    const valid = graph()
+    for (const position of [undefined, { x: NaN, y: 0 }, { x: 0, y: Infinity }]) {
+      nativeIpc.invoke.mockResolvedValue({
+        ...valid,
+        nodes: valid.nodes.map((node) => ({ ...node, position })),
+      })
+      await expect(fsApi.getWorkspaceGraph(request)).rejects.toThrow()
+    }
+    for (const kind of ['preview', 'missing']) {
+      const node = {
+        ...valid.nodes[1],
+        kind,
+        source_path: 'a.md',
+        target: 'b.md',
+        preview_kind: 'source',
+      }
+      nativeIpc.invoke.mockResolvedValue({ ...valid, nodes: [valid.nodes[0], node] })
+      await expect(fsApi.getWorkspaceGraph(request)).resolves.toMatchObject({
+        nodes: [expect.anything(), expect.objectContaining({ kind, position: { x: 200, y: 0 } })],
+      })
+      nativeIpc.invoke.mockResolvedValue({
+        ...valid,
+        nodes: [valid.nodes[0], { ...node, position: undefined }],
+      })
       await expect(fsApi.getWorkspaceGraph(request)).rejects.toThrow()
     }
   })

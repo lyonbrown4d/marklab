@@ -22,6 +22,7 @@ export type GraphPalette = {
   muted: string
   edge: string
   primary: string
+  background: string
 }
 
 export const readGraphPalette = (container: HTMLElement): GraphPalette => {
@@ -46,20 +47,19 @@ export const readGraphPalette = (container: HTMLElement): GraphPalette => {
     muted: resolve('muted-foreground'),
     edge: resolve('border'),
     primary: resolve('primary'),
+    background: resolve('background'),
   }
 }
 
 export const createKnowledgeTopology = (
   data: GraphData,
-  positions: Record<string, { x: number; y: number }> = {},
+  manualOverrides: Record<string, { x: number; y: number }> = {},
   palette: GraphPalette,
 ): KnowledgeTopology => {
   const graph = new MultiDirectedGraph<KnowledgeNodeAttributes, KnowledgeEdgeAttributes>()
-  data.nodes.forEach((node, index) => {
-    const angle = index * Math.PI * (3 - Math.sqrt(5))
-    const radius = Math.sqrt(index + 1)
+  data.nodes.forEach((node) => {
     graph.addNode(node.id, {
-      ...(positions[node.id] ?? { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }),
+      ...(manualOverrides[node.id] ?? node.position),
       label: node.label,
       kind: node.kind,
       ...graphNodeIcon(node),
@@ -78,12 +78,4 @@ export const createKnowledgeTopology = (
     graph.setNodeAttribute(id, 'size', attrs.size + Math.min(5, Math.sqrt(graph.degree(id)))),
   )
   return graph
-}
-
-export const topologyPositions = (graph: KnowledgeTopology) => {
-  const positions: Record<string, { x: number; y: number }> = Object.create(null)
-  graph.forEachNode((id, attributes) => {
-    positions[id] = { x: attributes.x, y: attributes.y }
-  })
-  return positions
 }
