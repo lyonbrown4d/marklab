@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { KnowledgeGraphDetails } from '@/features/knowledge-graph/KnowledgeGraphDetails'
-import { testGraph } from '@/features/knowledge-graph/testGraph'
+import { testExternalGraphNode, testGraph } from '@/features/knowledge-graph/testGraph'
 
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/components/knowledge/KnowledgeNodePreview', () => ({
@@ -36,6 +36,27 @@ const setup = (index = 0, active = true) => {
 beforeEach(() => vi.clearAllMocks())
 
 describe('relation graph details', () => {
+  it('shows the website label and URL without mounting a document preview', () => {
+    const node = testExternalGraphNode()
+    const onOpen = vi.fn()
+    render(
+      <KnowledgeGraphDetails
+        active
+        graph={testGraph()}
+        node={node}
+        workspaceKey="workspace"
+        onOpen={onOpen}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(node.label)).toBeInTheDocument()
+    expect(screen.getByText(node.url)).toBeInTheDocument()
+    expect(screen.queryByTestId('shared-preview')).not.toBeInTheDocument()
+    expect(onOpen).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'knowledgeGraph.openWebsite' }))
+    expect(onOpen).toHaveBeenCalledOnce()
+  })
   it('reuses the shared summary and navigates relations independently of document opening', () => {
     const { props } = setup()
     expect(screen.getByTestId('shared-preview')).toHaveTextContent('file:a.md:revision-1:workspace')

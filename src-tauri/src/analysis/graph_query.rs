@@ -43,7 +43,17 @@ pub(super) fn select(
     }
     neighborhood(&center, &edges, request.depth, request.direction)
   } else {
-    nodes.keys().cloned().collect()
+    // Keep local workspace nodes visible before website links consume a global budget.
+    nodes
+      .iter()
+      .filter(|(_, node)| !matches!(node, GraphNode::External { .. }))
+      .chain(
+        nodes
+          .iter()
+          .filter(|(_, node)| matches!(node, GraphNode::External { .. })),
+      )
+      .map(|(id, _)| id.clone())
+      .collect()
   };
   let eligible: BTreeSet<_> = ordered.iter().cloned().collect();
   let total_nodes = eligible.len();

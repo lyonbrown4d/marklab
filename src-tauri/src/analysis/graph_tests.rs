@@ -51,17 +51,18 @@ pub(super) fn project_graph(
   index: &Index,
   request: WorkspaceGraphRequest,
 ) -> crate::error::BackendResult<graph::WorkspaceGraph> {
-  graph::graph(index, request, &super::graph_layout::cache())
+  graph::graph(index, request)
 }
 
-fn ids(value: &graph::WorkspaceGraph) -> BTreeSet<&str> {
+pub(super) fn ids(value: &graph::WorkspaceGraph) -> BTreeSet<&str> {
   value
     .nodes
     .iter()
     .map(|node| match node {
       GraphNode::File { id, .. }
       | GraphNode::Preview { id, .. }
-      | GraphNode::Missing { id, .. } => id.as_str(),
+      | GraphNode::Missing { id, .. }
+      | GraphNode::External { id, .. } => id.as_str(),
     })
     .collect()
 }
@@ -199,31 +200,6 @@ fn truncation_keeps_center_and_edge_endpoints_and_reports_eligible_scope_totals(
       .iter()
       .all(|edge| ids(&value).contains(edge.source.as_str())
         && ids(&value).contains(edge.target.as_str()))
-  );
-}
-
-#[test]
-fn filters_control_attachments_missing_targets_and_exclude_external_unsafe_paths() {
-  let index = index(
-    &[(
-      "a.md",
-      "![Cover](cover.png) ![Missing](missing.png) [PDF](absent.pdf) [Page](missing.md) [[MissingWiki]] [Web](https://example.com) [Escape](../secret.md)",
-    )],
-    &["cover.png"],
-  );
-  let mut query = request();
-  assert_eq!(project_graph(&index, query.clone()).unwrap().total_nodes, 6);
-  query.include_attachments = false;
-  let value = project_graph(&index, query.clone()).unwrap();
-  assert_eq!(
-    ids(&value),
-    BTreeSet::from(["file:a.md", "missing:missing.md", "missing:MissingWiki.md"])
-  );
-  query.include_missing = false;
-  query.include_attachments = true;
-  assert_eq!(
-    ids(&project_graph(&index, query).unwrap()),
-    BTreeSet::from(["file:a.md", "preview:cover.png"])
   );
 }
 

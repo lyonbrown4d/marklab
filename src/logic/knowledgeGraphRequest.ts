@@ -3,7 +3,7 @@ import type { DesktopCommandArgs } from '@/generated/desktop/bindings'
 export type KnowledgeGraphRequest = DesktopCommandArgs['fs_get_workspace_graph']['request']
 
 export const workspaceGraphRequest = (
-  includeAttachments = false,
+  includeAttachments = true,
   includeMissing = true,
 ): KnowledgeGraphRequest => ({
   center_path: null,

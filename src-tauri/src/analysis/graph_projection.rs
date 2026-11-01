@@ -17,7 +17,6 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
       GraphNode::File {
         id,
         label: document.title.clone(),
-        position: GraphPosition::default(),
         path: document.path.clone(),
         group: GraphGroup {
           key: folder.into(),
@@ -35,7 +34,15 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
       .map(|link| (link, false))
       .chain(document.assets.iter().map(|link| (link, true)))
     {
-      if link.is_external || (attachment && !request.include_attachments) {
+      if link.is_external {
+        if !attachment && let Some(node) = super::graph_external::node(link) {
+          let target = node.id().to_owned();
+          nodes.entry(target.clone()).or_insert(node);
+          connect(&mut edges, &source, target, EdgeKind::LinksTo);
+        }
+        continue;
+      }
+      if attachment && !request.include_attachments {
         continue;
       }
       // Unresolved unsafe paths never become graph endpoints or native-open targets.
@@ -87,7 +94,6 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
             source_path: document.path.clone(),
             target: link.target.clone(),
             preview_kind: preview_kind(path),
-            position: GraphPosition::default(),
           }
         } else {
           GraphNode::Preview {
@@ -97,31 +103,39 @@ pub fn graph(index: &Index, request: WorkspaceGraphRequest) -> BackendResult<Wor
             source_path: document.path.clone(),
             target: link.target.clone(),
             preview_kind: preview_kind(path),
-            position: GraphPosition::default(),
           }
         }
       });
-      let key = (source.clone(), target.clone(), kind.clone());
-      let edge = edges.entry(key).or_insert_with(|| GraphEdge {
-        id: format!(
-          "edge:{}:{source}:{}:{}:{target}",
-          source.len(),
-          match kind {
-            EdgeKind::LinksTo => "links_to",
-            EdgeKind::ReferencesHeading => "references_heading",
-            EdgeKind::Previews => "previews",
-          },
-          target.len()
-        ),
-        source: source.clone(),
-        target,
-        kind,
-        count: 0,
-      });
-      edge.count = edge.count.saturating_add(1);
+      connect(&mut edges, &source, target, kind);
     }
   }
   graph_query::select(index, request, nodes, edges.into_values().collect())
+}
+
+fn connect(
+  edges: &mut BTreeMap<(String, String, EdgeKind), GraphEdge>,
+  source: &str,
+  target: String,
+  kind: EdgeKind,
+) {
+  let key = (source.to_owned(), target.clone(), kind.clone());
+  let edge = edges.entry(key).or_insert_with(|| GraphEdge {
+    id: format!(
+      "edge:{}:{source}:{}:{}:{target}",
+      source.len(),
+      match kind {
+        EdgeKind::LinksTo => "links_to",
+        EdgeKind::ReferencesHeading => "references_heading",
+        EdgeKind::Previews => "previews",
+      },
+      target.len()
+    ),
+    source: source.to_owned(),
+    target,
+    kind,
+    count: 0,
+  });
+  edge.count = edge.count.saturating_add(1);
 }
 
 fn preview_kind(path: &str) -> PreviewKind {

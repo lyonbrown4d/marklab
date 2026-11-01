@@ -65,15 +65,19 @@ components and Tailwind classes. Avoid transformed pane wrappers that offset
 Plate overlays. Preserve visible focus, read-only states, and both themes when
 resizing, moving tabs, or restoring a saved layout.
 
-Graph nodes use eleven shared file-kind pictograms through Sigma's official image
-program. Rust supplies cached base coordinates; manual dragging overrides those
-coordinates until reset. Labels sit outside glyphs, use measured viewport collision checks, and
+Graph nodes use shared file-kind and website pictograms through Sigma's official image
+program. Offer force-directed, circular and folder-grouped layouts through Graphology's
+layout ecosystem. Remember the selected layout, positions and camera per workspace/view.
+Labels sit outside glyphs, use measured viewport collision checks, and
 show only names that fit without covering icons or each other. Ordinary long
 names abbreviate visually; selection and hover prioritize fuller names when
 space permits. Preserve complete titles and paths in search and document data.
 Pixel-wheel input pans; Ctrl pinch, Alt/Meta pixel-wheel input, and
 line/page wheel input zoom around the pointer. Camera changes use Sigma's
 coordinate conversions. Hidden/disposed surfaces cancel pending wheel work.
+Canvas resizing schedules a complete native render so splitters cannot leave a
+cleared graph. Use a hand cursor over nodes, a grab cursor over the stage, and a
+grabbing cursor while dragging nodes or panning.
 
 These are implementation rules. Native input behavior and large-workspace
 performance require results from the actual target environment.

@@ -10,6 +10,7 @@ import * as code from 'lucide-react/icons/file-code-corner'
 import * as spreadsheet from 'lucide-react/icons/file-spreadsheet'
 import * as diagram from 'lucide-react/icons/network'
 import * as missing from 'lucide-react/icons/file-exclamation-point'
+import * as website from 'lucide-react/icons/globe'
 import { documentAdapterForPath } from '@/logic/documentAdapters'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import type { GraphNode } from '@/logic/graph'
@@ -26,10 +27,16 @@ const icons = {
   spreadsheet,
   diagram,
   missing,
+  website,
 }
 export type GraphFileIcon = keyof typeof icons
 
-export const graphFileIconKind = (node: Pick<GraphNode, 'kind' | 'path'>): GraphFileIcon => {
+type GraphIconNode =
+  | Pick<Exclude<GraphNode, { kind: 'external' }>, 'kind' | 'path'>
+  | Pick<Extract<GraphNode, { kind: 'external' }>, 'kind'>
+
+export const graphFileIconKind = (node: GraphIconNode): GraphFileIcon => {
+  if (node.kind === 'external') return 'website'
   if (node.kind === 'missing') return 'missing'
   if (isMarkdownFilePath(node.path)) return 'markdown'
   const adapter = documentAdapterForPath(node.path)
@@ -70,7 +77,7 @@ const sources = Object.fromEntries(
   Object.entries(icons).map(([kind, icon]) => [kind, iconSource(icon)]),
 ) as Record<GraphFileIcon, string>
 
-export const graphNodeIcon = (node: Pick<GraphNode, 'kind' | 'path'>) => {
+export const graphNodeIcon = (node: GraphIconNode) => {
   const iconKind = graphFileIconKind(node)
   return { iconKind, image: sources[iconKind] }
 }

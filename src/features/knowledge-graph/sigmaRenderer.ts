@@ -2,11 +2,16 @@ import Sigma, { DEFAULT_STYLES } from 'sigma'
 import { DEFAULT_EDGE_PRIMITIVES } from 'sigma/primitives'
 import { extremityArrow, sdfSquare } from 'sigma/rendering'
 import { layerImage } from '@sigma/node-image'
-import type { GraphData } from '@/logic/graph'
+import { graphNodeLocation, type GraphData } from '@/logic/graph'
 import {
   createKnowledgeTopology,
+  graphNodeLayoutGroup,
   readGraphPalette,
+  seedKnowledgeTopology,
+  topologyPositions,
 } from '@/features/knowledge-graph/graphologyAdapter'
+import { createGraphLayout } from '@/features/knowledge-graph/graphLayoutController'
+import type { GraphLayoutKind } from '@/features/knowledge-graph/graphLayoutTypes'
 import { readGraphView, saveGraphView } from '@/features/knowledge-graph/graphViewCache'
 import type { GraphCameraState, GraphFocusRequest } from '@/features/knowledge-graph/types'
 import { graphNodeIcon } from '@/features/knowledge-graph/graphNodeIcons'
@@ -37,13 +42,18 @@ export const createSigmaRenderer = ({
   onCameraChange,
 }: Options) => {
   const snapshot = readGraphView(workspaceKey, viewKey)
+  let layoutKind = snapshot?.layout ?? 'forceatlas2'
   let palette = readGraphPalette(container)
   let content = data
   const nodeIds = new Set(data.nodes.map((node) => node.id))
   let manualOverrides = Object.fromEntries(
     Object.entries(snapshot?.manualOverrides ?? {}).filter(([id]) => nodeIds.has(id)),
   )
-  const graph = createKnowledgeTopology(data, manualOverrides, palette)
+  const graph = createKnowledgeTopology(
+    data,
+    { ...snapshot?.positions, ...manualOverrides },
+    palette,
+  )
   let selected: string | null = null
   let neighborhood = new Set<string>()
   const labels = createGraphLabels(graph)
@@ -81,8 +91,13 @@ export const createSigmaRenderer = ({
       maxCameraRatio: 8,
     },
     styles: {
+      stage: { cursor: (state) => (state.isPanning || state.isDragging ? 'grabbing' : 'grab') },
       nodes: {
         ...DEFAULT_STYLES.nodes,
+        cursor: (_attributes, state, graphState) =>
+          state.isDragged || graphState.isPanning ? 'grabbing' : 'pointer',
+        labelCursor: (_attributes, state, graphState) =>
+          state.isDragged || graphState.isPanning ? 'grabbing' : 'pointer',
         shape: 'square',
         labelColor: palette.foreground,
         labelSize: GRAPH_LABEL_SIZE,
@@ -119,8 +134,24 @@ export const createSigmaRenderer = ({
   const save = () => {
     clearTimeout(saveTimer)
     if (!destroyed)
-      saveGraphView(workspaceKey, content.topology_key, manualOverrides, camera.getState(), viewKey)
+      saveGraphView(
+        workspaceKey,
+        content.topology_key,
+        manualOverrides,
+        camera.getState(),
+        viewKey,
+        topologyPositions(graph),
+        layoutKind,
+        layout.isRunning(),
+      )
   }
+  const layout = createGraphLayout(graph, save)
+  if (
+    snapshot?.layoutPending ||
+    snapshot?.topologyKey !== data.topology_key ||
+    graph.someNode((id) => !snapshot.positions[id] && !manualOverrides[id])
+  )
+    layout.start(manualOverrides, layoutKind)
   const reconcileContent = () => {
     const nodes = new Map(content.nodes.map((node) => [node.id, node]))
     manualOverrides = Object.fromEntries(
@@ -132,13 +163,13 @@ export const createSigmaRenderer = ({
         return node
           ? {
               ...attributes,
-              ...(manualOverrides[id] ?? node.position),
               label: node.label,
+              layoutGroup: graphNodeLayoutGroup(node),
               ...graphNodeIcon(node),
             }
           : attributes
       },
-      { attributes: ['x', 'y', 'label', 'image', 'iconKind'] },
+      { attributes: ['label', 'image', 'iconKind', 'layoutGroup'] },
     )
   }
   renderer.on('clickNode', ({ node }) => onSelectNode(node))
@@ -149,6 +180,7 @@ export const createSigmaRenderer = ({
   renderer.on('clickStage', () => onSelectNode(null))
   renderer.on('nodeDragStart', () => {
     wheelController.cancel()
+    layout.stop()
   })
   renderer.on('nodeDragEnd', ({ node, allDraggedNodes }) => {
     for (const id of new Set([node, ...allDraggedNodes])) {
@@ -164,7 +196,11 @@ export const createSigmaRenderer = ({
     saveTimer = setTimeout(save, 250)
   }
   camera.on('updated', cameraUpdated)
-  const resize = new ResizeObserver(() => renderer.resize())
+  const resize = new ResizeObserver(() => {
+    if (destroyed || container.offsetWidth === 0 || container.offsetHeight === 0) return
+    // Sigma's resize clears its canvas; render resizes and redraws together in one frame.
+    renderer.scheduleRender()
+  })
   resize.observe(container)
   const themeObserver = new MutationObserver(() => {
     palette = readGraphPalette(container)
@@ -175,12 +211,16 @@ export const createSigmaRenderer = ({
     attributeFilter: ['class', 'style', 'data-theme'],
   })
   return {
-    arrange: () => {
+    arrange: (kind: GraphLayoutKind = layoutKind) => {
       if (destroyed) return
       wheelController.cancel()
+      layout.stop()
       manualOverrides = {}
-      reconcileContent()
+      if (kind !== layoutKind) camera.setState({ x: 0.5, y: 0.5, ratio: 1, angle: 0 })
+      layoutKind = kind
+      seedKnowledgeTopology(graph)
       renderer.refresh()
+      layout.start(manualOverrides, layoutKind)
       save()
     },
     updateContent: (next: GraphData) => {
@@ -199,11 +239,13 @@ export const createSigmaRenderer = ({
     focus: (request: GraphFocusRequest) => {
       if (destroyed) return false
       const node = content.nodes.find(
-        (item) => item.id === request.nodeId || item.path === request.nodeId,
+        (item) => item.id === request.nodeId || graphNodeLocation(item) === request.nodeId,
       )
       if (request.nodeId !== 'workspace' && !node) return false
       if (node) onSelectNode(node.id)
       else onSelectNode(null)
+      layout.stop(true)
+      renderer.refresh()
       wheelController.cancel()
       if (request.viewport) camera.setState(request.viewport)
       else if (node)
@@ -216,6 +258,7 @@ export const createSigmaRenderer = ({
     },
     fit: () => {
       if (destroyed) return
+      renderer.refresh()
       wheelController.cancel()
       camera.setState({ x: 0.5, y: 0.5, ratio: 1, angle: 0 })
       save()
@@ -228,6 +271,7 @@ export const createSigmaRenderer = ({
     destroy: () => {
       if (destroyed) return
       save()
+      layout.destroy()
       destroyed = true
       resize.disconnect()
       themeObserver.disconnect()

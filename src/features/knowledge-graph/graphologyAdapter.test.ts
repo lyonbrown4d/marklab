@@ -4,7 +4,7 @@ import {
   readGraphPalette,
   type GraphPalette,
 } from '@/features/knowledge-graph/graphologyAdapter'
-import { testGraph } from '@/features/knowledge-graph/testGraph'
+import { testExternalGraphNode, testGraph } from '@/features/knowledge-graph/testGraph'
 
 const palette: GraphPalette = {
   file: '#111111',
@@ -18,6 +18,19 @@ const palette: GraphPalette = {
 }
 
 describe('Graphology domain adapter', () => {
+  it('renders website nodes as bundled globes with a safe existing palette fallback', () => {
+    const data = testGraph()
+    const website = testExternalGraphNode()
+    data.nodes.push(website)
+    const graph = createKnowledgeTopology(data, {}, palette)
+    expect(graph.getNodeAttributes(website.id)).toMatchObject({
+      kind: 'external',
+      label: website.label,
+      iconKind: 'website',
+      color: palette.preview,
+      layoutGroup: 'website:example.com',
+    })
+  })
   it('resolves local and root theme colors for WebGL with a fallback and no leftover probes', () => {
     const container = document.createElement('div')
     const marker = document.createElement('span')
@@ -39,6 +52,7 @@ describe('Graphology domain adapter', () => {
         primary: 'rgb(0, 255, 0)',
         preview: 'rgb(0, 0, 255)',
         missing: 'rgb(100, 116, 139)',
+        external: 'rgb(0, 0, 255)',
         foreground: 'rgb(100, 116, 139)',
         muted: 'rgb(100, 116, 139)',
         edge: 'rgb(100, 116, 139)',
@@ -65,11 +79,16 @@ describe('Graphology domain adapter', () => {
     })
     expect(graph.getNodeAttribute('missing:c.md', 'color')).toBe('#333333')
     expect(graph.getNodeAttribute('missing:c.md', 'iconKind')).toBe('missing')
+    expect(graph.getNodeAttribute('file:a.md', 'layoutGroup')).toBe('directory:.')
+    expect(graph.getNodeAttribute('missing:c.md', 'layoutGroup')).toBe('directory:.')
     expect(graph.source('a-b')).toBe('file:a.md')
     expect(graph.target('a-b')).toBe('file:b.md')
     expect(graph.getEdgeAttribute('a-b', 'weight')).toBe(3)
-    expect(graph.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
-    expect(graph.getNodeAttributes('missing:c.md')).toMatchObject(testGraph().nodes[2].position)
+    const first = graph.getNodeAttributes('file:b.md')
+    const second = graph.getNodeAttributes('missing:c.md')
+    expect(Number.isFinite(first.x) && Number.isFinite(first.y)).toBe(true)
+    expect(Number.isFinite(second.x) && Number.isFinite(second.y)).toBe(true)
+    expect(Math.hypot(first.x - second.x, first.y - second.y)).toBeGreaterThan(0)
   })
   it('omits dangling edges and supports parallel edges and self links', () => {
     const data = testGraph()

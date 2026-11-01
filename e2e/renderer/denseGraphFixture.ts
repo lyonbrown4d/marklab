@@ -18,9 +18,7 @@ export const denseDocuments = Object.fromEntries(
 )
 export const densePaths = Object.keys(denseDocuments)
 export const denseGraphFixture = (): FsGraph => {
-  const nodes = densePaths.map((path, index) => ({
-    // Deliberately close rows stress label placement without a browser-side layout worker.
-    position: { x: (index % 6) * 1.5, y: Math.floor(index / 6) * 1.3 },
+  const nodes = densePaths.map((path) => ({
     id: `file:${path}`,
     kind: 'file' as const,
     label: path.slice(0, -3),

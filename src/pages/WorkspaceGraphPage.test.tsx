@@ -3,7 +3,7 @@ import { WorkspacePaneContext } from '@/features/workbench/paneContext'
 import { fireEvent, render as testingRender, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceGraphPage from '@/pages/WorkspaceGraphPage'
-import { testGraph } from '@/features/knowledge-graph/testGraph'
+import { testExternalGraphNode, testGraph } from '@/features/knowledge-graph/testGraph'
 import { navigationHistoryStore } from '@/features/navigation/navigationHistory'
 import {
   requestWorkspaceMapNodeFocus,
@@ -15,7 +15,9 @@ const state = vi.hoisted(() => ({
   context: {} as Record<string, unknown>,
   active: true,
   openBeside: vi.fn(),
+  openWebTab: vi.fn(),
 }))
+vi.mock('@/app/useOpenWebTab', () => ({ useOpenWebTab: () => state.openWebTab }))
 const PaneProvider = ({ children }: { children: ReactNode }) => (
   <WorkspacePaneContext.Provider
     value={{
@@ -44,6 +46,8 @@ vi.mock('@/features/knowledge-graph/KnowledgeGraphCanvas', () => ({
       <button onClick={() => props.onOpenNode('file:a.md')}>open alpha</button>
       <button onClick={() => props.onSelectNode('missing:c.md')}>select missing</button>
       <button onClick={() => props.onOpenNode('missing:c.md')}>open missing</button>
+      <button onClick={() => props.onSelectNode(testExternalGraphNode().id)}>select website</button>
+      <button onClick={() => props.onOpenNode(testExternalGraphNode().id)}>open website</button>
       <button onClick={() => props.onFocusConsumed?.()}>consume</button>
       <output>{props.focusRequest?.nodeId}</output>
     </div>
@@ -61,6 +65,7 @@ vi.mock('@/features/knowledge-graph/KnowledgeGraphDetails', () => ({
 beforeEach(() => {
   state.active = true
   state.openBeside.mockClear()
+  state.openWebTab.mockClear()
   state.context = {
     graph: testGraph(),
     rootKind: 'external',
@@ -76,6 +81,22 @@ beforeEach(() => {
 })
 
 describe('WorkspaceGraphPage', () => {
+  it('selects website details without opening files or web tabs and opens only on explicit activation', () => {
+    const website = testExternalGraphNode()
+    const graph = testGraph()
+    graph.nodes.push(website)
+    state.context.graph = graph
+    render(<WorkspaceGraphPage />)
+    fireEvent.click(screen.getByText('select website'))
+    expect(screen.getByRole('complementary')).toHaveTextContent('Website guide')
+    expect(state.openWebTab).not.toHaveBeenCalled()
+    expect(state.openBeside).not.toHaveBeenCalled()
+    expect(state.context.onOpenFile).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('open website'))
+    expect(state.openWebTab).toHaveBeenCalledExactlyOnceWith(website.url, website.label)
+    expect(state.openBeside).not.toHaveBeenCalled()
+    expect(state.context.onOpenFile).not.toHaveBeenCalled()
+  })
   it('keeps selection independent from document editing and refuses to open missing targets', () => {
     render(<WorkspaceGraphPage />)
     fireEvent.click(screen.getByText('select alpha'))

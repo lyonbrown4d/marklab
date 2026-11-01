@@ -1,142 +1,60 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { createSigmaRenderer } from '@/features/knowledge-graph/sigmaRenderer'
+import { describe, expect, it, vi } from 'vitest'
+import { mocks, setup } from '@/features/knowledge-graph/sigmaRendererTestSetup'
 import { graphViewCache } from '@/features/knowledge-graph/graphViewCache'
-import { testGraph } from '@/features/knowledge-graph/testGraph'
-import type { GraphCameraState } from '@/features/knowledge-graph/types'
-import type { KnowledgeTopology } from '@/features/knowledge-graph/graphologyAdapter'
-
-const mocks = vi.hoisted(() => ({
-  kill: vi.fn(),
-  refresh: vi.fn(),
-  resize: vi.fn(),
-  events: new Map<string, (...args: never[]) => void>(),
-  cameraEvents: new Map<string, (camera: GraphCameraState) => void>(),
-  wheelEvents: new Map<string, (...args: never[]) => void>(),
-  graph: null as KnowledgeTopology | null,
-  camera: { x: 0.5, y: 0.5, ratio: 1, angle: 0 },
-  options: null as {
-    primitives: { nodes: { layers: { drawingMode: string }[] } }
-    settings: { enableNodeDrag: boolean; itemSizesReference: string }
-    nodeReducer: (id: string, data: { size: number }) => { opacity: number }
-    edgeReducer: (id: string) => { opacity: number }
-  } | null,
-}))
-vi.mock('sigma', () => ({
-  DEFAULT_STYLES: { nodes: {}, edges: {} },
-  default: class {
-    constructor(graph: KnowledgeTopology, _container: HTMLElement, options: typeof mocks.options) {
-      mocks.graph = graph
-      mocks.camera = { x: 0.5, y: 0.5, ratio: 1, angle: 0 }
-      mocks.options = options
-    }
-    on(name: string, callback: (...args: never[]) => void) {
-      mocks.events.set(name, callback)
-    }
-    getCamera() {
-      return {
-        getState: () => mocks.camera,
-        getBoundedRatio: (ratio: number) => Math.min(8, Math.max(0.05, ratio)),
-        setState: (next: Partial<GraphCameraState>) => {
-          const changed = Object.entries(next).some(
-            ([key, value]) => mocks.camera[key as keyof GraphCameraState] !== value,
-          )
-          mocks.camera = { ...mocks.camera, ...next }
-          if (changed) mocks.cameraEvents.get('updated')?.(mocks.camera)
-        },
-        on: (name: string, callback: (camera: GraphCameraState) => void) =>
-          mocks.cameraEvents.set(name, callback),
-        off: vi.fn(),
-        cancelAnimation: vi.fn(),
-        get ratio() {
-          return mocks.camera.ratio
-        },
-      }
-    }
-    getMouseCaptor() {
-      return {
-        on: (name: string, callback: (...args: never[]) => void) =>
-          mocks.wheelEvents.set(name, callback),
-        off: (name: string) => mocks.wheelEvents.delete(name),
-      }
-    }
-    graphToFramedGraph() {
-      return { x: 0.2, y: 0.3 }
-    }
-    graphToViewport() {
-      return { x: 120, y: 120 }
-    }
-    getDimensions() {
-      return { width: 640, height: 480 }
-    }
-    scaleSize(size: number) {
-      return size / Math.sqrt(mocks.camera.ratio)
-    }
-    off(name: string) {
-      mocks.events.delete(name)
-    }
-    refresh = mocks.refresh
-    resize = mocks.resize
-    kill = mocks.kill
-  },
-}))
-vi.mock('sigma/primitives', () => ({ DEFAULT_EDGE_PRIMITIVES: {} }))
-vi.mock('sigma/rendering', () => ({
-  extremityArrow: () => ({ name: 'arrow' }),
-  sdfSquare: () => ({ name: 'square' }),
-}))
-vi.mock('@sigma/node-image', () => ({ layerImage: (options: unknown) => options }))
-
-beforeEach(() => {
-  vi.useFakeTimers()
-  vi.clearAllMocks()
-  mocks.events.clear()
-  mocks.cameraEvents.clear()
-  mocks.wheelEvents.clear()
-  mocks.camera = { x: 0.5, y: 0.5, ratio: 1, angle: 0 }
-  graphViewCache.setState({ entries: [] })
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe = vi.fn()
-      disconnect = vi.fn()
-    },
-  )
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-    measureText: (text: string) => ({ width: text.length * 32 }),
-  } as CanvasRenderingContext2D)
-})
-afterEach(() => {
-  vi.useRealTimers()
-  vi.unstubAllGlobals()
-})
-const setup = (graph = testGraph(), viewKey = 'workspace') => {
-  const onSelectNode = vi.fn(),
-    onOpenNode = vi.fn(),
-    onCameraChange = vi.fn()
-  const renderer = createSigmaRenderer({
-    graph,
-    viewKey,
-    workspaceKey: 'workspace',
-    container: document.createElement('div'),
-    onSelectNode,
-    onOpenNode,
-    onCameraChange,
-  })
-  return { renderer, onSelectNode, onOpenNode, onCameraChange }
-}
+import { testExternalGraphNode, testGraph } from '@/features/knowledge-graph/testGraph'
 
 describe('Sigma4 graph renderer integration', () => {
-  it('uses native coordinates immediately, never saves the native base, and releases resources', () => {
+  it('redraws positive container sizes without resetting graph state and ignores hidden or retired views', () => {
+    const container = document.createElement('div')
+    let width = 640
+    let height = 480
+    Object.defineProperties(container, {
+      offsetWidth: { get: () => width },
+      offsetHeight: { get: () => height },
+    })
+    const { renderer } = setup(testGraph(), 'workspace', container)
+    renderer.select('file:b.md')
+    renderer.focus({ nodeId: 'file:b.md', viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 } })
+    mocks.graph?.setNodeAttribute('file:b.md', 'x', 42)
+    mocks.events.get('nodeDragEnd')?.({ node: 'file:b.md', allDraggedNodes: [] } as never)
+    const graph = mocks.graph
+    for (const nextWidth of [640, 320, 900]) {
+      width = nextWidth
+      mocks.resizeCallback()
+    }
+    expect(mocks.scheduleRender).toHaveBeenCalledTimes(3)
+    expect(mocks.resize).not.toHaveBeenCalled()
+    expect(mocks.graph).toBe(graph)
+    expect(graph?.getNodeAttribute('file:b.md', 'x')).toBe(42)
+    expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
+    expect(mocks.options?.nodeReducer('missing:c.md', { size: 3 }).opacity).toBe(0.2)
+    width = 0
+    mocks.resizeCallback()
+    width = 640
+    height = 0
+    mocks.resizeCallback()
+    expect(mocks.scheduleRender).toHaveBeenCalledTimes(3)
+    height = 480
+    mocks.resizeCallback()
+    expect(mocks.scheduleRender).toHaveBeenCalledTimes(4)
+    renderer.destroy()
+    mocks.resizeCallback()
+    expect(mocks.scheduleRender).toHaveBeenCalledTimes(4)
+  })
+  it('seeds coordinates immediately, settles a finite worker, persists the computed layout and releases resources', () => {
     const { renderer } = setup()
     expect(mocks.options?.settings.enableNodeDrag).toBe(true)
     expect(mocks.options?.settings.itemSizesReference).toBe('screen')
     expect(mocks.options?.primitives.nodes.layers[0].drawingMode).toBe('color')
-    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
+    const seeded = { ...mocks.graph?.getNodeAttributes('file:b.md') }
+    expect(Number.isFinite(seeded.x) && Number.isFinite(seeded.y)).toBe(true)
     expect(mocks.graph?.getNodeAttribute('file:a.md', 'iconKind')).toBe('markdown')
     mocks.refresh.mockClear()
     vi.advanceTimersByTime(3000)
     expect(mocks.refresh).not.toHaveBeenCalled()
-    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(testGraph().nodes[1].position)
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(seeded)
+    expect(mocks.workers[0].kill).toHaveBeenCalledOnce()
+    expect(Object.keys(graphViewCache.getState().entries[0].positions)).toHaveLength(3)
     renderer.zoom(0.5)
     renderer.destroy()
     renderer.destroy()
@@ -144,10 +62,39 @@ describe('Sigma4 graph renderer integration', () => {
     expect(mocks.wheelEvents.size).toBe(0)
     expect(graphViewCache.getState().entries[0]).toMatchObject({
       topologyKey: 'topology-1',
+      layoutPending: false,
       manualOverrides: {},
       camera: mocks.camera,
     })
     expect(graphViewCache.getState().entries[0].camera.ratio).toBe(0.5)
+    const restored = setup()
+    expect(mocks.workers).toHaveLength(1)
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject(seeded)
+    expect(mocks.camera.ratio).toBe(0.5)
+    restored.renderer.destroy()
+  })
+  it('resumes unfinished force layouts after camera saves, fitting and rapid close instead of caching seeds as settled', () => {
+    const { renderer } = setup()
+    renderer.zoom(0.7)
+    vi.advanceTimersByTime(250)
+    expect(graphViewCache.getState().entries[0].layoutPending).toBe(true)
+    renderer.fit()
+    expect(mocks.workers[0].kill).not.toHaveBeenCalled()
+    expect(graphViewCache.getState().entries[0].layoutPending).toBe(true)
+    renderer.zoom(0.6)
+    renderer.destroy()
+    expect(graphViewCache.getState().entries[0].layoutPending).toBe(true)
+    expect(mocks.workers[0].kill).toHaveBeenCalledOnce()
+    const resumed = setup()
+    expect(mocks.workers).toHaveLength(2)
+    expect(mocks.camera.ratio).toBe(0.6)
+    mocks.workers[1].graph.mergeNodeAttributes('file:b.md', { x: 80, y: 90 })
+    vi.advanceTimersByTime(3000)
+    expect(graphViewCache.getState().entries[0]).toMatchObject({
+      layoutPending: false,
+      positions: { 'file:b.md': { x: 80, y: 90 } },
+    })
+    resumed.renderer.destroy()
   })
   it('persists an explicit fit even when the camera is already at its default position', () => {
     const { renderer, onCameraChange } = setup()
@@ -160,10 +107,11 @@ describe('Sigma4 graph renderer integration', () => {
     })
     renderer.destroy()
   })
-  it('persists only explicit drags and applies them over a changed native base without moving the camera', () => {
+  it('retains computed and manual positions on content updates, then explicitly rearranges without moving the camera', () => {
     const { renderer } = setup()
     renderer.focus({ nodeId: 'file:a.md', viewport: { x: 0.3, y: 0.4, ratio: 0.6, angle: 0 } })
     mocks.graph?.setNodeAttribute('file:a.md', 'x', 42)
+    mocks.graph?.setNodeAttribute('file:a.md', 'y', 0)
     mocks.graph?.setNodeAttribute('file:b.md', 'x', 999)
     mocks.events.get('nodeDragEnd')?.({
       node: 'file:a.md',
@@ -173,10 +121,8 @@ describe('Sigma4 graph renderer integration', () => {
       'file:a.md': { x: 42, y: 0 },
     })
     const updated = testGraph()
-    updated.nodes[0].position = { x: -50, y: 60 }
-    updated.nodes[1].position = { x: 300, y: 90 }
     updated.nodes[0].label = 'Renamed'
-    updated.nodes[0].path = 'assets/renamed.png'
+    if (updated.nodes[0].kind === 'file') updated.nodes[0].path = 'assets/renamed.png'
     renderer.updateContent(updated)
     expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({
       x: 42,
@@ -184,15 +130,16 @@ describe('Sigma4 graph renderer integration', () => {
       label: 'Renamed',
       iconKind: 'image',
     })
-    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject({ x: 300, y: 90 })
+    expect(mocks.graph?.getNodeAttributes('file:b.md')).toMatchObject({ x: 999 })
     expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
     renderer.arrange()
-    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({ x: -50, y: 60 })
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).not.toBe(42)
+    const arranged = { ...mocks.graph?.getNodeAttributes('file:a.md') }
     expect(graphViewCache.getState().entries[0].manualOverrides).toEqual({})
     expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
     renderer.destroy()
     const restored = setup(updated)
-    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject({ x: -50, y: 60 })
+    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject(arranged)
     expect(mocks.camera.ratio).toBe(0.6)
     restored.renderer.destroy()
   })
@@ -208,12 +155,18 @@ describe('Sigma4 graph renderer integration', () => {
       allDraggedNodes: ['file:a.md'],
     } as never)
     initial.renderer.destroy()
-    const changed = setup({ ...testGraph(), topology_key: 'topology-2' })
+    const updated = testGraph()
+    updated.nodes.push(testExternalGraphNode())
+    const changed = setup({ ...updated, topology_key: 'topology-2' })
     expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(42)
     expect(mocks.camera).toMatchObject({ x: 0.3, y: 0.4, ratio: 0.6 })
+    expect(mocks.graph?.hasNode(testExternalGraphNode().id)).toBe(true)
+    expect(Number.isFinite(mocks.graph?.getNodeAttribute(testExternalGraphNode().id, 'x'))).toBe(
+      true,
+    )
     changed.renderer.destroy()
     const local = setup(testGraph(), 'document:a.md')
-    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).toBe(0)
+    expect(mocks.graph?.getNodeAttribute('file:a.md', 'x')).not.toBe(42)
     expect(mocks.camera).toMatchObject({ x: 0.5, y: 0.5, ratio: 1 })
     local.renderer.destroy()
     const removed = testGraph()
@@ -221,6 +174,32 @@ describe('Sigma4 graph renderer integration', () => {
     const remaining = setup(removed)
     remaining.renderer.destroy()
     expect(graphViewCache.getState().entries[0].manualOverrides).toEqual({})
+  })
+  it('saves layout changes immediately, clears explicit overrides, and restores kind and positions on reopen', () => {
+    const { renderer } = setup()
+    mocks.events.get('nodeDragStart')?.()
+    mocks.graph?.setNodeAttribute('file:a.md', 'x', 42)
+    mocks.events.get('nodeDragEnd')?.({ node: 'file:a.md', allDraggedNodes: [] } as never)
+    renderer.zoom(0.5)
+    renderer.arrange('circular')
+    expect(graphViewCache.getState().entries[0]).toMatchObject({
+      layout: 'circular',
+      manualOverrides: {},
+      camera: { ratio: 1 },
+    })
+    renderer.arrange('grouped')
+    const snapshot = graphViewCache.getState().entries[0]
+    expect(snapshot.layout).toBe('grouped')
+    renderer.destroy()
+    const restored = setup()
+    expect(mocks.workers).toHaveLength(1)
+    expect(mocks.graph?.getNodeAttributes('file:a.md')).toMatchObject(
+      snapshot.positions['file:a.md'],
+    )
+    restored.renderer.arrange()
+    expect(graphViewCache.getState().entries[0].layout).toBe('grouped')
+    expect(mocks.workers).toHaveLength(1)
+    restored.renderer.destroy()
   })
   it('selects without opening, opens on double click and dims unrelated nodes', () => {
     const { renderer, onSelectNode, onOpenNode } = setup()

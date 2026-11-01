@@ -7,8 +7,13 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { workspaceMapNavigationStore } from '@/utils/workspaceMapNavigation'
 import { DocumentRelationsGraph } from '@/components/DocumentRelationsGraph'
 import i18n from '@/i18n/setup'
+import { testExternalGraphNode } from '@/features/knowledge-graph/testGraph'
 
-const { getWorkspaceGraph } = vi.hoisted(() => ({ getWorkspaceGraph: vi.fn() }))
+const { getWorkspaceGraph, openWebTab } = vi.hoisted(() => ({
+  getWorkspaceGraph: vi.fn(),
+  openWebTab: vi.fn(),
+}))
+vi.mock('@/app/useOpenWebTab', () => ({ useOpenWebTab: () => openWebTab }))
 vi.mock('@/services/fsApi', () => ({ fsApi: { getWorkspaceGraph } }))
 vi.mock('@/components/knowledge/KnowledgeNodePreview', () => ({
   KnowledgeNodePreview: () => <p>Document summary</p>,
@@ -25,6 +30,8 @@ vi.mock('@/features/knowledge-graph/KnowledgeGraphCanvas', () => ({
       <button onClick={() => onSelectNode('file:linked.md')}>Select linked</button>
       <button onClick={() => onSelectNode('missing:lost')}>Select missing</button>
       <button onClick={() => onOpenNode('missing:lost')}>Activate missing</button>
+      <button onClick={() => onSelectNode(testExternalGraphNode().id)}>Select website</button>
+      <button onClick={() => onOpenNode(testExternalGraphNode().id)}>Activate website</button>
     </>
   ),
 }))
@@ -38,7 +45,6 @@ const graph: FsGraph = {
   nodes: [
     {
       id: 'file:linked.md',
-      position: { x: 0, y: 0 },
       kind: 'file',
       label: 'Linked',
       path: 'linked.md',
@@ -46,7 +52,6 @@ const graph: FsGraph = {
     },
     {
       id: 'missing:lost',
-      position: { x: 200, y: 0 },
       kind: 'missing',
       label: 'Lost',
       path: 'lost.md',
@@ -77,10 +82,27 @@ beforeEach(async () => {
   useWorkspaceStore.setState({ rootKind: 'internal', rootPath: '/workspace' })
   workspaceMapNavigationStore.setState({ request: null })
   getWorkspaceGraph.mockReset()
+  openWebTab.mockReset()
   await i18n.changeLanguage('en-US')
 })
 
 describe('document relation graph', () => {
+  it('shows a website label and URL without a preview or file open, then opens explicitly', async () => {
+    const website = testExternalGraphNode()
+    getWorkspaceGraph.mockResolvedValue({ ...graph, nodes: [...graph.nodes, website] })
+    const onOpenFile = mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Select website' }))
+    expect(screen.getByText(website.label)).toBeInTheDocument()
+    expect(screen.getByText(website.url)).toBeInTheDocument()
+    expect(screen.queryByText('Document summary')).not.toBeInTheDocument()
+    expect(onOpenFile).not.toHaveBeenCalled()
+    expect(openWebTab).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('knowledgeGraph.openWebsite') }))
+    expect(openWebTab).toHaveBeenCalledExactlyOnceWith(website.url, website.label)
+    fireEvent.click(screen.getByRole('button', { name: 'Activate website' }))
+    expect(openWebTab).toHaveBeenCalledTimes(2)
+    expect(onOpenFile).not.toHaveBeenCalled()
+  })
   it('shows loading and request failure, then recovers to an explicit empty result', async () => {
     let reject: (error: Error) => void = () => undefined
     getWorkspaceGraph.mockImplementationOnce(

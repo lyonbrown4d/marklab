@@ -35,7 +35,6 @@ export const fsMarkdownBlockSchema = z.discriminatedUnion('kind', [
 
 const graphPreviewNodeFields = {
   id: z.string(),
-  position: z.object({ x: z.number(), y: z.number() }),
   label: z.string(),
   path: z.string(),
   source_path: z.string(),
@@ -55,7 +54,6 @@ const graphPreviewNodeFields = {
 export const fsGraphNodeSchema = z.discriminatedUnion('kind', [
   z.object({
     id: z.string(),
-    position: z.object({ x: z.number(), y: z.number() }),
     kind: z.literal('file'),
     label: z.string(),
     path: z.string(),
@@ -63,6 +61,21 @@ export const fsGraphNodeSchema = z.discriminatedUnion('kind', [
   }),
   z.object({ ...graphPreviewNodeFields, kind: z.literal('preview') }),
   z.object({ ...graphPreviewNodeFields, kind: z.literal('missing') }),
+  z
+    .object({
+      id: z.string(),
+      kind: z.literal('external'),
+      label: z.string(),
+      url: z.url().refine((value) => {
+        try {
+          const url = new URL(value)
+          return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+        } catch {
+          return false
+        }
+      }, 'Expected an HTTP or HTTPS website URL without credentials'),
+    })
+    .strict(),
 ]) satisfies z.ZodType<FsGraphNode>
 
 export const fsGraphEdgeSchema = z.object({

@@ -1,3 +1,4 @@
+pub use super::graph_projection::graph;
 pub use super::graph_types::*;
 pub use super::publication::publication;
 use super::{Index, document::Document};
@@ -7,25 +8,6 @@ use std::collections::BTreeSet;
 
 pub fn revision(index: &Index) -> String {
   format!("{}:{}", index.generation, index.revision)
-}
-
-pub fn graph(
-  index: &Index,
-  request: WorkspaceGraphRequest,
-  layouts: &super::graph_layout::LayoutCache,
-) -> BackendResult<WorkspaceGraph> {
-  let mut graph = super::graph_projection::graph(index, request)?;
-  let positions = super::graph_layout::positions(layouts, index, &graph)?;
-  for node in &mut graph.nodes {
-    let point = positions.get(node.id()).ok_or_else(|| {
-      BackendError::new(
-        "GRAPH_LAYOUT_FAILED",
-        "Graph layout is missing a node position",
-      )
-    })?;
-    node.set_position(*point);
-  }
-  Ok(graph)
 }
 
 #[derive(Deserialize, Serialize, specta::Type)]

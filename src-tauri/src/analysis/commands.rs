@@ -84,14 +84,13 @@ pub async fn fs_get_workspace_graph(
   request: graph::WorkspaceGraphRequest,
 ) -> BackendResult<std::sync::Arc<graph::WorkspaceGraph>> {
   super::graph_query::validate(&request)?;
-  let layouts = analysis.graph_layouts.clone();
   project(
     &window,
     &registry,
     &analysis,
     "graph",
     request,
-    move |index, request| graph::graph(index, request, &layouts),
+    graph::graph,
   )
   .await
 }

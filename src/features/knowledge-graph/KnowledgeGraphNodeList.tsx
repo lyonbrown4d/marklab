@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react'
 import { cn } from '@/lib/utils'
-import type { GraphNode } from '@/logic/graph'
+import { graphNodeLocation, type GraphNode } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
 
 type Props = {
@@ -58,7 +58,9 @@ export const KnowledgeGraphNodeList = ({
             type="button"
           >
             <span className="block truncate">{node.label}</span>
-            <span className="block truncate text-xs text-muted-foreground">{node.path}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {graphNodeLocation(node)}
+            </span>
           </button>
         </li>
       ))}

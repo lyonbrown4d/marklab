@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react'
+import { useOpenGraphWebsite } from '@/features/knowledge-graph/useOpenGraphWebsite'
+import { graphNodeLocation } from '@/logic/graph'
 import { useStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/button'
@@ -28,6 +30,7 @@ const WorkspaceGraphPage = () => {
     })),
   )
   const { t } = useI18n()
+  const openWebsite = useOpenGraphWebsite()
   const pane = useWorkspacePane()
   const active = pane?.visible ?? true
   const focused = pane?.active ?? true
@@ -41,7 +44,9 @@ const WorkspaceGraphPage = () => {
     !context.graphRefreshing &&
     pending &&
     pending.nodeId !== 'workspace' &&
-    !context.graph.nodes.some((node) => node.id === pending.nodeId || node.path === pending.nodeId)
+    !context.graph.nodes.some(
+      (node) => node.id === pending.nodeId || graphNodeLocation(node) === pending.nodeId,
+    )
   const unavailableNotice = targetUnavailable ? (
     <div
       className={
@@ -71,7 +76,7 @@ const WorkspaceGraphPage = () => {
     (id: string | null) => {
       setSelection(id ? { workspaceKey, id } : null)
       const node = context.graph.nodes.find((candidate) => candidate.id === id)
-      if (node && node.kind !== 'missing') pane?.openBeside(node.path)
+      if (node?.kind === 'file' || node?.kind === 'preview') pane?.openBeside(node.path)
       const history = navigationHistoryStore.getState()
       if (focused && history.workspaceKey === workspaceKey)
         history.visit({ kind: 'graph', nodeId: id ?? 'workspace', viewId: 'all' })
@@ -80,7 +85,8 @@ const WorkspaceGraphPage = () => {
   )
   const openNode = (id: string) => {
     const node = context.graph.nodes.find((candidate) => candidate.id === id)
-    if (node && node.kind !== 'missing') {
+    if (node?.kind === 'external') openWebsite(node)
+    else if (node && node.kind !== 'missing') {
       if (pane) pane.openBeside(node.path, undefined, true)
       else context.onOpenFile(node.path)
     }
@@ -139,7 +145,7 @@ const WorkspaceGraphPage = () => {
           viewKey={pane ? `pane:${pane.id}` : 'workspace'}
         />
       </div>
-      {selected?.kind === 'missing' ? (
+      {selected?.kind === 'missing' || selected?.kind === 'external' ? (
         <KnowledgeGraphDetails
           active={active}
           graph={context.graph}

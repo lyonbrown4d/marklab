@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { graphFileIconKind, graphNodeIcon } from '@/features/knowledge-graph/graphNodeIcons'
 
 describe('graph file icons', () => {
+  it('uses one bundled globe for websites without resolving URL paths as local files', () => {
+    const website = graphNodeIcon({ kind: 'external' })
+    expect(website.iconKind).toBe('website')
+    expect(website.image).toContain('data:image/svg+xml')
+    expect(website.image).not.toBe(graphNodeIcon({ kind: 'file', path: 'guide.md' }).image)
+  })
   it('uses the existing adapter registry and distinct Lucide artwork for supported kinds', () => {
     const cases = [
       ['notes/NOTE.MD#heading', 'markdown'],

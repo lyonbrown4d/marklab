@@ -1,10 +1,22 @@
 import { useMemo, useState } from 'react'
-import { Focus, List, Minus, Plus, Shuffle, X } from 'lucide-react'
+import { useStore } from 'zustand'
+import { Focus, LayoutGrid, List, Minus, Plus, Shuffle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { graphNodeLocation } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
 import { KnowledgeGraphNodeList } from '@/features/knowledge-graph/KnowledgeGraphNodeList'
 import { useSigmaGraph } from '@/features/knowledge-graph/useSigmaGraph'
+import { graphViewCache } from '@/features/knowledge-graph/graphViewCache'
+import { graphLayoutKinds } from '@/features/knowledge-graph/graphLayoutTypes'
 import type { GraphFocusRequest, KnowledgeGraphCanvasProps } from '@/features/knowledge-graph/types'
 
 export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
@@ -13,6 +25,15 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
   const [query, setQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
   const [localFocus, setLocalFocus] = useState<GraphFocusRequest | null>(null)
+  const layout = useStore(
+    graphViewCache,
+    (state) =>
+      state.entries.find(
+        (entry) =>
+          entry.workspaceKey === props.workspaceKey &&
+          entry.viewKey === (props.viewKey ?? 'workspace'),
+      )?.layout ?? 'forceatlas2',
+  )
   const { renderer, unavailable } = useSigmaGraph(container, {
     ...props,
     focusRequest: props.focusRequest ?? localFocus,
@@ -25,7 +46,7 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
     const needle = query.trim().toLocaleLowerCase()
     return needle
       ? props.graph.nodes.filter((node) =>
-          `${node.label} ${node.path}`.toLocaleLowerCase().includes(needle),
+          `${node.label} ${graphNodeLocation(node)}`.toLocaleLowerCase().includes(needle),
         )
       : props.graph.nodes
   }, [props.graph.nodes, query])
@@ -96,6 +117,35 @@ export const KnowledgeGraphCanvas = (props: KnowledgeGraphCanvasProps) => {
         >
           <Shuffle className="size-4" />
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={t('knowledgeGraph.layout')}
+              disabled={!renderer}
+              size="icon"
+              title={t(`knowledgeGraph.layout.${layout}`)}
+              variant="ghost"
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>{t('knowledgeGraph.layout')}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={layout}
+              onValueChange={(value) => {
+                const next = graphLayoutKinds.find((kind) => kind === value)
+                if (next) renderer?.arrange(next)
+              }}
+            >
+              {graphLayoutKinds.map((kind) => (
+                <DropdownMenuRadioItem key={kind} value={kind}>
+                  {t(`knowledgeGraph.layout.${kind}`)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           aria-label={t('knowledgeGraph.fit')}
           disabled={!renderer}

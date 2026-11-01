@@ -1,4 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
+import { useOpenGraphWebsite } from '@/features/knowledge-graph/useOpenGraphWebsite'
+import { graphNodeLocation } from '@/logic/graph'
 import { useNavigate } from 'react-router-dom'
 import { LocateFixed, Pin, PinOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,6 +38,7 @@ export const DocumentRelationsGraph = ({
   onOpenFile,
 }: DocumentRelationsGraphProps) => {
   const { t } = useI18n()
+  const openWebsite = useOpenGraphWebsite()
   const navigate = useNavigate()
   const { query, centerPath, depth, setDepth, direction, setDirection, pinned, togglePinned } =
     useDocumentRelations(workspaceKey, targetPath)
@@ -49,6 +52,7 @@ export const DocumentRelationsGraph = ({
   const openNode = (id: string) => {
     const node = graph?.nodes.find((candidate) => candidate.id === id)
     if (node?.kind === 'file' || node?.kind === 'preview') onOpenFile(node.path)
+    else if (node?.kind === 'external') openWebsite(node)
     else selectNode(id)
   }
   const locate = () => {
@@ -165,7 +169,9 @@ export const DocumentRelationsGraph = ({
           aria-label={t('knowledgeGraph.selectedNode')}
         >
           <p className="truncate text-xs font-medium">{selected.label}</p>
-          <p className="mb-2 truncate text-[11px] text-muted-foreground">{selected.path}</p>
+          <p className="mb-2 truncate text-[11px] text-muted-foreground">
+            {graphNodeLocation(selected)}
+          </p>
           {selected.kind === 'file' && graph && (
             <KnowledgeNodePreview
               nodeId={selected.id}
@@ -182,7 +188,11 @@ export const DocumentRelationsGraph = ({
               size="sm"
               onClick={() => openNode(selected.id)}
             >
-              {t('knowledgeGraph.openDocument')}
+              {t(
+                selected.kind === 'external'
+                  ? 'knowledgeGraph.openWebsite'
+                  : 'knowledgeGraph.openDocument',
+              )}
             </Button>
           )}
         </div>

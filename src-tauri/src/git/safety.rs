@@ -30,6 +30,16 @@ pub fn workspace_root(
   Ok(workspace.root_directory())
 }
 pub async fn repository(root: &Path, allow_missing: bool) -> BackendResult<bool> {
+  inspect_repository(root, allow_missing, false).await
+}
+pub async fn readable_repository(root: &Path, allow_missing: bool) -> BackendResult<bool> {
+  inspect_repository(root, allow_missing, true).await
+}
+async fn inspect_repository(
+  root: &Path,
+  allow_missing: bool,
+  read_only: bool,
+) -> BackendResult<bool> {
   let root = root.to_owned();
   crate::blocking::run(move || {
     let repository = match process::open(&root) {
@@ -50,6 +60,15 @@ pub async fn repository(root: &Path, allow_missing: bool) -> BackendResult<bool>
       while let Some(entry) = entries.next() {
         let entry = entry?;
         let name = entry.name()?.to_ascii_lowercase();
+        if name.starts_with("filter.lfs.") && standard_lfs_filter(&name, entry.value()?) {
+          if read_only {
+            continue;
+          }
+          return Err(error(
+            "git_lfs_write_unsupported",
+            "Git LFS repositories support read-only Git queries in Marklab; use Git LFS tooling for writes",
+          ));
+        }
         if unsafe_key(&name) {
           return Err(error(
             "git_unsafe_configuration",
@@ -61,6 +80,14 @@ pub async fn repository(root: &Path, allow_missing: bool) -> BackendResult<bool>
     Ok(true)
   })
   .await
+}
+fn standard_lfs_filter(key: &str, value: &str) -> bool {
+  matches!(
+    (key, value),
+    ("filter.lfs.clean", "git-lfs clean -- %f")
+      | ("filter.lfs.smudge", "git-lfs smudge -- %f")
+      | ("filter.lfs.process", "git-lfs filter-process")
+  )
 }
 fn unsafe_key(key: &str) -> bool {
   key.starts_with("alias.")

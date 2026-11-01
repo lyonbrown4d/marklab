@@ -10,8 +10,8 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
 - `src/services/*` and the typed `src/runtime/*` adapter own desktop calls and
   scoped event subscriptions. Commands validate requests and root ownership;
   external child webviews have no desktop capability.
-- Monaco owns source editing; Plate owns rich editing; Rust owns graph base node
-  layout. Sigma.js owns graph interaction and screen-space label placement.
+- Monaco owns source editing; Plate owns rich editing; Graphology owns renderer-side
+  node layouts. Sigma.js owns graph interaction and screen-space label placement.
   Dockview owns workspace tab groups, splits, dragging and
   resizing. Native edit routing respects actual pane focus and Vim ownership.
 - One workspace buffer/save queue serves path-bound pane callbacks. Pane ownership
@@ -22,6 +22,10 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
   session rules control persistence.
 - Node.js is build/test tooling. The former Electron runtime, preload, Node
   knowledge sidecar, and dedicated packaging/test entry points have been removed.
+- Standard Git LFS filter configuration is accepted for read-only Git queries.
+  Other executable filter configurations remain rejected. Git writes in these
+  LFS repositories remain blocked until the backend supports LFS filtering, so
+  staging cannot silently store hydrated files as ordinary Git blobs.
 
 ## Change Impact Checklist
 

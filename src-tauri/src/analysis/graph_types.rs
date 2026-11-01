@@ -20,12 +20,6 @@ pub enum AnalysisGraphMode {
   Relations,
 }
 pub use AnalysisGraphNode as GraphNode;
-pub use AnalysisGraphPosition as GraphPosition;
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
-pub struct AnalysisGraphPosition {
-  pub x: f64,
-  pub y: f64,
-}
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum AnalysisGraphNode {
@@ -34,7 +28,6 @@ pub enum AnalysisGraphNode {
     label: String,
     path: String,
     group: GraphGroup,
-    position: GraphPosition,
   },
   Preview {
     id: String,
@@ -43,7 +36,6 @@ pub enum AnalysisGraphNode {
     source_path: String,
     target: String,
     preview_kind: PreviewKind,
-    position: GraphPosition,
   },
   Missing {
     id: String,
@@ -52,21 +44,20 @@ pub enum AnalysisGraphNode {
     source_path: String,
     target: String,
     preview_kind: PreviewKind,
-    position: GraphPosition,
+  },
+  External {
+    id: String,
+    label: String,
+    url: String,
   },
 }
 impl AnalysisGraphNode {
   pub(super) fn id(&self) -> &str {
     match self {
-      Self::File { id, .. } | Self::Preview { id, .. } | Self::Missing { id, .. } => id,
-    }
-  }
-
-  pub(super) fn set_position(&mut self, point: GraphPosition) {
-    match self {
-      Self::File { position, .. }
-      | Self::Preview { position, .. }
-      | Self::Missing { position, .. } => *position = point,
+      Self::File { id, .. }
+      | Self::Preview { id, .. }
+      | Self::Missing { id, .. }
+      | Self::External { id, .. } => id,
     }
   }
 }

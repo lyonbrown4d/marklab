@@ -3,10 +3,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FsGraph } from '@/services/fsApi'
+import { graphNodeLocation } from '@/logic/graph'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { useDocumentRelations } from '@/components/knowledge/useDocumentRelations'
 
 const { getWorkspaceGraph } = vi.hoisted(() => ({ getWorkspaceGraph: vi.fn() }))
+const firstLocation = (data: FsGraph | undefined) => {
+  const node = data?.nodes[0]
+  return node ? graphNodeLocation(node) : undefined
+}
 vi.mock('@/services/fsApi', () => ({ fsApi: { getWorkspaceGraph } }))
 
 const graph = (path: string): FsGraph => ({
@@ -19,7 +24,6 @@ const graph = (path: string): FsGraph => ({
   nodes: [
     {
       id: `file:${path}`,
-      position: { x: 0, y: 0 },
       kind: 'file',
       path,
       label: path,
@@ -48,9 +52,9 @@ describe('document relation requests', () => {
       ({ path }) => useDocumentRelations('internal:/one', path),
       { initialProps: { path: 'a.md' }, wrapper: wrapper() },
     )
-    await waitFor(() => expect(result.current.query.data?.nodes[0]?.path).toBe('a.md'))
+    await waitFor(() => expect(firstLocation(result.current.query.data)).toBe('a.md'))
     rerender({ path: 'b.md' })
-    await waitFor(() => expect(result.current.query.data?.nodes[0]?.path).toBe('b.md'))
+    await waitFor(() => expect(firstLocation(result.current.query.data)).toBe('b.md'))
     act(() => result.current.togglePinned())
     rerender({ path: 'c.md' })
     expect(result.current.centerPath).toBe('b.md')
@@ -70,7 +74,7 @@ describe('document relation requests', () => {
       }),
     )
     act(() => result.current.togglePinned())
-    await waitFor(() => expect(result.current.query.data?.nodes[0]?.path).toBe('c.md'))
+    await waitFor(() => expect(firstLocation(result.current.query.data)).toBe('c.md'))
   })
 
   it('isolates late results and pinned centers when the workspace changes', async () => {
@@ -89,9 +93,9 @@ describe('document relation requests', () => {
     act(() => result.current.togglePinned())
     act(() => useWorkspaceStore.setState({ rootPath: '/two' }))
     rerender({ workspaceKey: 'internal:/two', path: 'new.md' })
-    await waitFor(() => expect(result.current.query.data?.nodes[0]?.path).toBe('new.md'))
+    await waitFor(() => expect(firstLocation(result.current.query.data)).toBe('new.md'))
     await act(async () => resolveOld(graph('old.md')))
-    expect(result.current.query.data?.nodes[0]?.path).toBe('new.md')
+    expect(firstLocation(result.current.query.data)).toBe('new.md')
     expect(result.current.pinned).toBe(false)
   })
 })

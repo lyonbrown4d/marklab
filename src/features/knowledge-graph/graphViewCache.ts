@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { z } from 'zod'
 import type { GraphCameraState } from '@/features/knowledge-graph/types'
+import { graphLayoutKinds, type GraphLayoutKind } from '@/features/knowledge-graph/graphLayoutTypes'
 
 const pointSchema = z.object({ x: z.number(), y: z.number() })
 const cameraSchema = pointSchema.extend({
@@ -12,6 +13,9 @@ const entrySchema = z.object({
   workspaceKey: z.string(),
   viewKey: z.string(),
   topologyKey: z.string(),
+  layout: z.enum(graphLayoutKinds),
+  layoutPending: z.boolean().default(false),
+  positions: z.record(z.string(), pointSchema),
   manualOverrides: z.record(z.string(), pointSchema),
   camera: cameraSchema,
 })
@@ -25,7 +29,16 @@ const boundSnapshots = (entries: GraphViewSnapshot[]) => {
   return entries.slice(0, MAX_SNAPSHOTS).map((entry) => {
     const manualOverrides = Object.entries(entry.manualOverrides).slice(0, remaining)
     remaining -= manualOverrides.length
-    return { ...entry, manualOverrides: Object.fromEntries(manualOverrides) }
+    const keptOverrides = Object.fromEntries(manualOverrides)
+    const positions = Object.entries(entry.positions)
+      .filter(([id]) => !Object.hasOwn(keptOverrides, id))
+      .slice(0, remaining)
+    remaining -= positions.length
+    return {
+      ...entry,
+      manualOverrides: keptOverrides,
+      positions: Object.fromEntries(positions),
+    }
   })
 }
 
@@ -56,8 +69,8 @@ const storage = createJSONStorage<CacheState>(() => ({
 export const graphViewCache = createStore<CacheState>()(
   persist<CacheState>(() => ({ entries: [] }), {
     name: 'marklab.knowledgeGraph.views',
-    // Earlier versions contained renderer-computed layouts, not explicit user drags.
-    version: 3,
+    // Version 3 stored native layouts; frontend layouts are rebuilt once after upgrading.
+    version: 4,
     migrate: () => ({ entries: [] }),
     storage,
     merge: (persisted, current) => {
@@ -80,11 +93,17 @@ export const saveGraphView = (
   manualOverrides: Record<string, { x: number; y: number }>,
   camera: GraphCameraState,
   viewKey = 'workspace',
+  positions: Record<string, { x: number; y: number }> = {},
+  layout: GraphLayoutKind = 'forceatlas2',
+  layoutPending = false,
 ) => {
   const parsed = entrySchema.safeParse({
     workspaceKey,
     viewKey,
     topologyKey,
+    positions,
+    layout,
+    layoutPending,
     manualOverrides,
     camera,
   })

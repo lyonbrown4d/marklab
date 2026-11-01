@@ -4,3 +4,6 @@ import type { FsGraph, FsGraphEdge, FsGraphNode } from '@/services/fsApi'
 export type GraphData = FsGraph
 export type GraphNode = FsGraphNode
 export type GraphEdge = FsGraphEdge
+
+export const graphNodeLocation = (node: GraphNode): string =>
+  node.kind === 'external' ? node.url : node.path

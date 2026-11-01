@@ -61,6 +61,8 @@ impl GitState {
 mod tests;
 
 #[cfg(test)]
+mod test_lfs;
+#[cfg(test)]
 mod test_lifecycle;
 #[cfg(test)]
 mod test_remote;

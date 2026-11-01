@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { KnowledgeNodePreview } from '@/components/knowledge/KnowledgeNodePreview'
-import type { GraphData, GraphNode } from '@/logic/graph'
+import { graphNodeLocation, type GraphData, type GraphNode } from '@/logic/graph'
 
 type Props = {
   active: boolean
@@ -46,12 +46,12 @@ export const KnowledgeGraphDetails = ({
           <X className="size-4" />
         </Button>
       </div>
-      <p className="break-all text-xs text-muted-foreground">{node.path}</p>
+      <p className="break-all text-xs text-muted-foreground">{graphNodeLocation(node)}</p>
       {node.kind === 'missing' ? (
         <p className="text-sm text-muted-foreground">{t('knowledgeGraph.missing')}</p>
       ) : (
         <Button onClick={onOpen} size="sm">
-          {t('knowledgeGraph.open')}
+          {t(node.kind === 'external' ? 'knowledgeGraph.openWebsite' : 'knowledgeGraph.open')}
         </Button>
       )}
       {active && node.kind === 'file' ? (
