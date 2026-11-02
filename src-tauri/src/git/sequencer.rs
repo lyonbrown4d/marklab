@@ -17,8 +17,9 @@ pub fn continue_remaining(
 ) -> BackendResult<()> {
   let actions = actions(repo, todo)?.into_iter().skip(1).collect::<Vec<_>>();
   for (position, action) in actions.iter().enumerate() {
-    restore(repo, &actions[position..], head, options)?;
     let commit = repo.find_commit(action.oid)?;
+    preflight(repo, &commit)?;
+    restore(repo, &actions[position..], head, options)?;
     let message = if action.verb == "pick" {
       commit.message()?.to_owned()
     } else {
@@ -36,6 +37,14 @@ pub fn continue_remaining(
       repo.revert(&commit, Some(&mut options))?;
     }
     sequence::finish_simple(repo, &message)?;
+  }
+  Ok(())
+}
+pub(super) fn preflight(repo: &git2::Repository, commit: &git2::Commit<'_>) -> BackendResult<()> {
+  super::lfs_checkout::tree(repo, &repo.head()?.peel_to_tree()?)?;
+  super::lfs_checkout::tree(repo, &commit.tree()?)?;
+  for parent in commit.parents() {
+    super::lfs_checkout::tree(repo, &parent.tree()?)?;
   }
   Ok(())
 }

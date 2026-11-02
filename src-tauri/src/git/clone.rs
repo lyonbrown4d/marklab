@@ -51,17 +51,23 @@ pub async fn clone_repository(
     let work = || {
       let mut fetch = git2::FetchOptions::new();
       fetch.remote_callbacks(super::transport::callbacks(Some(cancel.clone())));
-      let mut checkout = git2::build::CheckoutBuilder::new();
-      let checkout_cancel = cancel.clone();
-      checkout
-        .notify_on(git2::CheckoutNotificationType::all())
-        .notify(move |_, _, _, _, _| !checkout_cancel.load(Ordering::Acquire));
+      // Fetch/LFS callbacks cancel their own work. A plain checkout remains in
+      // staging until the cancellation check below; git2's notify callback uses
+      // a positive abort code which its clone wrapper does not treat as an error.
+      let checkout = git2::build::CheckoutBuilder::new();
       let mut builder = git2::build::RepoBuilder::new();
       builder.fetch_options(fetch).with_checkout(checkout);
       if let Some(branch) = &branch {
         builder.branch(branch);
       }
-      let repository = builder.clone(&url, &destination.staging)?;
+      let _lfs_cancellation = super::lfs_cancel::Guard::new(cancel.clone());
+      let repository = builder.clone(&url, &destination.staging).map_err(|value| {
+        if cancel.load(Ordering::Acquire) {
+          error("git_operation_cancelled", "Git clone was cancelled")
+        } else {
+          value.into()
+        }
+      })?;
       if cancel.load(Ordering::Acquire) {
         return Err(error("git_operation_cancelled", "Git clone was cancelled"));
       }

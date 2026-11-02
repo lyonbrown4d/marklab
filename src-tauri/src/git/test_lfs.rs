@@ -52,13 +52,7 @@ async fn standard_lfs_configuration_allows_read_queries_without_changing_the_rep
     std::fs::read(repo.root().join(".git/index")).unwrap(),
     index_before
   );
-  assert_eq!(
-    safety::repository(repo.root(), false)
-      .await
-      .unwrap_err()
-      .code,
-    "git_lfs_write_unsupported"
-  );
+  safety::repository(repo.root(), false).await.unwrap();
 }
 
 #[tokio::test]
@@ -91,6 +85,13 @@ async fn lfs_named_shell_commands_and_other_custom_filters_remain_rejected_for_q
         .await
         .err()
         .unwrap()
+        .code,
+      "git_unsafe_configuration"
+    );
+    assert_eq!(
+      safety::repository(repo.root(), false)
+        .await
+        .unwrap_err()
         .code,
       "git_unsafe_configuration"
     );

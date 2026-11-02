@@ -214,6 +214,7 @@ pub async fn network(
               "Pull requires a fast-forward update",
             ));
           }
+          super::lfs_checkout::tree(repo, &target.tree()?)?;
           repo.checkout_tree(
             target.as_object(),
             Some(git2::build::CheckoutBuilder::new().safe()),
@@ -252,6 +253,13 @@ pub async fn network(
         }
         let mut options = git2::PushOptions::new();
         options.remote_callbacks(super::transport::callbacks(None));
+        // LFS objects must be available remotely before any Git references move.
+        super::lfs_network::upload_to(
+          repo,
+          remote_name,
+          repo.head()?.peel_to_commit()?.id(),
+          &destination,
+        )?;
         remote.push(
           &[format!("refs/heads/{branch}:{destination}")],
           Some(&mut options),

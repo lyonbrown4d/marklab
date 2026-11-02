@@ -11,6 +11,8 @@ pub async fn stash_save(root: &Path, request: &StashSaveRequest) -> BackendResul
   process::repository(root, move |repo| {
     status::no_operation_now(repo)?;
     let signature = process::signature(repo)?;
+    super::lfs_checkout::tree(repo, &repo.head()?.peel_to_tree()?)?;
+    super::lfs_checkout::index(repo, &repo.index()?)?;
     repo.stash_save2(
       &signature,
       (!message.is_empty()).then_some(message.as_str()),
@@ -34,7 +36,7 @@ pub async fn stash_action(
     let locker = process::open(&lock_root)?;
     let mut transaction = locker.transaction()?;
     transaction.lock_ref("refs/stash")?;
-    let (index, _) = history::require_stash_now(repo, &reference, expected.as_deref())?;
+    let (index, entry) = history::require_stash_now(repo, &reference, expected.as_deref())?;
     if drop {
       let mut log = repo.reflog("refs/stash")?;
       log.remove(index, true)?;
@@ -55,6 +57,10 @@ pub async fn stash_action(
       transaction.set_reflog("refs/stash", log)?;
       transaction.commit()?;
     } else {
+      let stash = repo.find_commit(git2::Oid::from_str(&entry.hash)?)?;
+      super::sequencer::preflight(repo, &stash)?;
+      super::lfs_checkout::index(repo, &repo.index()?)?;
+      std::mem::drop(stash);
       repo.stash_apply(index, None)?;
       std::mem::drop(transaction);
     }

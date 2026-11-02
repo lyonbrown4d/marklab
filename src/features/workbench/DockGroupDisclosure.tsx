@@ -88,7 +88,7 @@ export const DockGroupDisclosure = ({ activePanel, group }: IDockviewHeaderActio
           size="sm"
           aria-label={`${t('tabs.showOpenFiles')}: ${label}`}
           aria-expanded={false}
-          className="absolute left-1/2 top-1 z-10 h-7 w-max max-w-[min(16rem,calc(100%_-_1.5rem))] -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
+          className="pointer-events-auto absolute left-1/2 top-1 z-10 h-7 w-max max-w-[min(16rem,calc(100%_-_1.5rem))] -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={disclosure.pinOpen}
         >

@@ -30,16 +30,6 @@ pub fn workspace_root(
   Ok(workspace.root_directory())
 }
 pub async fn repository(root: &Path, allow_missing: bool) -> BackendResult<bool> {
-  inspect_repository(root, allow_missing, false).await
-}
-pub async fn readable_repository(root: &Path, allow_missing: bool) -> BackendResult<bool> {
-  inspect_repository(root, allow_missing, true).await
-}
-async fn inspect_repository(
-  root: &Path,
-  allow_missing: bool,
-  read_only: bool,
-) -> BackendResult<bool> {
   let root = root.to_owned();
   crate::blocking::run(move || {
     let repository = match process::open(&root) {
@@ -60,14 +50,18 @@ async fn inspect_repository(
       while let Some(entry) = entries.next() {
         let entry = entry?;
         let name = entry.name()?.to_ascii_lowercase();
-        if name.starts_with("filter.lfs.") && standard_lfs_filter(&name, entry.value()?) {
-          if read_only {
-            continue;
-          }
+        if name.starts_with("lfs.extension.")
+          || name.starts_with("lfs.customtransfer.")
+          || name == "lfs.standalonetransferagent"
+        {
           return Err(error(
-            "git_lfs_write_unsupported",
-            "Git LFS repositories support read-only Git queries in Marklab; use Git LFS tooling for writes",
+            "git_lfs_unsupported",
+            "LFS extensions and custom transfer adapters are not supported",
           ));
+        }
+        if name.starts_with("filter.lfs.") && standard_lfs_filter(&name, entry.value()?) {
+          // The native LFS filter handles conversion; these shell commands are never run.
+          continue;
         }
         if unsafe_key(&name) {
           return Err(error(

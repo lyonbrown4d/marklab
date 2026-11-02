@@ -40,6 +40,8 @@ pub fn merge_now(repo: &mut git2::Repository, target: git2::Oid) -> BackendResul
     return Ok(());
   }
   let head = repo.head()?.peel_to_commit()?;
+  super::lfs_checkout::tree(repo, &head.tree()?)?;
+  super::lfs_checkout::commit(repo, target.id())?;
   repo.reference("ORIG_HEAD", head.id(), true, "marklab: before merge")?;
   if analysis.is_fast_forward() {
     let commit = repo.find_commit(target.id())?;
@@ -83,6 +85,8 @@ pub fn merge_now(repo: &mut git2::Repository, target: git2::Oid) -> BackendResul
   Ok(())
 }
 pub fn rebase_now(repo: &git2::Repository, target: git2::Oid) -> BackendResult<()> {
+  super::lfs_checkout::commit(repo, target)?;
+  super::lfs_checkout::tree(repo, &repo.head()?.peel_to_tree()?)?;
   let target = repo.find_annotated_commit(target)?;
   let mut options = git2::RebaseOptions::new();
   let mut rebase = repo.rebase(None, Some(&target), None, Some(&mut options))?;
@@ -107,14 +111,23 @@ fn advance_rebase(
       Err(error) => return Err(error.into()),
     }
   }
-  while let Some(operation) = rebase.next() {
-    let operation = operation?;
+  loop {
+    let next = rebase.operation_current().map_or(0, |current| current + 1);
+    let Some(operation) = rebase.nth(next) else {
+      break;
+    };
     if operation.kind() == Some(git2::RebaseOperationType::Exec) {
       return Err(error(
         "git_unsafe_configuration",
         "Rebase contains shell execution steps; continue it externally",
       ));
     }
+    let commit = repo.find_commit(operation.id())?;
+    super::sequencer::preflight(repo, &commit)?;
+    let Some(operation) = rebase.next() else {
+      break;
+    };
+    operation?;
     if repo.index()?.has_conflicts() {
       return Err(error(
         "git_conflicts_present",
@@ -151,6 +164,10 @@ pub fn sequence_now(repo: &mut git2::Repository, abort: bool) -> BackendResult<(
     }
     let mut rebase = repo.open_rebase(None)?;
     if abort {
+      let original = rebase
+        .orig_head_id()
+        .ok_or_else(|| error("git_invalid_input", "Cannot find the original rebase HEAD"))?;
+      super::lfs_checkout::commit(repo, original)?;
       rebase.abort()?;
       return Ok(());
     }
@@ -176,6 +193,7 @@ pub fn sequence_now(repo: &mut git2::Repository, abort: bool) -> BackendResult<(
           "Cannot find the original operation HEAD",
         )
       })?;
+    super::lfs_checkout::commit(repo, original)?;
     let target = repo.find_object(original, None)?;
     repo.reset(
       &target,

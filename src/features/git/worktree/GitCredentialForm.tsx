@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useI18n } from '@/i18n/useI18n'
 import { gitCredentialsApi, type GitCredentials } from '@/services/gitCredentialsApi'
+import { defaultGitCredentialUrl, gitCredentialUrl } from '@/logic/gitCredentialUrl'
 
 type CredentialAction =
   { type: 'save'; credentials: GitCredentials } | { type: 'remove'; url: string }
 
 export const GitCredentialForm = ({ url }: { url: string }) => {
   const { t } = useI18n()
+  const [serverUrl, setServerUrl] = useState(() => defaultGitCredentialUrl(url))
   const [username, setUsername] = useState('')
   const [token, setToken] = useState('')
   const submitting = useRef(false)
@@ -38,14 +40,8 @@ export const GitCredentialForm = ({ url }: { url: string }) => {
       submitting.current = false
     }
   }
-  let origin: string | null = null
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol === 'https:' && !parsed.username && !parsed.password) origin = parsed.origin
-  } catch {
-    // Remote editing can contain an incomplete URL.
-  }
-  if (!gitCredentialsApi.available() || !origin) return null
+  const origin = gitCredentialUrl(serverUrl)
+  if (!gitCredentialsApi.available() || !url.trim()) return null
 
   return (
     <details className="border-t border-border pt-3 text-sm">
@@ -57,12 +53,26 @@ export const GitCredentialForm = ({ url }: { url: string }) => {
         aria-busy={mutation.isPending}
         onSubmit={(event) => {
           event.preventDefault()
-          if (username.trim() && token.trim()) {
-            void run({ type: 'save', credentials: { url, username, token } })
+          if (origin && username.trim() && token.trim()) {
+            void run({ type: 'save', credentials: { url: origin, username, token } })
           }
         }}
       >
-        <p className="break-all text-xs text-muted-foreground">{origin}</p>
+        <Label htmlFor="git-credential-url">{t('scm.credentials.url')}</Label>
+        <Input
+          id="git-credential-url"
+          type="url"
+          autoComplete="off"
+          placeholder="https://"
+          value={serverUrl}
+          disabled={mutation.isPending}
+          aria-invalid={serverUrl.trim() !== '' && !origin}
+          onChange={(event) => {
+            setServerUrl(event.target.value)
+            setToken('')
+            mutation.reset()
+          }}
+        />
         <Label htmlFor="git-credential-username">{t('scm.credentials.username')}</Label>
         <Input
           id="git-credential-username"
@@ -85,7 +95,7 @@ export const GitCredentialForm = ({ url }: { url: string }) => {
           <Button
             type="submit"
             size="sm"
-            disabled={mutation.isPending || !username.trim() || !token.trim()}
+            disabled={mutation.isPending || !origin || !username.trim() || !token.trim()}
           >
             {t('scm.credentials.save')}
           </Button>
@@ -93,8 +103,10 @@ export const GitCredentialForm = ({ url }: { url: string }) => {
             type="button"
             size="sm"
             variant="outline"
-            disabled={mutation.isPending}
-            onClick={() => void run({ type: 'remove', url })}
+            disabled={mutation.isPending || !origin}
+            onClick={() => {
+              if (origin) void run({ type: 'remove', url: origin })
+            }}
           >
             {t('scm.credentials.remove')}
           </Button>

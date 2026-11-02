@@ -97,6 +97,20 @@ pub async fn write_blob(root: &Path, hash: &str, mut file: std::fs::File) -> Bac
     if kind != git2::ObjectType::Blob {
       return Err(error("git_invalid_input", "Preview requires a blob"));
     }
+    if size < git_lfs_pointer::MAX_POINTER_SIZE {
+      let blob = repo.find_blob(oid)?;
+      if super::lfs::pointer(blob.content())?.is_some() {
+        let root = repo.workdir().ok_or_else(|| {
+          error(
+            "git_workspace_boundary",
+            "LFS preview requires a working tree",
+          )
+        })?;
+        super::lfs::smudge(root, &mut std::io::Cursor::new(blob.content()), &mut file)?;
+        file.flush()?;
+        return Ok(());
+      }
+    }
     let (mut reader, _, _) = odb.reader(oid)?;
     let mut buffer = [0u8; 65536];
     let mut written = 0;

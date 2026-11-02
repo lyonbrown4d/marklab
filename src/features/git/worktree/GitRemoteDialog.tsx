@@ -36,6 +36,7 @@ export const GitRemoteDialog = ({
   useNativeSurfaceOcclusion('git-remote-dialog', open, { blocksCommandPalette: true })
   const [name, setName] = useState('origin')
   const [url, setUrl] = useState('')
+  const credentialUrl = url || status?.remotes[0]?.fetch_url || ''
   return (
     <Dialog
       open={open}
@@ -107,7 +108,7 @@ export const GitRemoteDialog = ({
           </Button>
         </form>
         {gitCredentialsApi.available() && (
-          <GitCredentialForm key={url} url={url || status?.remotes[0]?.fetch_url || ''} />
+          <GitCredentialForm key={credentialUrl} url={credentialUrl} />
         )}
         {error ? (
           <p role="alert" className="break-words text-xs text-destructive">

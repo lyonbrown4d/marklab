@@ -1,10 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
-import { useNavigate } from 'react-router-dom'
-import { LocateFixed } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { pathToWorkspaceGraphRoute } from '@/logic/routing'
-import { requestWorkspaceMapNodeFocus } from '@/utils/workspaceMapNavigation'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
 import type {
@@ -113,7 +108,6 @@ const WysiwygEditorPage = ({
   readOnly,
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
-  const navigate = useNavigate()
   const pane = useWorkspacePane()
   const interactionActive = pane?.active ?? true
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
@@ -212,21 +206,6 @@ const WysiwygEditorPage = ({
       aria-busy={linkPending}
       data-editor-document-path={activePath ?? undefined}
     >
-      {activePath && workspaceKey && (
-        <div className="flex shrink-0 justify-end border-b border-border/40 px-3 py-1">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => {
-              requestWorkspaceMapNodeFocus({ nodeId: `file:${activePath}`, workspaceKey })
-              navigate(pathToWorkspaceGraphRoute())
-            }}
-          >
-            <LocateFixed className="size-3.5" />
-            {t('knowledgeGraph.locateInGraph')}
-          </Button>
-        </div>
-      )}
       {linkPending && (
         <span role="status" className="sr-only">
           {t('editor.transition.loading')}

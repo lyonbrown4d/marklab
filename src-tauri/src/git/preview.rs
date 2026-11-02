@@ -115,7 +115,25 @@ pub fn object_bytes(repo: &git2::Repository, oid: git2::Oid) -> BackendResult<Ve
   if size > MAX_PREVIEW {
     return Ok(vec![0; MAX_PREVIEW + 1]);
   }
-  Ok(odb.read(oid)?.data().to_vec())
+  let bytes = odb.read(oid)?.data().to_vec();
+  if size < git_lfs_pointer::MAX_POINTER_SIZE
+    && let Some(pointer) = super::lfs::pointer(&bytes)?
+    && !pointer.is_empty()
+  {
+    if pointer.size > MAX_PREVIEW as u64 {
+      return Ok(vec![0; MAX_PREVIEW + 1]);
+    }
+    let root = repo.workdir().ok_or_else(|| {
+      error(
+        "git_workspace_boundary",
+        "LFS preview requires a working tree",
+      )
+    })?;
+    let mut decoded = Vec::with_capacity(pointer.size as usize);
+    super::lfs::smudge(root, &mut std::io::Cursor::new(bytes), &mut decoded)?;
+    return Ok(decoded);
+  }
+  Ok(bytes)
 }
 pub async fn read_object(root: &Path, hash: &str) -> BackendResult<Vec<u8>> {
   safety::hash(hash)?;

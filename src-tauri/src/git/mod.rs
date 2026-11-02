@@ -13,7 +13,18 @@ mod conflict;
 mod conflict_index;
 mod conflict_write;
 mod history;
+mod lfs;
+mod lfs_cancel;
+mod lfs_checkout;
+mod lfs_endpoint;
+mod lfs_filter;
+mod lfs_filter_ffi;
+mod lfs_history;
+mod lfs_network;
+mod lfs_transfer;
+mod lfs_transfer_io;
 mod local;
+mod local_revisions;
 mod open_file;
 mod preview;
 mod sequence;
@@ -62,6 +73,10 @@ mod tests;
 
 #[cfg(test)]
 mod test_lfs;
+#[cfg(test)]
+mod test_lfs_network;
+#[cfg(test)]
+mod test_lfs_operations;
 #[cfg(test)]
 mod test_lifecycle;
 #[cfg(test)]

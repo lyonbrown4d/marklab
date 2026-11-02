@@ -41,7 +41,7 @@ specta = { version = "=2.0.0-rc.27", features = ["derive", "function", "serde_js
 specta-typescript = { version = "=0.0.14", optional = true }
 specta-serde = { version = "=0.0.14", optional = true }
 specta-util = { version = "=0.0.14", optional = true }
-tokio-util = { version = "0.7.20", features = ["rt", "io"] }
+tokio-util = { version = "0.7.20", features = ["rt", "io", "io-util"] }
 lsp-types = "0.97.0"
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
@@ -64,6 +64,12 @@ mime_guess = "2.0.5"
 pathdiff = "0.2.3"
 percent-encoding = "2.3.2"
 git2 = { version = "0.21.0", features = ["vendored-libgit2", "vendored-openssl"] }
+# Use library entry points only; never attach the subprocess credential helper.
+git-lfs-pointer = "=0.7.0"
+git-lfs-store = "=0.7.0"
+git-lfs-api = "=0.7.0"
+reqwest-lfs = { package = "reqwest", version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+libgit2-sys = "=0.18.8"
 futures-util = "0.3.34"
 fluxdi = { version = "=2.0.0", default-features = false, features = ["macros", "thread-safe", "async-factory"] }
 moka = { version = "0.12.16", default-features = false, features = ["future", "sync"] }

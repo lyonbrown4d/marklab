@@ -32,6 +32,21 @@ pub fn redact(input: &str) -> String {
 }
 impl From<git2::Error> for BackendError {
   fn from(value: git2::Error) -> Self {
+    if let Some((code, message)) = value.message().split_once(": ")
+      && [
+        "git_lfs_failed",
+        "git_lfs_unsupported",
+        "git_lfs_object_corrupt",
+        "git_lfs_pointer_invalid",
+        "git_lfs_storage_failed",
+        "git_authentication_required",
+        "git_operation_cancelled",
+        "git_workspace_boundary",
+      ]
+      .contains(&code)
+    {
+      return error(code, &redact(message));
+    }
     let code = if value.code() == git2::ErrorCode::Auth {
       "git_authentication_required"
     } else if value.code() == git2::ErrorCode::Conflict {
@@ -47,6 +62,9 @@ impl From<git2::Error> for BackendError {
 pub fn initialize() -> BackendResult<()> {
   static INITIALIZED: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
   let result = INITIALIZED.get_or_init(|| {
+    // Keep libgit2 alive before installing a process-lifetime native filter.
+    libgit2_sys::init();
+    super::lfs_filter::register()?;
     // Serialized once, before any repository worker accesses libgit2 transport settings.
     // Bound stalled network jobs so the shared blocking pool always becomes available.
     unsafe {

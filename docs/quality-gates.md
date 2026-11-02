@@ -22,10 +22,16 @@ that changed, and keep browser, native-library, and actual desktop evidence sepa
   session rules control persistence.
 - Node.js is build/test tooling. The former Electron runtime, preload, Node
   knowledge sidecar, and dedicated packaging/test entry points have been removed.
-- Standard Git LFS filter configuration is accepted for read-only Git queries.
-  Other executable filter configurations remain rejected. Git writes in these
-  LFS repositories remain blocked until the backend supports LFS filtering, so
-  staging cannot silently store hydrated files as ordinary Git blobs.
+- Standard Git LFS filters use native Rust pointer/object-store libraries and a
+  libgit2 streaming filter for staging and checkout, including stash and branch
+  changes. HTTPS basic transfers use the application's stored credentials;
+  missing checkout objects are downloaded and verified, and outgoing history's
+  LFS objects are uploaded before Git references are pushed. Historical file
+  previews resolve pointers to content with the existing preview size limits.
+  Repository filter scripts, hooks, credential helpers, and custom LFS adapters
+  are never executed. File locking, pointer extensions, custom object storage, and pure SSH
+  LFS transfers are unsupported and return errors. Git remotes using SSH may use
+  a separate HTTPS LFS endpoint with HTTPS credentials.
 
 ## Change Impact Checklist
 

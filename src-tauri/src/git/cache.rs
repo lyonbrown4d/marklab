@@ -153,7 +153,7 @@ impl GitState {
 }
 async fn load(root: &Path, query: Query) -> BackendResult<Value> {
   let missing_allowed = matches!(query, Query::Repository | Query::Status);
-  let repository = safety::readable_repository(root, missing_allowed).await?;
+  let repository = safety::repository(root, missing_allowed).await?;
   Ok(match query {
     Query::Repository => Value::Repository(if repository {
       status::repo(root).await?

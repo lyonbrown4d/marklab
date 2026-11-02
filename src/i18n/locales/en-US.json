@@ -1524,6 +1524,7 @@
   "scm.merge.reloadDescription": "Discard this unsaved draft and load the current file and index versions? This cannot be undone.",
   "scm.merge.stale": "The file or conflict index changed. Your draft is preserved; reload before resolving against the new versions.",
   "scm.credentials.title": "HTTPS authentication",
+  "scm.credentials.url": "HTTPS server URL",
   "scm.credentials.username": "Username",
   "scm.credentials.token": "Access token",
   "scm.credentials.storage": "Stored in the system credential store.",
